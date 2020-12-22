@@ -1,6 +1,6 @@
 {
   "name": "react-native-global-state-hooks",
-  "version": "1.0.5",
+  "version": "1.1.1",
   "description": "This is a package to easily handling global-state across your react-native-components No-redux, No-context.",
   "main": "lib/GlobalStore.js",
   "files": [
@@ -59,7 +59,7 @@
     "typescript": "^4.1.2"
   },
   "peerDependencies": {
-    "@react-native-async-storage/async-storage": "^1.13.2",
+    "@react-native-async-storage/async-storage": "workspace:*",
     "lodash": "workspace:*",
     "react": "workspace:*",
     "react-dom": "workspace:*"

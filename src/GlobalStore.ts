@@ -78,7 +78,7 @@ export class GlobalStore<
           const primitive = isPrimitive(value);
           const newState: IState = primitive ? value : this.formatItemFromStore(value);
 
-          this.state = primitive ? newState : { ...this.state, ...newState };
+          await this.globalSetterAsync(newState);
         }
 
         resolve(this.state);
