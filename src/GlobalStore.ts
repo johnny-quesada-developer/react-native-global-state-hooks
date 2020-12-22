@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   cloneDeep, debounce, isNil, isNumber, isBoolean, isString,
 } from 'lodash';
-import asyncStorage from '@react-native-community/async-storage';
+import asyncStorage from '@react-native-async-storage/async-storage';
 import ReactDOM from 'react-dom';
 import * as IGlobalStore from './GlobalStoreTypes';
 
