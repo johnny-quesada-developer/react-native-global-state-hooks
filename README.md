@@ -3,6 +3,8 @@ This is a package to easily handling global-state across your react-native-compo
 
 This utility follows the same style as the default useState hook, this in order to be an intuitive tool to help you to quickly migrate from complex options as redux to the new react-hooks.
 
+**after version 1.0.4, we migrated to @react-native-async-storage/async-storage, because @react-native-async-storage/async-storage has been deprecated!!**
+
 ## Creating a global store, an a simple hook
 
 We are gonna create a global count example **count.ts**:
