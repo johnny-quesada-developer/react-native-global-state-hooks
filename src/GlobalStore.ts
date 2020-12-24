@@ -189,7 +189,8 @@ export class GlobalStore<
     // batch store updates
     GlobalStore.batchedUpdates.push([() => this.subscribers.forEach((updateChild) => updateChild(newState)), this, newState]);
 
-    GlobalStore.ExecutePendingBatches(callback);
+    GlobalStore.ExecutePendingBatchesCallbacks.push(callback);
+    GlobalStore.ExecutePendingBatches();
   };
 
   protected globalSetterAsync = async (setter: Partial<IState> | ((state: IState) => Partial<IState>)):
@@ -200,9 +201,11 @@ export class GlobalStore<
     await this.setAsyncStoreItem();
   };
 
+  static ExecutePendingBatchesCallbacks: (() => void)[] = [];
+
   // avoid multiples calls to batchedUpdates
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  static ExecutePendingBatches = debounce((callback: () => void = () => {}) => {
+  static ExecutePendingBatches = debounce(() => {
     const reactBatchedUpdates = ReactDOM.unstable_batchedUpdates || ((mock: () => void) => mock());
 
     reactBatchedUpdates(() => {
@@ -210,7 +213,8 @@ export class GlobalStore<
         execute();
       });
       GlobalStore.batchedUpdates = [];
-      callback();
+      GlobalStore.ExecutePendingBatchesCallbacks.forEach((callback) => callback());
+      GlobalStore.ExecutePendingBatchesCallbacks = [];
     });
   }, 0);
 
