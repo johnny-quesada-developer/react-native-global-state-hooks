@@ -40,9 +40,34 @@ Just like that, you are using a global state. Note that the only difference betw
 
 ## Persisted store
 
-You could persist the state in the local-storage by just adding a name to the constructor of your global-store let's see.
+You could persist the state in the local-storage by just adding a name to the constructor of your global-store let's see. 
 ```
 const countStore = new GlobalStore(0, null, 'GLOBAL_COUNT');
+```
+
+## Customize persist storage
+
+Let suppose you don't like async storage, or you also want to implement some kind of secure storage. You could easily extends the GlobalStore Class, and customize your persist store implementation. 
+
+```
+import GlobalState from 'react-native-global-state-hooks';
+import secureStorage from 'react-native-secure-storage';
+import { IActionCollection } from 'react-native-global-state-hooks/lib/GlobalStoreTypes';
+
+export class SecureGlobalState<
+  IState,
+  IPersist extends string | null = null,
+  IsPersist extends boolean = IPersist extends null ? false : true,
+  IActions extends IActionCollection<IState> | null = null
+> extends GlobalState<IState, IPersist, IsPersist, IActions> {
+
+  protected asyncStorageGetItem = () => secureStorage.getItem(this.persistStoreAs as string, config);
+
+  protected asyncStorageSetItem = (value: string) => secureStorage.setItem(this.persistStoreAs as string, value, config);
+  
+}
+
+export default SecureGlobalState;
 ```
 
 ## Consuming Persisted Store

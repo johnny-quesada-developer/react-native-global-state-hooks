@@ -64,6 +64,10 @@ export class GlobalStore<
 
   protected getAsyncStoreItemPromise: Promise<IState> | null = null;
 
+  protected asyncStorageGetItem(): Promise<string | null> {
+    return asyncStorage.getItem(this.persistStoreAs as string);
+  }
+
   protected async getAsyncStoreItem(): Promise<IState> {
     if (this.isStoredStateItemUpdated) return this.storedStateItem as IState;
 
@@ -71,7 +75,7 @@ export class GlobalStore<
 
     this.getAsyncStoreItemPromise = new Promise((resolve) => {
       (async () => {
-        const item = await asyncStorage.getItem(this.persistStoreAs as string);
+        const item = await this.asyncStorageGetItem();
 
         if (item) {
           const value = JSON.parse(item) as IState;
@@ -88,6 +92,10 @@ export class GlobalStore<
     return this.getAsyncStoreItemPromise;
   }
 
+  protected async asyncStorageSetItem(valueToStore: string): Promise<void> {
+    await asyncStorage.setItem(this.persistStoreAs as string, valueToStore);
+  }
+
   protected async setAsyncStoreItem(): Promise<void> {
     if (this.storedStateItem === this.state) return;
 
@@ -95,7 +103,7 @@ export class GlobalStore<
 
     const valueToStore = isPrimitive(this.state) ? this.state : this.formatToStore(cloneDeep(this.state));
 
-    await asyncStorage.setItem(this.persistStoreAs as string, JSON.stringify(valueToStore));
+    await this.asyncStorageSetItem(JSON.stringify(valueToStore));
   }
 
   public getPersistStoreValue = () => async (): Promise<IState> => this.getAsyncStoreItem();
