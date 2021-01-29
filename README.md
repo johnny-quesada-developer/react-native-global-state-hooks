@@ -45,6 +45,14 @@ You could persist the state in the local-storage by just adding a name to the co
 const countStore = new GlobalStore(0, null, 'GLOBAL_COUNT');
 ```
 
+## Consuming Persisted Store
+```
+const [state, setter, isUpdated] = useCount();
+```
+
+with the persist storage, the first time the hooks is called the same is gonna return the initial value, at the same time will perform an async request to the persist storage in order to get the stored value, to validate if that call was already performed, youl'll get an extra boolean item in the resulted array.
+
+
 ## Customize persist storage
 
 Let suppose you don't like async storage, or you also want to implement some kind of secure storage. You could easily extends the GlobalStore Class, and customize your persist store implementation. 
@@ -69,31 +77,6 @@ export class SecureGlobalState<
 
 export default SecureGlobalState;
 ```
-
-## Consuming Persisted Store
-```
-const [refresh, setter, state, isUpdated] = useCount();
-
-useEffect(() => {
-  refresh();
-}, []);
-
-```
-With the persistent storage, I preferred to change a little the format of the result... To let know developers what they are doing, because **asyncStorage** is ASYNC, so if I were automatically updating the state the first time that the hook is called, it could be ending into an INEXPLICABLE re-render of components...
-
-But even with the above, you could still automatically adding that behavior if you want, just by wrapping the hook:
-```
-export const usePersistedCount = () => {
-  const [refresh, setter, state, isUpdated] = useCount();
-
-  useEffect(() => {
-    refresh();
-  }, []);
-
-  return [state, setter, isUpdated];
-}
-```
-Don't worry about calling the refresh method every time you reuse the hook, that use case is already being handled by the GlobalState, and is not gonna perform any re-render... actually is just gonna read the asyncStorage the first time that you'll call the REFRESH method. Again this is strongly typed, so you'll don't have to guess what is happening.
 
 ## Creating hooks with reusable actions
 
@@ -154,14 +137,17 @@ The above step is necessary to get the correct typing of the parameters of your 
 Finally, if you want to access the global state outside a component, or without subscribing the component to the state changes... 
 
 This is especially useful when you want to reuse an action into another one, or when you wrote components that have edition access to a certain store, but they actually don't need to be reactive to the state changes, like a search component that just need to get the current state every time is gonna search the data, but actually don't need to hear all changes over the collection he is gonna be filtering. 
+
 ```
 export const useCount = countStore.getHook<ICountActions>();
-export const useCountDecoupled = countStore.getHookDecoupled<ICountActions>();
+
+export const [getCountValue, countActions] = countStore.getHookDecoupled<ICountActions>()();
+
 ```
 
 Let's see a trivial example: 
 ```
-import { useCount, useCountDecoupled } from './count'
+import { useCount, countActions } from './count'
 
 function Stage1() {
   const [count] = useCount();
@@ -170,9 +156,8 @@ function Stage1() {
 }
 
 function Stage2() {
-  const [, actions] = useCountDecoupled();
-  const increaseClick = useCallback(() => actions.plus(1), []);
-  const decreaseClick = useCallback(() => actions.decrease(1), []);
+  const increaseClick = useCallback(() => countActions.plus(1), []);
+  const decreaseClick = useCallback(() => countActions.decrease(1), []);
 
   return (<>
       <button onPress={increaseClick}>increase<button/>

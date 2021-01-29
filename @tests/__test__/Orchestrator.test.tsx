@@ -1,4 +1,4 @@
-import * as Hooks from '../globalStates';
+import * as hooksDecoupled from '../hooksDecoupled';
 import Orchestrator from '../Orchestrator';
 import React from 'react';
 import ReactDom from 'react-dom';
@@ -36,7 +36,7 @@ describe('Orchestrator', () => {
   });
 
   describe('hooks', () => {
-    const testNumericHook = (hookName: keyof typeof Hooks) => {
+    const testNumericHook = (hookName: keyof typeof hooksDecoupled) => {
       let orchestratorWrapper: renderer.ReactTestRenderer;
       let getter: any;
       let setter: any;
@@ -47,7 +47,7 @@ describe('Orchestrator', () => {
 
       beforeEach(async () => {
         orchestratorWrapper = await createOrchestrator();
-        ([getter, setter] = Hooks[hookName]());
+        [getter, setter] = hooksDecoupled[hookName];
         increaseValue = () => Promise.resolve();
         decreaseValue = () => Promise.resolve();
 
@@ -127,24 +127,24 @@ describe('Orchestrator', () => {
       });
     };
 
-    describe('useCountStoreDecoupled', () => {
-      testNumericHook('useCountStoreDecoupled');
+    describe('countStoreDecoupled', () => {
+      testNumericHook('countStoreDecoupled');
     });
 
-    describe('useCountPercistDecoupled', () => {
-      testNumericHook('useCountPercistDecoupled');
+    describe('countPercistDecoupled', () => {
+      testNumericHook('countPercistDecoupled');
     });
 
-    describe('useCountWithActionsDecoupled', () => {
-      testNumericHook('useCountWithActionsDecoupled');
+    describe('countWithActionsDecoupled', () => {
+      testNumericHook('countWithActionsDecoupled');
     });
 
-    describe('useCountWithActionsTypedDecoupled', () => {
-      testNumericHook('useCountWithActionsTypedDecoupled');
+    describe('countWithActionsTypedDecoupled', () => {
+      testNumericHook('countWithActionsTypedDecoupled');
     });
 
-    describe('useCountWithActionsDecoupledP', () => {
-      testNumericHook('useCountWithActionsDecoupledP');
+    describe('countWithActionsDecoupledP', () => {
+      testNumericHook('countWithActionsDecoupledP');
     });
   });
 });

@@ -106,23 +106,23 @@ export class GlobalStore<
     await this.asyncStorageSetItem(JSON.stringify(valueToStore));
   }
 
-  public getPersistStoreValue = () => async (): Promise<IState> => this.getAsyncStoreItem();
-
   protected getStateCopy = (): IState => Object.freeze(cloneDeep(this.state));
 
   public getHook = <
     IApi extends IGlobalStore.ActionCollectionResult<IActions> | null = IActions extends null ? null : IGlobalStore.ActionCollectionResult<IActions>
   >() => (): [
-    IPersist extends string ? () => Promise<IState> : IState,
+    IState,
     IGlobalStore.IHookResult<IState, IActions, IApi>,
-    IsPersist extends true ? IState : null,
     IsPersist extends true ? boolean : null,
   ] => {
     const [value, setter] = useState(this.state);
-    const valueWrapper: (() => Promise<IState>) | IState = this.isPersistStore ? this.getPersistStoreValue() : value;
 
     useEffect(() => {
       this.subscribers.push(setter as IGlobalStore.StateSetter<IState>);
+
+      if (this.isPersistStore) {
+        this.getAsyncStoreItem();
+      }
 
       return () => {
         this.subscribers = this.subscribers.filter((hook) => setter !== hook);
@@ -130,28 +130,20 @@ export class GlobalStore<
     }, []);
 
     return [
-      valueWrapper as IPersist extends string ? () => Promise<IState> : IState,
+      value,
       this.stateOrchestrator as IGlobalStore.IHookResult<IState, IActions, IApi>,
-      this.state as IsPersist extends true ? IState : null,
       this.isStoredStateItemUpdated as IsPersist extends true ? boolean : null,
     ];
   };
 
   public getHookDecoupled = <
     IApi extends IGlobalStore.ActionCollectionResult<IActions> | null = IActions extends null ? null : IGlobalStore.ActionCollectionResult<IActions>
-  >() => (): [
-    () => IPersist extends string ? Promise<IState> : IState,
-    IGlobalStore.IHookResult<IState, IActions, IApi>,
-    IsPersist extends true ? IState : null,
-    IsPersist extends true ? boolean : null,
-  ] => {
-    const valueWrapper = this.isPersistStore ? this.getPersistStoreValue() : () => this.state;
+  > (): [() => IPersist extends string ? Promise<IState> : IState, IGlobalStore.IHookResult<IState, IActions, IApi>] => {
+    const valueWrapper = this.isPersistStore ? this.getAsyncStoreItem() : () => this.state;
 
     return [
       valueWrapper as () => IPersist extends string ? Promise<IState> : IState,
       this.stateOrchestrator as IGlobalStore.IHookResult<IState, IActions, IApi>,
-      this.state as IsPersist extends true ? IState : null,
-      this.isStoredStateItemUpdated as IsPersist extends true ? boolean : null,
     ];
   };
 

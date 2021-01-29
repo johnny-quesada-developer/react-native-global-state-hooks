@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { StageTitle } from './fixtures';
 import {
   useCountStore, useCountPercist, useCountWithActions, useCountWithActionsTyped, useCountWithActionsP,
-} from './globalStates';
+} from './hooks';
 
 export const Stage1 = () => {
   const [count, setCount] = useCountStore();

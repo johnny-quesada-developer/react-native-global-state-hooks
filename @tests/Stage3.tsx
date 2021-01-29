@@ -1,19 +1,19 @@
 import React, { useCallback } from 'react';
 import { StageTitle } from './fixtures';
 import {
-  useCountStoreDecoupled,
-  useCountPercistDecoupled,
-  useCountWithActionsDecoupled,
-  useCountWithActionsTypedDecoupled,
-  useCountWithActionsDecoupledP,
-} from './globalStates';
+  countStoreDecoupled,
+  countPercistDecoupled,
+  countWithActionsDecoupled,
+  countWithActionsTypedDecoupled,
+  countWithActionsDecoupledP,
+} from './hooksDecoupled';
 
 export const Stage3 = () => {
-  const [, setCount] = useCountStoreDecoupled();
-  const [, setCountP] = useCountPercistDecoupled();
-  const [, setCountWA] = useCountWithActionsDecoupled();
-  const [, setCountWAT] = useCountWithActionsTypedDecoupled();
-  const [, setCountWAP] = useCountWithActionsDecoupledP();
+  const [, setCount] = countStoreDecoupled;
+  const [, setCountP] = countPercistDecoupled;
+  const [, setCountWA] = countWithActionsDecoupled;
+  const [, setCountWAT] = countWithActionsTypedDecoupled;
+  const [, setCountWAP] = countWithActionsDecoupledP;
 
   const onPressCount = useCallback(() => setCount((count) => count + 1), []);
   const onPressCountP = useCallback(() => setCountP((countP) => countP + 1), []);

@@ -73,22 +73,19 @@ export interface IGlobalState<
   * @return [currentState, GlobalState.IHookResult<IState, IActions, IApi>, initialStatePersistStorage | null, isUpdatedPersistStorage | null]
   */
   getHook: <IApi extends IActions extends ActionCollectionResult<IActions> ? ActionCollectionResult<IActions> : null>() => () => [
-    IPersist extends string ? () => Promise<IState> : IState,
+    IState,
     IHookResult<IState, IActions, IApi>,
-    IsPersist extends true ? IState : null,
     IsPersist extends true ? boolean : null,
   ];
 
   /**
   * This is an access to the subscribers queue and to the current state of a specific store...
   * THIS IS NOT A REACT-HOOK, so you could use it everywhere example other hooks, and services.
-  * @return [currentState, GlobalState.IHookResult<IState, IActions, IApi>, initialStatePersistStorage | null, isUpdatedPersistStorage | null]
+  * @return [currentState, GlobalState.IHookResult<IState, IActions, IApi>]
   */
-  getHookDecoupled: <IApi extends IActions extends ActionCollectionResult<IActions> ? ActionCollectionResult<IActions> : null>() => () => [
+  getHookDecoupled: <IApi extends IActions extends ActionCollectionResult<IActions> ? ActionCollectionResult<IActions> : null>() => [
     () => IPersist extends string ? Promise<IState> : IState,
     IHookResult<IState, IActions, IApi>,
-    IsPersist extends true ? IState : null,
-    IsPersist extends true ? boolean : null,
   ];
 }
 
