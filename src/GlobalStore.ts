@@ -30,6 +30,12 @@ export class GlobalStore<
   private storedStateItem: IState | undefined = undefined;
 
   protected formatItemFromStore<T>(obj: T): any {
+    const isArray = Array.isArray(obj);
+
+    if (isArray) {
+      return (obj as unknown as Array<any>).map((item) => this.formatItemFromStore(item));
+    }
+
     return Object.keys(obj).filter((key) => !key.includes('_type')).reduce((acumulator, key) => {
       const type: string = obj[`${key}_type` as keyof T] as unknown as string;
       const unformatedValue = obj[key as keyof T];
@@ -50,6 +56,12 @@ export class GlobalStore<
   }
 
   protected formatToStore<T>(obj: T): any {
+    const isArray = Array.isArray(obj);
+
+    if (isArray) {
+      return (obj as unknown as Array<any>).map((item) => this.formatToStore(item));
+    }
+
     return Object.keys(obj).reduce((acumulator, key) => {
       const value = obj[key as keyof T];
       const isDatetime = value instanceof Date;
