@@ -144,7 +144,7 @@ describe('Orchestrator', () => {
     });
 
     describe('countWithActionsDecoupledP', () => {
-      testNumericHook('countWithActionsDecoupledP');
+      testNumericHook('countWithActionsDecoupledPersisted');
     });
   });
 });

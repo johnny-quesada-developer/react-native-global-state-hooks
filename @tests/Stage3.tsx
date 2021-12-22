@@ -5,16 +5,16 @@ import {
   countPercistDecoupled,
   countWithActionsDecoupled,
   countWithActionsTypedDecoupled,
-  countWithActionsDecoupledP,
+  countWithActionsDecoupledPersisted,
 } from './hooksDecoupled';
 
-export const Stage3 = () => {
-  const [, setCount] = countStoreDecoupled;
-  const [, setCountP] = countPercistDecoupled;
-  const [, setCountWA] = countWithActionsDecoupled;
-  const [, setCountWAT] = countWithActionsTypedDecoupled;
-  const [, setCountWAP] = countWithActionsDecoupledP;
+const [, setCount] = countStoreDecoupled;
+const [, setCountP] = countPercistDecoupled;
+const [, setCountWA] = countWithActionsDecoupled;
+const [, setCountWAT] = countWithActionsTypedDecoupled;
+const [, setCountWAP] = countWithActionsDecoupledPersisted;
 
+export const Stage3 = () => {
   const onPressCount = useCallback(() => setCount((count) => count + 1), []);
   const onPressCountP = useCallback(() => setCountP((countP) => countP + 1), []);
 

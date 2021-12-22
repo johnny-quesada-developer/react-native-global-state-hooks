@@ -14,4 +14,4 @@ export const countWithActionsTypedDecoupled = countStoreWithActionsTyped.getHook
 
 export const countStoreWithActionsPersistDecoupled = countStoreWithActionsPersist.getHookDecoupled<ICountActions>();
 
-export const countWithActionsDecoupledP = countStoreWithActionsPersist.getHookDecoupled<ICountActions>();
+export const countWithActionsDecoupledPersisted = countStoreWithActionsPersist.getHookDecoupled<ICountActions>();

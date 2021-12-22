@@ -13,4 +13,4 @@ export const useCountWithActions = countStoreWithActions.getHook();
 
 export const useCountWithActionsTyped = countStoreWithActionsTyped.getHook<ICountActions>();
 
-export const useCountWithActionsP = countStoreWithActionsPersist.getHook<ICountActions>();
+export const useCountWithActionsPersisted = countStoreWithActionsPersist.getHook<ICountActions>();

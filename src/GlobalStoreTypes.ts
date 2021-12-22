@@ -1,32 +1,40 @@
 /**
 * @param {StateSetter<IState>} setter - add a new value to the state
-* @returns {Promise<void>} result - resolves when update_batches finished
+* @returns {void} result - void
 */
 export type StateSetter<IState> = (
-  setter: Partial<IState> | ((state: IState) => Partial<IState>),
-) => Promise<void>;
+  setter: IState | ((state: IState) => IState),
+) => void;
 
 /**
 * This is the structure required by the API actions in order to be able to capture action parameters and inject state setter into actions.
 */
-export type IAction<IState> = <IResult>(
+export type IActionConfig<IState> = (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ...params: any[]
-) => (setter: StateSetter<IState>, currentState: IState) => Promise<unknown> | IResult;
+) => (setter: StateSetter<IState>, currentState: IState) => Promise<unknown>;
 
 /**
 * Configuration of you API
 */
-export interface IActionCollection<IState> {
-  [key: string]: IAction<IState>;
+export interface IActionCollectionConfig<IState> {
+  [key: string]: IActionConfig<IState>;
+}
+
+/**
+* This should be the API format of the hook (if you passed an API as a parameter)
+*/
+export interface IActionCollectionResult {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: (...params: any[]) => Promise<unknown>;
 }
 
 /**
 * This is the API result of the hook (if you passed an API as a parameter)
 */
-export type ActionCollectionResult<IActions> = {
+export type ActionCollectionResult<IState, IActions extends IActionCollectionConfig<IState> | null> = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key in keyof IActions]: <IResult>(...params: any[]) => any | IResult;
+  [key in keyof IActions]: (...params: any[]) => unknown;
 };
 
 /**
@@ -34,12 +42,12 @@ export type ActionCollectionResult<IActions> = {
 */
 export type IHookResult<
   IState,
-  IActions extends IActionCollection<IState> | null = null,
-  IApi extends ActionCollectionResult<IActions> | null = IActions extends null ? null : ActionCollectionResult<IActions>
+  IActions extends IActionCollectionConfig<IState> | null = null,
+  IApi extends ActionCollectionResult<IState, IActions> | null = IActions extends null ? null : ActionCollectionResult<IState, IActions>
 > = IApi extends null
   ? StateSetter<IState>
-  : IActions extends IActionCollection<IState>
-  ? IApi extends ActionCollectionResult<IActions>
+  : IActions extends IActionCollectionConfig<IState>
+  ? IApi extends ActionCollectionResult<IState, IActions>
     ? IApi
     : StateSetter<IState>
   : StateSetter<IState>;
@@ -61,7 +69,7 @@ export interface IGlobalState<
   IState,
   IPersist extends string | null = null,
   IsPersist extends boolean = IPersist extends null ? false : true,
-  IActions extends IActionCollection<IState> | null = null
+  IActions extends IActionCollectionConfig<IState> | null = null
 > {
 
   persistStoreAs: IPersist;
@@ -72,7 +80,7 @@ export interface IGlobalState<
   * Returns a global hook that will share information across components by subscribing them to a specific store.
   * @return [currentState, GlobalState.IHookResult<IState, IActions, IApi>, initialStatePersistStorage | null, isUpdatedPersistStorage | null]
   */
-  getHook: <IApi extends IActions extends ActionCollectionResult<IActions> ? ActionCollectionResult<IActions> : null>() => () => [
+  getHook: <IApi extends IActions extends ActionCollectionResult<IState, IActions> ? ActionCollectionResult<IState, IActions> : null>() => () => [
     IState,
     IHookResult<IState, IActions, IApi>,
     IsPersist extends true ? boolean : null,
@@ -83,7 +91,7 @@ export interface IGlobalState<
   * THIS IS NOT A REACT-HOOK, so you could use it everywhere example other hooks, and services.
   * @return [currentState, GlobalState.IHookResult<IState, IActions, IApi>]
   */
-  getHookDecoupled: <IApi extends IActions extends ActionCollectionResult<IActions> ? ActionCollectionResult<IActions> : null>() => [
+  getHookDecoupled: <IApi extends IActions extends ActionCollectionResult<IState, IActions> ? ActionCollectionResult<IState, IActions> : null>() => [
     () => IPersist extends string ? Promise<IState> : IState,
     IHookResult<IState, IActions, IApi>,
   ];
@@ -96,7 +104,7 @@ export interface IGlobalStateFactory<
   IState,
   IPersist extends string | null = null,
   IsPersist extends boolean = IPersist extends null ? false : true,
-  IActions extends IActionCollection<IState> | null = null
+  IActions extends IActionCollectionConfig<IState> | null = null
 > extends IGlobalState<IState, IPersist, IsPersist, IActions> {
 
 }

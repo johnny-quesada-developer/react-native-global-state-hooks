@@ -1,163 +1,101 @@
 # react-native-global-state-hooks
-This is a package to easily handling global-state across your react-native-components No-redux, No-context.
+This is a package to easily handling global-state across your react-native-components **No-redux**.
 
-This utility follows the same style as the default useState hook, this in order to be an intuitive tool to help you to quickly migrate from complex options as redux to the new react-hooks.
+This utility follows the same style as the default **useState** hook, this in order to be intuitive and easy to use
 
 **after version 1.0.4, we migrated to @react-native-async-storage/async-storage, because @react-native-async-storage/async-storage has been deprecated!!**
 
 ## Creating a global store, an a simple hook
 
-We are gonna create a global count example **count.ts**:
+We are gonna create a global count example **useCountGlobal.ts**:
 
-```
+```JSX
 import GlobalStore from 'react-native-global-state-hooks';
 
 const countStore = new GlobalStore(0);
 
-export const useCount = countStore.getHook();
+export const useCountGlobal = countStore.getHook();
 ```
 
 That's it, that's a global store... Strongly typed, with a global-hook that we could reuse cross all our react-components.
 
 ## Consuming global hook
-Let's say we have two components stage1, stage2, in order to use our global hook they will look just like: 
-```
-import { useCount } from './count'
+Let's say we have two components **Stage1**, **Stage2**, in order to use our global hook they will look just like: 
+```JSX
+import { useCountGlobal } from './useCountGlobal'
 
-function Stage1() {
-  const [count, setter] = useCount();
-  const onClick = useCallback(() => setter(currentState => currentState + 1), []);
-  return (<button onPress={onClick}>count: {count}<button/>);
+const Stage1: React.FC = () => {
+  const [count, setter] = useCountGlobal();
+  const onClickAddOne = () => setter(count + 1);
+
+  return (<button onPress={onClickAddOne}>count: {count}<button/>);
 }
 
-function Stage2() {
-  const [count, setter] = useCount();
-  const onClick = useCallback(() => setter(currentState => currentState + 1));
-  return (<button onPress={onClick}>count: {count}<button/>);
+const Stage2: React.FC = () => {
+  const [count, setter] = useCountGlobal();
+  const onClickAddTwo = () => setter(count + 2);
+  
+  return (<button onPress={onClickAddTwo}>count: {count}<button/>);
 }
 ```
-Just like that, you are using a global state. Note that the only difference between this and the default useState hook is that you are not adding the initial value, cause you already did that when you created the store. 
+
+Just like that! You now are using a global state. 
+
+Note that the only difference between this and the default **useState** hook is that you are not adding the initial value, cause you already did that when you created the store:
+```JSX
+const countStore = new GlobalStore(0);
+```
 
 ## Persisted store
 
-You could persist the state in the local-storage by just adding a name to the constructor of your global-store let's see. 
-```
+You could persist the state in the **async-storage** by just adding the **key-name** to the constructor of your global-store, for example: 
+```JSX
+// The FIRST parameter is the initial value of the state
+// The Second parameter is an API to restrict access to the state, will talk about that later.
+// The Third parameter is the key that will use on the async-storage
 const countStore = new GlobalStore(0, null, 'GLOBAL_COUNT');
 ```
 
 ## Consuming Persisted Store
-```
-const [state, setter, isUpdated] = useCount();
-```
 
-with the persist storage, the first time the hooks is called the same is gonna return the initial value, at the same time will perform an async request to the persist storage in order to get the stored value, to validate if that call was already performed, youl'll get an extra boolean item in the resulted array.
-
-
-## Customize persist storage
-
-Let suppose you don't like async storage, or you also want to implement some kind of secure storage. You could easily extends the GlobalStore Class, and customize your persist store implementation. 
-
-```
-import GlobalState from 'react-native-global-state-hooks';
-import secureStorage from 'react-native-secure-storage';
-import { IActionCollection } from 'react-native-global-state-hooks/lib/GlobalStoreTypes';
-
-export class SecureGlobalState<
-  IState,
-  IPersist extends string | null = null,
-  IsPersist extends boolean = IPersist extends null ? false : true,
-  IActions extends IActionCollection<IState> | null = null
-> extends GlobalState<IState, IPersist, IsPersist, IActions> {
-
-  protected asyncStorageGetItem = () => secureStorage.getItem(this.persistStoreAs as string, config);
-
-  protected asyncStorageSetItem = (value: string) => secureStorage.setItem(this.persistStoreAs as string, value, config);
-  
-}
-
-export default SecureGlobalState;
+```JSX
+const [count, setCount, isCountUpdated] = useCountGlobal();
 ```
 
-## Creating hooks with reusable actions
-
-Let's say you want to have a STATE with a specific set of actions that you could be reused. With this library is pretty easy to accomplish. Let's create **plus** and **decrease** actions to our COUNT-store. **count.ts**:
-
-```
-import * as IGlobalState from 'react-native-global-state-hooks/lib/GlobalStoreTypes';
-import GlobalStore from 'react-native-global-state-hooks';
-
-const countStore = new GlobalStore(0, {
-  plus: (increase: number) => async (setter: IGlobalStore.StateSetter<number>, currentState: number) => {
-    // perfom whatever login you want
-    setter(currentState + increase);
-  },
-  decrease: (decrease: number) => async (setter: IGlobalStore.StateSetter<number>, currentState: number) => {
-    // perfom whatever login you want
-    setter(currentState - decrease);
-  },
-});
-
-export const useCount = countStore.getHook();
-
-```
-
-Now the result of our useCount will return our actions instead of a simple setter... Let's see:
-
-```
-import { useCount } from './count'
-
-function Stage1() {
-  const [count, actions] = useCount();
-  const increaseClick = useCallback(() => actions.plus(1), []);
-  const decreaseClick = useCallback(() => actions.decrease(1), []);
-
-  return (<>
-      <label>{count}<label/><br/>
-      <button onPress={increaseClick}>increase<button/>
-      <button onPress={decreaseClick}>decrease<button/>
-    </>);
-}
-
-```
-
-You could also type the API contract, in order to take more advantage of typescript, just by passing an interface to getHook method:
-
-```
-export interface ICountActions {
-  plus: (increase: number) => Promise<void>,
-  decrease: (decrease: number) => Promise<void>,
-}
-
-export const useCount = countStore.getHook<ICountActions>();
-```
-The above step is necessary to get the correct typing of the parameters of your actions, otherwise, you'll get the name of the actions but the parameters would be all TYPE-ANY
+**isCountUpdated**: With the persist storage, the first time the hooks is called the same is gonna return the default value declared in the **new GlobalStore**, at the same time will perform an **async** request to the **async-storage** in order to get the stored value, to validate if that call was already performed, youl'll get an extra boolean value.
 
 ## Decoupled hook
 
-Finally, if you want to access the global state outside a component, or without subscribing the component to the state changes... 
+```JSX
+import GlobalStore from 'react-native-global-state-hooks';
 
-This is especially useful when you want to reuse an action into another one, or when you wrote components that have edition access to a certain store, but they actually don't need to be reactive to the state changes, like a search component that just need to get the current state every time is gonna search the data, but actually don't need to hear all changes over the collection he is gonna be filtering. 
+const countStore = new GlobalStore(0);
+
+export const useCountGlobal = countStore.getHook();
+
+export const [getCountGlobalValue, setCountGlobalValue] = countStore.getHookDecoupled();
 
 ```
-export const useCount = countStore.getHook<ICountActions>();
 
-export const [getCountValue, countActions] = countStore.getHookDecoupled<ICountActions>()();
+If you want to access the global state outside a component or outside a hook, or without subscribing the component to the state changes... 
 
-```
+This is especially useful when you want to create components that have edition access to a certain store, but they actually don't need to be reactive to the state changes, like a search component that just need to get the current state every time that is going to search the data; but actually don't need to be subscribed to the changes over the collection he is going to be filtering. 
+
 
 Let's see a trivial example: 
-```
-import { useCount, countActions } from './count'
+```JSX
+import { useCountGlobal, setCountGlobalValue } from './useCountGlobal'
 
-function Stage1() {
-  const [count] = useCount();
+const Stage1: React.FC = () => {
+  const [count] = useCountGlobal();
 
   return (<label>{count}<label/><br/>);
 }
 
-function Stage2() {
-  const increaseClick = useCallback(() => countActions.plus(1), []);
-  const decreaseClick = useCallback(() => countActions.decrease(1), []);
+// Stage2 does not need to be updated once the global count changes
+const Stage2: React.FC = () => {
+  const increaseClick = () => setCountGlobalValue(count => count + 1);
+  const decreaseClick = () => setCountGlobalValue(count => count - 1);
 
   return (<>
       <button onPress={increaseClick}>increase<button/>
@@ -166,17 +104,10 @@ function Stage2() {
 }
 ```
 
-Now our stage 1, is just listening to the changes of the state, while stage 2 is just acting as an orchestrator, but stage 2 is not actively listening to state changes, so, actually is not gonna be re-render while stage 1 does. 
-
-# Important notes:
-Are concern about performance? this library is for you, instead of handling huge complex stores with options like redux, or by passing the setState to a context Provider (because of the limitations that the context has)... If does, You should just use this library, we are using the more atomic and 'native' way that REACT gives to handle the state, and that is the hook **useState**... 
-
-This utility is just including the implementation of the use state into a subscriber pattern, to enable you to create hooks that will be subscribed to specific store changes, does how we'll be creating a global state hook. 
-
 ## Advantages:
 1. Using REACT's simplest and default way to deal with the state.
-2. Adding partial state designations (This is not on useState default functionality)
-3. Added availability to create actions and decoupled access to the states, no more connects, and dispatches, just call your actions as a normal service of whatever other libraries.
-4. This library is already taking care of avoiding re-renders if the new state does not have changes
-5. This library also is taking care of batching multiple stores updates by using **React unstable_batchedUpdates**; this is a problem that the **useState** have when you call multiple **setStates** into async flows as setTimeout
-6. This tool also take care for you to avoid localStorage data to lose the data types that you stored. For example when you are using datetimes
+2. This library also is taking care of batching multiple stores updates by using **React unstable_batchedUpdates**; this is a problem that the **useState** have when you call multiple **setStates** into async flows as setTimeout
+3. This tool also take care for you to avoid **async-storage*** data to lose the data types that you stored. For example when you are using datetimes
+
+## Advance Config
+[README]:./README.advance.md
