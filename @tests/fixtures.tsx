@@ -13,7 +13,7 @@ export interface ICountActionsConfig extends IGlobalState.IActionCollectionConfi
   increase: (increase: number) => (setter: IGlobalState.StateSetter<number>, state: number) => Promise<void>,
 }
 
-export interface ICountActions extends IGlobalState.IActionCollectionResult {
+export interface ICountActions extends IGlobalState.IActionCollectionResult<number, ICountActionsConfig> {
   decrease: (decrease: number) => Promise<void>,
   increase: (increase: number) => Promise<void>,
 }

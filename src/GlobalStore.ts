@@ -120,8 +120,8 @@ export class GlobalStore<
   protected getStateCopy = (): IState => Object.freeze(cloneDeep(this.state));
 
   public getHook = <
-    IApi extends IGlobalStore.ActionCollectionResult<IState, IActions> |
-    null = IActions extends null ? null : IGlobalStore.ActionCollectionResult<IState, IActions>
+    IApi extends IGlobalStore.IActionCollectionResult<IState, IActions> |
+    null = IActions extends null ? null : IGlobalStore.IActionCollectionResult<IState, IActions>
   >() => (): [
     IState,
     IGlobalStore.IHookResult<IState, IActions, IApi>,
@@ -149,8 +149,8 @@ export class GlobalStore<
   };
 
   public getHookDecoupled = <
-    IApi extends IGlobalStore.ActionCollectionResult<IState, IActions> |
-    null = IActions extends null ? null : IGlobalStore.ActionCollectionResult<IState, IActions>
+    IApi extends IGlobalStore.IActionCollectionResult<IState, IActions> |
+    null = IActions extends null ? null : IGlobalStore.IActionCollectionResult<IState, IActions>
   > (): [() => IPersist extends string ? Promise<IState> : IState, IGlobalStore.IHookResult<IState, IActions, IApi>] => {
     const valueWrapper = this.isPersistStore ? this.getAsyncStoreItem() : () => this.state;
 
@@ -160,20 +160,20 @@ export class GlobalStore<
     ];
   };
 
-  private _stateOrchestrator: IGlobalStore.StateSetter<IState> | IGlobalStore.ActionCollectionResult<IState, IActions> | null = null;
+  private _stateOrchestrator: IGlobalStore.StateSetter<IState> | IGlobalStore.IActionCollectionResult<IState, IActions> | null = null;
 
-  protected get stateOrchestrator(): IGlobalStore.StateSetter<IState> | IGlobalStore.ActionCollectionResult<IState, IActions> {
+  protected get stateOrchestrator(): IGlobalStore.StateSetter<IState> | IGlobalStore.IActionCollectionResult<IState, IActions> {
     if (this._stateOrchestrator) return this._stateOrchestrator;
 
     if (this.actions) {
-      this._stateOrchestrator = this.getActions() as IGlobalStore.ActionCollectionResult<IState, IActions>;
+      this._stateOrchestrator = this.getActions() as IGlobalStore.IActionCollectionResult<IState, IActions>;
     } else if (this.persistStoreAs) {
       this._stateOrchestrator = this.globalSetterToPersistStoreAsync as IGlobalStore.StateSetter<IState>;
     } else {
       this._stateOrchestrator = this.globalSetterAsync as IGlobalStore.StateSetter<IState>;
     }
 
-    return this._stateOrchestrator as IGlobalStore.StateSetter<IState> | IGlobalStore.ActionCollectionResult<IState, IActions>;
+    return this._stateOrchestrator as IGlobalStore.StateSetter<IState> | IGlobalStore.IActionCollectionResult<IState, IActions>;
   }
 
   /**
@@ -229,7 +229,7 @@ export class GlobalStore<
     GlobalStore.ExecutePendingBatchesCallbacks = [];
   }, 0);
 
-  protected getActions = <IApi extends IGlobalStore.ActionCollectionResult<IState, IGlobalStore.IActionCollectionConfig<IState>>>(): IApi => {
+  protected getActions = <IApi extends IGlobalStore.IActionCollectionResult<IState, IGlobalStore.IActionCollectionConfig<IState>>>(): IApi => {
     const actions = this.actions as IGlobalStore.IActionCollectionConfig<IState>;
     // Setter is allways async because of the render batch
     // but we are typing the setter as synchronous to avoid the developer has extra complexity that useState do not handle

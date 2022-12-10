@@ -1,6 +1,6 @@
 {
   "name": "react-native-global-state-hooks",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "This is a package to easily handling global-state across your react-native-components No-redux",
   "main": "lib/GlobalStore.js",
   "files": [
