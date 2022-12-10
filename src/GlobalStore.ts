@@ -3,7 +3,6 @@ import {
   cloneDeep, debounce, isNil, isNumber, isBoolean, isString,
 } from 'lodash';
 import asyncStorage from '@react-native-async-storage/async-storage';
-import ReactDOM from 'react-dom';
 import * as IGlobalStore from './GlobalStoreTypes';
 
 export const isPrimitive = <T>(value: T) => isNil(value) || isNumber(value) || isBoolean(value) || isString(value) || typeof value === 'symbol';
@@ -36,7 +35,7 @@ export class GlobalStore<
       return (obj as unknown as Array<unknown>).map((item) => this.formatItemFromStore(item));
     }
 
-    return Object.keys(obj).filter((key) => !key.includes('_type')).reduce((acumulator, key) => {
+    return Object.keys(obj as Record<string, unknown>).filter((key) => !key.includes('_type')).reduce((acumulator, key) => {
       const type: string = obj[`${key}_type` as keyof T] as unknown as string;
       const unformatedValue = obj[key as keyof T];
       const isDateType = type === 'date';
@@ -62,7 +61,7 @@ export class GlobalStore<
       return (obj as unknown as Array<unknown>).map((item) => this.formatToStore(item));
     }
 
-    return Object.keys(obj).reduce((acumulator, key) => {
+    return Object.keys(obj as Record<string, unknown>).reduce((acumulator, key) => {
       const value = obj[key as keyof T];
       const isDatetime = value instanceof Date;
 
@@ -206,28 +205,28 @@ export class GlobalStore<
   };
 
   protected globalSetterAsync = async (setter: IState | ((state: IState) => IState)):
-    Promise<void> => new Promise((resolve) => this.globalSetter(setter, () => resolve()));
+    Promise<IState> => new Promise((resolve) => this.globalSetter(setter, () => resolve(this.state)));
 
-  protected globalSetterToPersistStoreAsync = async (setter: IState | ((state: IState) => IState)): Promise<void> => {
+  protected globalSetterToPersistStoreAsync = async (setter: IState | ((state: IState) => IState)): Promise<IState> => {
     await this.globalSetterAsync(setter);
     await this.setAsyncStoreItem();
+
+    return this.state;
   };
 
   static ExecutePendingBatchesCallbacks: (() => void)[] = [];
 
-  // avoid multiples calls to batchedUpdates
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  /**
+   * React native cannot use unstable_batchedUpdates, it does not have any effect
+  */
   static ExecutePendingBatches = debounce(() => {
-    const reactBatchedUpdates = ReactDOM.unstable_batchedUpdates || ((mock: () => void) => mock());
-
-    reactBatchedUpdates(() => {
-      GlobalStore.batchedUpdates.forEach(([execute]) => {
-        execute();
-      });
-      GlobalStore.batchedUpdates = [];
-      GlobalStore.ExecutePendingBatchesCallbacks.forEach((callback) => callback());
-      GlobalStore.ExecutePendingBatchesCallbacks = [];
+    GlobalStore.batchedUpdates.forEach(([execute]) => {
+      execute();
     });
+
+    GlobalStore.batchedUpdates = [];
+    GlobalStore.ExecutePendingBatchesCallbacks.forEach((callback) => callback());
+    GlobalStore.ExecutePendingBatchesCallbacks = [];
   }, 0);
 
   protected getActions = <IApi extends IGlobalStore.ActionCollectionResult<IState, IGlobalStore.IActionCollectionConfig<IState>>>(): IApi => {
@@ -245,6 +244,7 @@ export class GlobalStore<
             promise = setter(value);
             return promise;
           };
+
           const result = actions[key](...parameres)(setterWrapper, this.getStateCopy());
           const resultPromise = Promise.resolve(result) === result ? result : Promise.resolve();
 
