@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react';
 import {
-  cloneDeep, debounce, isNil, isNumber, isBoolean, isString,
+  cloneDeep, debounce, isNil, isNumber, isBoolean, isString, isDate,
 } from 'lodash';
 import asyncStorage from '@react-native-async-storage/async-storage';
 import * as IGlobalStore from './GlobalStoreTypes';
 
 export const isPrimitive = <T>(value: T) => isNil(value) || isNumber(value) || isBoolean(value) || isString(value) || typeof value === 'symbol';
 
+export type IValueWithMedaData = {
+  _type_?: 'map' | 'set' | 'date';
+  value?: unknown;
+}
+
 export class GlobalStore<
   IState,
-  IPersist extends string | null = null,
-  IsPersist extends boolean = IPersist extends null ? false : true,
+  IPersist extends string | null,
   IActions extends IGlobalStore.IActionCollectionConfig<IState> | null = null
-> implements IGlobalStore.IGlobalState<IState, IPersist, IsPersist, IActions> {
+> implements IGlobalStore.IGlobalState<IState, IPersist, IActions> {
 
   public subscribers: IGlobalStore.StateSetter<IState>[] = [];
 
@@ -20,7 +24,16 @@ export class GlobalStore<
     return !!this.persistStoreAs;
   }
 
-  constructor(protected state: IState, protected actions: IActions = null as IActions, public persistStoreAs: IPersist = null as IPersist) {}
+  constructor(
+    protected state: IState,
+    protected actions: IActions = null as IActions,
+    public persistStoreAs: IPersist = null as IPersist,
+
+    /**
+     * This function can be used to format the data after it is loaded from the asyncStorage
+    */
+    public onPersistStorageLoad: (obj: unknown) => (IState | null) = () => null,
+  ) {}
 
   private get isStoredStateItemUpdated() {
     return this.storedStateItem !== undefined;
@@ -28,47 +41,104 @@ export class GlobalStore<
 
   private storedStateItem: IState | undefined = undefined;
 
-  protected formatItemFromStore<T>(obj: T): unknown {
+  protected formatItemFromStore<T>(_obj: T): unknown {
+    const obj = _obj as T & IValueWithMedaData;
+
+    if (isPrimitive(obj)) {
+      return obj;
+    }
+
+    const isMetaDate = obj?._type_ === 'date';
+
+    if (isMetaDate) {
+      return new Date(obj.value as string);
+    }
+
+    const isMetaMap = obj?._type_ === 'map';
+
+    if (isMetaMap) {
+      const mapData: [string, unknown][] = (((obj.value as []) ?? []) as [string, unknown][]).map(([key, item]) => [
+        key,
+        this.formatItemFromStore(item),
+      ]);
+
+      return new Map(mapData);
+    }
+
+    const isMetaSet = obj?._type_ === 'set';
+
+    if (isMetaSet) {
+      const setData: unknown[] = (obj.value as []) ?? [].map((item) => this.formatItemFromStore(item));
+
+      return new Set(setData);
+    }
+
     const isArray = Array.isArray(obj);
 
     if (isArray) {
       return (obj as unknown as Array<unknown>).map((item) => this.formatItemFromStore(item));
     }
 
-    return Object.keys(obj as Record<string, unknown>).filter((key) => !key.includes('_type')).reduce((acumulator, key) => {
-      const type: string = obj[`${key}_type` as keyof T] as unknown as string;
-      const unformatedValue = obj[key as keyof T];
-      const isDateType = type === 'date';
+    const keys = Object.keys(obj as Record<string, unknown>);
 
-      if (isDateType) {
-        return {
-          ...acumulator,
-          [key]: new Date(unformatedValue as unknown as string),
-        };
-      }
+    return keys.reduce((acumulator, key) => {
+      const unformatedValue: unknown = obj[key as keyof T];
 
       return {
         ...acumulator,
-        [key]: isPrimitive(unformatedValue) ? unformatedValue : this.formatItemFromStore(unformatedValue),
+        [key]: this.formatItemFromStore(unformatedValue),
       };
     }, {});
   }
 
   protected formatToStore<T>(obj: T): unknown {
+    if (isPrimitive(obj)) {
+      return obj;
+    }
+
     const isArray = Array.isArray(obj);
 
     if (isArray) {
       return (obj as unknown as Array<unknown>).map((item) => this.formatToStore(item));
     }
 
-    return Object.keys(obj as Record<string, unknown>).reduce((acumulator, key) => {
+    const isMap = obj instanceof Map;
+
+    if (isMap) {
+      const pairs = Array.from((obj as Map<unknown, unknown>).entries());
+
+      return {
+        _type_: 'map',
+        value: pairs.map((pair) => this.formatToStore(pair)),
+      };
+    }
+
+    const isSet = obj instanceof Set;
+
+    if (isSet) {
+      const values = Array.from((obj as Set<unknown>).values());
+
+      return {
+        _type_: 'set',
+        value: values.map((value) => this.formatToStore(value)),
+      };
+    }
+
+    if (isDate(obj)) {
+      return {
+        _type_: 'date',
+        value: obj.toISOString(),
+      };
+    }
+
+    const keys = Object.keys(obj as Record<string, unknown>);
+
+    return keys.reduce((acumulator, key) => {
       const value = obj[key as keyof T];
-      const isDatetime = value instanceof Date;
 
       return ({
         ...acumulator,
-        [key]: isPrimitive(value) || isDatetime ? value : this.formatToStore(value),
-        [`${key}_type`]: isDatetime ? 'date' : typeof value,
+        [key]: this.formatToStore(value),
       });
     }, {});
   }
@@ -89,9 +159,12 @@ export class GlobalStore<
         const item = await this.asyncStorageGetItem();
 
         if (item) {
-          const value = JSON.parse(item) as IState;
-          const primitive = isPrimitive(value);
-          const newState = primitive || Array.isArray(value) ? value : this.formatItemFromStore(value) as IState;
+          let value = JSON.parse(item) as IState;
+
+          /** This allow users to review what is been stored */
+          value = this.onPersistStorageLoad(value) ?? value;
+
+          const newState = this.formatItemFromStore(value) as IState;
 
           await this.globalSetterAsync(newState);
         }
@@ -112,7 +185,7 @@ export class GlobalStore<
 
     this.storedStateItem = this.state;
 
-    const valueToStore = isPrimitive(this.state) ? this.state : this.formatToStore(cloneDeep(this.state));
+    const valueToStore = this.formatToStore(cloneDeep(this.state));
 
     await this.asyncStorageSetItem(JSON.stringify(valueToStore));
   }
@@ -125,7 +198,7 @@ export class GlobalStore<
   >() => (): [
     IState,
     IGlobalStore.IHookResult<IState, IActions, IApi>,
-    IsPersist extends true ? boolean : null,
+    IPersist extends null ? false : true extends true ? boolean : null,
   ] => {
     const [value, setter] = useState(() => this.state);
 
@@ -144,7 +217,7 @@ export class GlobalStore<
     return [
       value,
       this.stateOrchestrator as IGlobalStore.IHookResult<IState, IActions, IApi>,
-      this.isStoredStateItemUpdated as IsPersist extends true ? boolean : null,
+      this.isStoredStateItemUpdated as IPersist extends null ? false : true extends true ? boolean : null,
     ];
   };
 
@@ -256,6 +329,12 @@ export class GlobalStore<
       {} as IApi,
     );
   };
+
+  public deleteAsyncStoreItem = async (): Promise<void> => {
+    if (!this.isPersistStore) return;
+
+    await asyncStorage.removeItem(this.persistStoreAs as string);
+  }
 
 }
 

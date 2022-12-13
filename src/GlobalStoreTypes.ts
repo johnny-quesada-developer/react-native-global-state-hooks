@@ -60,7 +60,6 @@ export type IHookResult<
 export interface IGlobalState<
   IState,
   IPersist extends string | null = null,
-  IsPersist extends boolean = IPersist extends null ? false : true,
   IActions extends IActionCollectionConfig<IState> | null = null
 > {
 
@@ -69,13 +68,18 @@ export interface IGlobalState<
   isPersistStore: boolean;
 
   /**
+  * This function can be used to format the data after it is loaded from the asyncStorage
+  */
+  onPersistStorageLoad: (obj: unknown) => (IState | null);
+
+  /**
   * Returns a global hook that will share information across components by subscribing them to a specific store.
   * @return [currentState, GlobalState.IHookResult<IState, IActions, IApi>, initialStatePersistStorage | null, isUpdatedPersistStorage | null]
   */
   getHook: <IApi extends IActions extends IActionCollectionResult<IState, IActions> ? IActionCollectionResult<IState, IActions> : null>() => () => [
     IState,
     IHookResult<IState, IActions, IApi>,
-    IsPersist extends true ? boolean : null,
+    IPersist extends null ? false : true extends true ? boolean : null,
   ];
 
   /**
@@ -87,16 +91,6 @@ export interface IGlobalState<
     () => IPersist extends string ? Promise<IState> : IState,
     IHookResult<IState, IActions, IApi>,
   ];
-}
 
-/**
- * @deprecated This interface name is deprecated, use instead IGlobalState
- */
-export interface IGlobalStateFactory<
-  IState,
-  IPersist extends string | null = null,
-  IsPersist extends boolean = IPersist extends null ? false : true,
-  IActions extends IActionCollectionConfig<IState> | null = null
-> extends IGlobalState<IState, IPersist, IsPersist, IActions> {
-
+  deleteAsyncStoreItem: () => Promise<void>;
 }
