@@ -1,9 +1,8 @@
 /* eslint-disable max-nested-callbacks */
 /* eslint-disable camelcase */
-import { debounce } from 'lodash';
 import renderer from 'react-test-renderer';
 import ReactDom from 'react-dom';
-import GlobalStore from './src/GlobalStore';
+import GlobalStore, { debounce } from './src/GlobalStore';
 import * as Stage3All from './@tests/Stage3';
 import * as Stage2All from './@tests/Stage2';
 import * as Stage1All from './@tests/Stage1';
