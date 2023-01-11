@@ -1,7 +1,6 @@
 import * as hooksDecoupled from '../hooksDecoupled';
 import Orchestrator from '../Orchestrator';
 import React from 'react';
-import ReactDom from 'react-dom';
 import Stage1 from '../Stage1';
 import Stage2 from '../Stage2';
 import Stage3 from '../Stage3';
@@ -43,7 +42,6 @@ describe('Orchestrator', () => {
       let increaseValue: () => Promise<unknown>;
       let decreaseValue: () => Promise<unknown>;
       let checkCurrentValue: (newValue: number) => Promise<void>;
-      let unstableBatchedUpdatesSpy: jest.SpyInstance<any>;
 
       beforeEach(async () => {
         orchestratorWrapper = await createOrchestrator();
@@ -52,8 +50,10 @@ describe('Orchestrator', () => {
         decreaseValue = () => Promise.resolve();
 
         if (typeof setter === 'function') {
-          increaseValue = (): Promise<void> => setter((currentValue: number) => currentValue + 1);
-          decreaseValue = (): Promise<void> => setter((currentValue: number) => currentValue - 1);
+          increaseValue = (): Promise<void> =>
+            setter((currentValue: number) => currentValue + 1);
+          decreaseValue = (): Promise<void> =>
+            setter((currentValue: number) => currentValue - 1);
         } else {
           increaseValue = (): Promise<void> => setter.increase(1);
           decreaseValue = (): Promise<void> => setter.decrease(1);
@@ -64,14 +64,15 @@ describe('Orchestrator', () => {
         if (typeof getter === 'function') {
           checkCurrentValue = async (newValue: number) => {
             const result = getter();
-            const promise = Promise.resolve(result) === result ? result : Promise.resolve(result);
+            const promise =
+              Promise.resolve(result) === result
+                ? result
+                : Promise.resolve(result);
             const currentValue = await promise;
 
             expect(currentValue).toBe(newValue);
           };
         }
-
-        unstableBatchedUpdatesSpy = jest.spyOn(ReactDom, 'unstable_batchedUpdates');
       });
 
       afterAll(() => {
@@ -101,9 +102,6 @@ describe('Orchestrator', () => {
           await increaseValue();
           await checkCurrentValue(3);
         });
-
-        // just one batch of changes
-        expect(unstableBatchedUpdatesSpy).toHaveBeenCalledTimes(1);
 
         // note that even calling 3 times the increase/decrease functions...
         // the render is just gonna happen once, all changes are batch

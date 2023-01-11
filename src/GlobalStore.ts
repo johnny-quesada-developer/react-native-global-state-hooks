@@ -77,7 +77,7 @@ export class GlobalStore<
 
           const newState = formatFromStore(value) as IState;
 
-          await this.globalSetterAsync(newState);
+          await this.globalSetter(newState);
         }
 
         resolve(this.state);
@@ -154,7 +154,7 @@ export class GlobalStore<
     } else if (this.persistStoreAs) {
       this._stateOrchestrator = this.globalSetterToPersistStoreAsync as IGlobalStore.StateSetter<IState>;
     } else {
-      this._stateOrchestrator = this.globalSetterAsync as IGlobalStore.StateSetter<IState>;
+      this._stateOrchestrator = this.globalSetter as IGlobalStore.StateSetter<IState>;
     }
 
     return this._stateOrchestrator as IGlobalStore.StateSetter<IState> | IGlobalStore.IActionCollectionResult<IState, IActions>;
@@ -165,7 +165,7 @@ export class GlobalStore<
   */
   protected static batchedUpdates: [() => void, object][] = [];
 
-  protected globalSetter = (setter: IState | ((state: IState) => IState), callback: () => void) => {
+  protected globalSetter = (setter: IState | ((state: IState) => IState)) => {
     // avoid perform multiple updates over the same state
     GlobalStore.batchedUpdates = GlobalStore.batchedUpdates.filter(([, hook]) => {
       const isSameHook = hook === this;
@@ -184,40 +184,32 @@ export class GlobalStore<
 
     // batch store updates
     GlobalStore.batchedUpdates.push([() => this.subscribers.forEach((updateChild) => updateChild(newState)), this]);
-    GlobalStore.ExecutePendingBatchesCallbacks.push(callback);
     GlobalStore.ExecutePendingBatches();
   };
 
-  protected globalSetterAsync = async (setter: IState | ((state: IState) => IState)):
-    Promise<IState> => new Promise((resolve) => this.globalSetter(setter, () => resolve(this.state)));
-
   protected globalSetterToPersistStoreAsync = async (setter: IState | ((state: IState) => IState)): Promise<IState> => {
-    await this.globalSetterAsync(setter);
+    this.globalSetter(setter);
     await this.setAsyncStoreItem();
 
     return this.state;
   };
 
-  static ExecutePendingBatchesCallbacks: (() => void)[] = [];
-
   /**
-   * React native cannot use unstable_batchedUpdates, it does not have any effect
+   * React native cannot use unstable_batchedUpdates
   */
-  static ExecutePendingBatches = debounce(() => {
+  static ExecutePendingBatches = () => {
     GlobalStore.batchedUpdates.forEach(([execute]) => {
       execute();
     });
 
     GlobalStore.batchedUpdates = [];
-    GlobalStore.ExecutePendingBatchesCallbacks.forEach((callback) => callback());
-    GlobalStore.ExecutePendingBatchesCallbacks = [];
-  }, 0);
+  }
 
   protected getActions = <IApi extends IGlobalStore.IActionCollectionResult<IState, IGlobalStore.IActionCollectionConfig<IState>>>(): IApi => {
     const actions = this.actions as IGlobalStore.IActionCollectionConfig<IState>;
     // Setter is allways async because of the render batch
     // but we are typing the setter as synchronous to avoid the developer has extra complexity that useState do not handle
-    const setter = this.isPersistStore ? this.globalSetterToPersistStoreAsync : this.globalSetterAsync;
+    const setter = this.isPersistStore ? this.globalSetterToPersistStoreAsync : this.globalSetter;
 
     return Object.keys(actions).reduce(
       (accumulator, key) => ({
