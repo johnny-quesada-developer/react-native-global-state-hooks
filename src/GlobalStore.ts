@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import {
+  Dispatch, SetStateAction, useEffect, useState,
+} from 'react';
 import {
   formatToStore,
   formatFromStore,
@@ -60,9 +62,13 @@ export class GlobalStore<
     return asyncStorage.getItem(this.persistStoreAs as string);
   }
 
-  protected async getAsyncStoreItem(): Promise<IState> {
+  protected async getAsyncStoreItem({ invokerSetState }: {
+    invokerSetState?: React.Dispatch<React.SetStateAction<IState>>
+  }): Promise<IState> {
+    // If the state is already updated, return it
     if (this.isStoredStateItemUpdated) return this.storedStateItem as IState;
 
+    // If the promise to get the state is already running, return it
     if (this.getAsyncStoreItemPromise) return this.getAsyncStoreItemPromise;
 
     this.getAsyncStoreItemPromise = new Promise((resolve) => {
@@ -76,8 +82,9 @@ export class GlobalStore<
           value = this.onPersistStorageLoad(value) ?? value;
 
           const newState = formatFromStore(value) as IState;
+          const stateSetter = this.getInternalSetter({ invokerSetState });
 
-          await this.globalSetter(newState);
+          stateSetter(newState);
         }
 
         resolve(this.state);
@@ -111,23 +118,23 @@ export class GlobalStore<
     IGlobalStore.IHookResult<IState, IActions, IApi>,
     IPersist extends null ? false : true extends true ? boolean : null,
   ] => {
-    const [value, setter] = useState(() => this.state);
+    const [value, invokerSetState] = useState(() => this.state);
 
     useEffect(() => {
-      this.subscribers.push(setter as IGlobalStore.StateSetter<IState>);
+      this.subscribers.push(invokerSetState as IGlobalStore.StateSetter<IState>);
 
       if (this.isPersistStore) {
-        this.getAsyncStoreItem();
+        this.getAsyncStoreItem({ invokerSetState });
       }
 
       return () => {
-        this.subscribers = this.subscribers.filter((hook) => setter !== hook);
+        this.subscribers = this.subscribers.filter((hook) => invokerSetState !== hook);
       };
     }, []);
 
     return [
       value,
-      this.stateOrchestrator as IGlobalStore.IHookResult<IState, IActions, IApi>,
+      this.getStateOrchestrator(invokerSetState) as IGlobalStore.IHookResult<IState, IActions, IApi>,
       this.isStoredStateItemUpdated as IPersist extends null ? false : true extends true ? boolean : null,
     ];
   };
@@ -136,101 +143,103 @@ export class GlobalStore<
     IApi extends IGlobalStore.IActionCollectionResult<IState, IActions> |
     null = IActions extends null ? null : IGlobalStore.IActionCollectionResult<IState, IActions>
   > (): [() => IPersist extends string ? Promise<IState> : IState, IGlobalStore.IHookResult<IState, IActions, IApi>] => {
-    const valueWrapper = this.isPersistStore ? this.getAsyncStoreItem() : () => this.state;
+    const getState = () => {
+      if (this.isPersistStore) {
+        return this.getAsyncStoreItem({});
+      }
+
+      return this.state;
+    };
 
     return [
-      valueWrapper as () => IPersist extends string ? Promise<IState> : IState,
-      this.stateOrchestrator as IGlobalStore.IHookResult<IState, IActions, IApi>,
+      getState as () => IPersist extends string ? Promise<IState> : IState,
+      this.getStateOrchestrator() as IGlobalStore.IHookResult<IState, IActions, IApi>,
     ];
   };
 
-  private _stateOrchestrator: IGlobalStore.StateSetter<IState> | IGlobalStore.IActionCollectionResult<IState, IActions> | null = null;
+  protected getInternalSetter = ({ invokerSetState }: {
+    invokerSetState?: React.Dispatch<React.SetStateAction<IState>>
+  } = {}): IGlobalStore.StateSetter<IState> => {
+    let stateOrchestrator: (params: { invokerSetState?: Dispatch<SetStateAction<IState>>; setter: IState | ((state: IState) => IState); }) => void;
 
-  protected get stateOrchestrator(): IGlobalStore.StateSetter<IState> | IGlobalStore.IActionCollectionResult<IState, IActions> {
-    if (this._stateOrchestrator) return this._stateOrchestrator;
-
-    if (this.actions) {
-      this._stateOrchestrator = this.getActions() as IGlobalStore.IActionCollectionResult<IState, IActions>;
-    } else if (this.persistStoreAs) {
-      this._stateOrchestrator = this.globalSetterToPersistStoreAsync as IGlobalStore.StateSetter<IState>;
+    if (this.persistStoreAs) {
+      stateOrchestrator = this.globalSetterToPersistStoreAsync;
     } else {
-      this._stateOrchestrator = this.globalSetter as IGlobalStore.StateSetter<IState>;
+      stateOrchestrator = this.globalSetter;
     }
 
-    return this._stateOrchestrator as IGlobalStore.StateSetter<IState> | IGlobalStore.IActionCollectionResult<IState, IActions>;
+    return (setter) => {
+      stateOrchestrator({ invokerSetState, setter });
+    };
   }
 
-  /**
-  **  [subscriber-update-callback, hook]
-  */
-  protected static batchedUpdates: [() => void, object][] = [];
+  protected getStateOrchestrator(invokerSetState?: React.Dispatch<React.SetStateAction<IState>>): IGlobalStore.StateSetter<IState> |
+   IGlobalStore.IActionCollectionResult<IState, IActions> {
 
-  protected globalSetter = (setter: IState | ((state: IState) => IState)) => {
-    // avoid perform multiple updates over the same state
-    GlobalStore.batchedUpdates = GlobalStore.batchedUpdates.filter(([, hook]) => {
-      const isSameHook = hook === this;
+    if (this.actions) {
+      return this.getApiActions({
+        invokerSetState,
+      }) as IGlobalStore.IActionCollectionResult<IState, IActions>;
+    }
 
-      if (isSameHook) {
-        // eslint-disable-next-line no-console
-        console.warn('You should try avoid call the same state-setter multiple times at one execution line');
-      }
+    return this.getInternalSetter({ invokerSetState });
+  }
 
-      return !isSameHook;
-    });
-
+  protected globalSetter = ({ setter, invokerSetState }: {
+    setter: IState | ((state: IState) => IState),
+    invokerSetState?: React.Dispatch<React.SetStateAction<IState>>,
+  }) => {
     const newState: IState = typeof setter === 'function' ? (setter as (state: IState) => IState)(this.getStateCopy()) : setter;
 
     this.state = newState;
 
-    // batch store updates
-    GlobalStore.batchedUpdates.push([() => this.subscribers.forEach((updateChild) => updateChild(newState)), this]);
-    GlobalStore.ExecutePendingBatches();
+    // execute the invoke setter before the batched updates to avoid delays on the UI
+    invokerSetState?.(newState);
+
+    // update all the subscribers
+    this.subscribers.forEach((setState) => {
+      if (setState === invokerSetState) return;
+
+      setState(newState);
+    });
   };
 
-  protected globalSetterToPersistStoreAsync = async (setter: IState | ((state: IState) => IState)): Promise<IState> => {
-    this.globalSetter(setter);
+  protected globalSetterToPersistStoreAsync = async ({ setter, invokerSetState }: {
+    setter: IState | ((state: IState) => IState),
+    invokerSetState?: React.Dispatch<React.SetStateAction<IState>>,
+  }): Promise<IState> => {
+    this.globalSetter({ invokerSetState, setter });
+
     await this.setAsyncStoreItem();
 
     return this.state;
   };
 
-  /**
-   * React native cannot use unstable_batchedUpdates
-  */
-  static ExecutePendingBatches = () => {
-    GlobalStore.batchedUpdates.forEach(([execute]) => {
-      execute();
-    });
+  protected getApiActions = <IApi extends IGlobalStore.IActionCollectionResult<IState, IGlobalStore.IActionCollectionConfig<IState>>>({ invokerSetState }: {
+    invokerSetState?: React.Dispatch<React.SetStateAction<IState>>,
+  }): IApi => {
+    const actionsConfig = this.actions as IGlobalStore.IActionCollectionConfig<IState>;
+    const actionsKeys = Object.keys(actionsConfig);
 
-    GlobalStore.batchedUpdates = [];
-  }
+    const internalSetter: IGlobalStore.StateSetter<IState> = this.getInternalSetter({ invokerSetState });
 
-  protected getActions = <IApi extends IGlobalStore.IActionCollectionResult<IState, IGlobalStore.IActionCollectionConfig<IState>>>(): IApi => {
-    const actions = this.actions as IGlobalStore.IActionCollectionConfig<IState>;
-    // Setter is allways async because of the render batch
-    // but we are typing the setter as synchronous to avoid the developer has extra complexity that useState do not handle
-    const setter = this.isPersistStore ? this.globalSetterToPersistStoreAsync : this.globalSetter;
-
-    return Object.keys(actions).reduce(
+    const actionsApi = actionsKeys.reduce(
       (accumulator, key) => ({
         ...accumulator,
-        [key]: async (...parameres: unknown[]) => {
-          let promise;
-          const setterWrapper: IGlobalStore.StateSetter<IState> = (value: IState | ((state: IState) => IState)) => {
-            promise = setter(value);
-            return promise;
-          };
+        [key]: (...parameres: unknown[]) => {
+          const actionConfig = actionsConfig[key];
+          const action = actionConfig(...parameres);
 
-          const result = actions[key](...parameres)(setterWrapper, this.getStateCopy());
-          const resultPromise = Promise.resolve(result) === result ? result : Promise.resolve();
-
-          await Promise.all([promise, resultPromise]);
+          // executes the actions bringing access to the state setter and a copy of the state
+          const result = action(internalSetter, this.getStateCopy());
 
           return result;
         },
       }),
       {} as IApi,
     );
+
+    return actionsApi;
   };
 
   public deleteAsyncStoreItem = async (): Promise<void> => {

@@ -1,13 +1,15 @@
-/* eslint-disable max-nested-callbacks */
-/* eslint-disable camelcase */
-import * as Stage3All from './@tests/Stage3';
-import * as Stage2All from './@tests/Stage2';
-import * as Stage1All from './@tests/Stage1';
+import React from "react";
+
 
 beforeEach(() => {
-  jest.spyOn(Stage1All, 'default');
-  jest.spyOn(Stage2All, 'default');
-  jest.spyOn(Stage3All, 'default');
+  // mock useState
+  // @ts-ignore
+  jest.spyOn(React, "useState").mockImplementation((initialState) => {
+    return [initialState, jest.fn()];
+  });
+
+  // mock useEffect
+  jest.spyOn(React, "useEffect").mockImplementation((f) => f());
 });
 
 afterEach(() => {
