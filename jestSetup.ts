@@ -1,20 +1,35 @@
 import React from "react";
 
-
 beforeEach(() => {
-  // mock useState
-  // @ts-ignore
-  jest.spyOn(React, "useState").mockImplementation((initialState) => {
-    return [initialState, jest.fn()];
+   spyOn(React, "useState").and.callFake(((initialState) => {
+    const value = typeof initialState === "function" ? initialState() : initialState;
+
+    const setState =jest.fn((() => {
+      let state;
+
+      return (setter) => {
+        const newState = typeof setter === "function" ? setter(state) : setter;
+  
+        state = newState;
+      }
+    })());
+
+    return [value, setState];
+  }) as any);
+
+  const mockUseEffect = jest.fn((callback) => {
+    const value = callback();
+  
+    return value;
   });
 
-  // mock useEffect
-  jest.spyOn(React, "useEffect").mockImplementation((f) => f());
+  spyOn(React, "useEffect").and.callFake(mockUseEffect);
 });
 
 afterEach(() => {
   jest.restoreAllMocks();
   jest.clearAllMocks();
+  jest.clearAllTimers();
 });
 
 export {};
