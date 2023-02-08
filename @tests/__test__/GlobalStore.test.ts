@@ -1,9 +1,9 @@
 import { GlobalStore } from '../../src/GlobalStore';
 import {
-  IActionCollectionConfig,
-  IActionCollectionResult,
+  ActionCollectionConfig,
+  ActionCollectionResult,
   StateSetter,
-} from '../../src/GlobalStoreTypes';
+} from '../../src/GlobalStore.types';
 import { useState, useEffect } from 'react';
 
 const countStoreInitialState = 1;
