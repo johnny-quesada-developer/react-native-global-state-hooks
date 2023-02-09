@@ -32,24 +32,20 @@ export class GlobalStore<
     TState,
     TMetadata
   > | null = null,
-  TStoreActions extends null | ActionCollectionResult<
-    TState,
-    TMetadata,
-    NonNullable<TStoreActionsConfig>
-  > = TStoreActionsConfig extends ActionCollectionResult<
-    TState,
-    TMetadata,
-    NonNullable<TStoreActionsConfig>
-  >
-    ? ActionCollectionResult<
+  // orchestrator
+  TOrchestrator extends
+    | StateSetter<TState>
+    | ActionCollectionResult<
+        TState,
+        TMetadata,
+        TStoreActionsConfig
+      > = TStoreActionsConfig extends null
+    ? StateSetter<TState>
+    : ActionCollectionResult<
         TState,
         TMetadata,
         NonNullable<TStoreActionsConfig>
       >
-    : null,
-  TOrchestrator = TStoreActions extends null
-    ? StateSetter<TState>
-    : TStoreActions
 > {
   public subscribers: Set<StateSetter<TState>> = new Set();
 
