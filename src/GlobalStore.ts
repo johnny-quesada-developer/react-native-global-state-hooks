@@ -63,7 +63,7 @@ export class GlobalStore<
   constructor(
     protected state: TState,
     protected storeActionsConfig: TStoreActionsConfig = null as TStoreActionsConfig,
-    protected config: GlobalStoreConfig<
+    public config: GlobalStoreConfig<
       TState,
       TMetadata,
       NonNullable<TStoreActionsConfig>

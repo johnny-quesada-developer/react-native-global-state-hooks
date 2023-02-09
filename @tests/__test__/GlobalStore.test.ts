@@ -199,57 +199,205 @@ describe('GlobalStore with actions', () => {
 });
 
 describe('GlobalStore with configuration callbacks', () => {
-  it('should execute onInit callback without actions', () => {
-    expect.assertions(8);
-
-    let params!: StateConfigCallbackParam<number, null>;
-
-    const spy = jest.fn().mockImplementation((_parameters) => {
-      params = _parameters;
-
-      const { setState, getState, getMetadata, setMetadata, actions } = params;
-
-      expect(getState()).toEqual(initialState);
-      expect(getMetadata()).toBeNull();
-      expect(setState).toBeInstanceOf(Function);
-      expect(setMetadata).toBeInstanceOf(Function);
-      expect(actions).toBe(null);
-    });
+  it('should execute onInit callback', () => {
+    expect.assertions(6);
 
     const initialState = { count: 0 };
+    const onInitSpy = jest
+      .fn()
+      .mockImplementation(
+        (parameters: StateConfigCallbackParam<number, null>) => {
+          const { setState, getState, getMetadata, setMetadata, actions } =
+            parameters;
+
+          expect(getState()).toEqual(initialState);
+          expect(getMetadata()).toBeNull();
+          expect(setState).toBeInstanceOf(Function);
+          expect(setMetadata).toBeInstanceOf(Function);
+          expect(actions).toBe(null);
+        }
+      );
+
     new GlobalStore(initialState, null, {
-      onInit: spy,
+      onInit: onInitSpy,
     });
 
-    expect(spy).toBeCalledTimes(1);
-    expect(spy).toBeCalledWith(params);
-    expect(params).toBeDefined();
+    expect(onInitSpy).toBeCalledTimes(1);
   });
 
-  it('should execute onInit callback', () => {
-    expect.assertions(8);
-
-    let params!: StateConfigCallbackParam<number, null>;
-
-    const spy = jest.fn().mockImplementation((_parameters) => {
-      params = _parameters;
-
-      const { setState, getState, getMetadata, setMetadata, actions } = params;
-
-      expect(getState()).toEqual(initialState);
-      expect(getMetadata()).toBeNull();
-      expect(setState).toBeInstanceOf(Function);
-      expect(setMetadata).toBeInstanceOf(Function);
-      expect(actions).toBe(null);
-    });
+  it('should execute onInit callback with metadata', () => {
+    expect.assertions(3);
 
     const initialState = { count: 0 };
+    const onInitSpy = jest.fn().mockImplementation(
+      (
+        parameters: StateConfigCallbackParam<
+          number,
+          {
+            isAsyncStorageReady: boolean;
+          }
+        >
+      ) => {
+        const { getMetadata, setMetadata } = parameters;
+
+        expect(getMetadata()).toEqual({
+          isAsyncStorageReady: false,
+        });
+
+        setMetadata({
+          isAsyncStorageReady: true,
+        });
+
+        expect(getMetadata()).toEqual({
+          isAsyncStorageReady: true,
+        });
+      }
+    );
+
     new GlobalStore(initialState, null, {
-      onInit: spy,
+      onInit: onInitSpy,
+      metadata: {
+        isAsyncStorageReady: false,
+      },
     });
 
-    expect(spy).toBeCalledTimes(1);
-    expect(spy).toBeCalledWith(params);
-    expect(params).toBeDefined();
+    expect(onInitSpy).toBeCalledTimes(1);
+  });
+
+  it('should execute onSubscribed callback every time a subscriber is added', () => {
+    expect.assertions(8);
+
+    let onSubscribedSpy = jest
+      .fn()
+      .mockImplementation(
+        (parameters: StateConfigCallbackParam<number, null>) => {
+          const { setState, getState, getMetadata, setMetadata, actions } =
+            parameters;
+
+          expect(getMetadata()).toBeNull();
+          expect(setState).toBeInstanceOf(Function);
+          expect(setMetadata).toBeInstanceOf(Function);
+          expect(actions).toBe(null);
+          expect(getState()).toEqual({ count: 0 });
+        }
+      );
+
+    const store = new GlobalStore({ count: 0 }, null, {
+      onSubscribed: onSubscribedSpy,
+    });
+
+    expect(onSubscribedSpy).toBeCalledTimes(0);
+
+    const useStore = store.getHook();
+
+    useStore();
+
+    expect(onSubscribedSpy).toBeCalledTimes(1);
+
+    onSubscribedSpy = jest.fn();
+
+    store.config.onSubscribed = onSubscribedSpy;
+
+    useStore();
+    useStore();
+
+    expect(onSubscribedSpy).toBeCalledTimes(2);
+  });
+
+  it('should execute onStateChanged callback every time the state is changed', () => {
+    expect.assertions(7);
+
+    const onStateChangedSpy = jest
+      .fn()
+      .mockImplementation(
+        (parameters: StateConfigCallbackParam<number, null>) => {
+          const { setState, getState, getMetadata, setMetadata, actions } =
+            parameters;
+
+          expect(getMetadata()).toBeNull();
+          expect(setState).toBeInstanceOf(Function);
+          expect(setMetadata).toBeInstanceOf(Function);
+          expect(actions).toBe(null);
+          expect(getState()).toEqual({ count: 1 });
+        }
+      );
+
+    const store = new GlobalStore({ count: 0 }, null, {
+      onStateChanged: onStateChangedSpy,
+    });
+
+    expect(onStateChangedSpy).toBeCalledTimes(0);
+
+    const [, setState] = store.getHookDecoupled();
+
+    setState((state) => ({ count: state.count + 1 }));
+
+    expect(onStateChangedSpy).toBeCalledTimes(1);
+  });
+
+  it('should execute computePreventStateChange callback before state is changed and continue if it returns false', () => {
+    expect.assertions(7);
+
+    const computePreventStateChangeSpy = jest
+      .fn()
+      .mockImplementation(
+        (parameters: StateConfigCallbackParam<number, null>) => {
+          const { setState, getState, getMetadata, setMetadata, actions } =
+            parameters;
+
+          expect(getMetadata()).toBeNull();
+          expect(setState).toBeInstanceOf(Function);
+          expect(setMetadata).toBeInstanceOf(Function);
+          expect(actions).toBe(null);
+
+          return false;
+        }
+      );
+
+    const store = new GlobalStore({ count: 0 }, null, {
+      computePreventStateChange: computePreventStateChangeSpy,
+    });
+
+    expect(computePreventStateChangeSpy).toBeCalledTimes(0);
+
+    const [getState, setState] = store.getHookDecoupled();
+
+    setState((state) => ({ count: state.count + 1 }));
+
+    expect(computePreventStateChangeSpy).toBeCalledTimes(1);
+    expect(getState()).toEqual({ count: 1 });
+  });
+
+  it('should execute computePreventStateChange callback before state is changed and prevent state change if it returns true', () => {
+    expect.assertions(7);
+
+    const computePreventStateChangeSpy = jest
+      .fn()
+      .mockImplementation(
+        (parameters: StateConfigCallbackParam<number, null>) => {
+          const { setState, getState, getMetadata, setMetadata, actions } =
+            parameters;
+
+          expect(getMetadata()).toBeNull();
+          expect(setState).toBeInstanceOf(Function);
+          expect(setMetadata).toBeInstanceOf(Function);
+          expect(actions).toBe(null);
+
+          return true;
+        }
+      );
+
+    const store = new GlobalStore({ count: 0 }, null, {
+      computePreventStateChange: computePreventStateChangeSpy,
+    });
+
+    expect(computePreventStateChangeSpy).toBeCalledTimes(0);
+
+    const [getState, setState] = store.getHookDecoupled();
+
+    setState((state) => ({ count: state.count + 1 }));
+
+    expect(computePreventStateChangeSpy).toBeCalledTimes(1);
+    expect(getState()).toEqual({ count: 0 });
   });
 });
