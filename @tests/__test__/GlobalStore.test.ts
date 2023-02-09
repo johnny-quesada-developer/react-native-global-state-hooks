@@ -1,8 +1,9 @@
 import { GlobalStore } from '../../src/GlobalStore';
+
 import {
   ActionCollectionConfig,
   ActionCollectionResult,
-  ActionConfigCallbackParam,
+  StateConfigCallbackParam,
   StateSetter,
 } from '../../src/GlobalStore.types';
 
@@ -13,17 +14,21 @@ const createCountStoreWithActions = (spy?: jest.Mock) => {
   const countStore = new GlobalStore(
     countStoreInitialState,
     {
-      log: () => {
-        return spy ?? jest.fn(() => null);
+      log(message: string) {
+        return () => spy?.(message);
       },
-      increase: () => {
-        return ({ setState, actions }: ActionConfigCallbackParam<number>) => {
-          setState((state) => state + 1);
+      increase(increase: number = 1) {
+        this.log('wrapper');
 
-          return actions.log();
+        return ({ setState, getState }) => {
+          setState((state) => state + increase);
+
+          this.log('execution');
+
+          return getState();
         };
       },
-    },
+    } as ActionCollectionConfig<number, null>,
     {}
   );
 
@@ -62,7 +67,7 @@ describe('Basic GlobalStore', () => {
   });
 
   it('should be able to get the state', () => {
-    const stateValue = 'test';
+    const stateValue = 1;
     const store = new GlobalStore(stateValue);
 
     const [getState] = store.getHookDecoupled();
@@ -184,9 +189,69 @@ describe('GlobalStore with actions', () => {
 
     const [, actions] = store.getHookDecoupled();
 
-    const result = actions.increase();
+    const result = actions.increase(1);
+
+    expect(spy).toBeCalledTimes(2);
+
+    expect(spy).toBeCalledWith('wrapper');
+    expect(spy).toBeCalledWith('execution');
+
+    expect(result).toBe(2);
+  });
+});
+
+describe('GlobalStore with configuration callbacks', () => {
+  it('should execute onInit callback without actions', () => {
+    expect.assertions(8);
+
+    let params!: StateConfigCallbackParam<number, null>;
+
+    const spy = jest.fn().mockImplementation((_parameters) => {
+      params = _parameters;
+
+      const { setState, getState, getMetadata, setMetadata, actions } = params;
+
+      expect(getState()).toEqual(initialState);
+      expect(getMetadata()).toBeNull();
+      expect(setState).toBeInstanceOf(Function);
+      expect(setMetadata).toBeInstanceOf(Function);
+      expect(actions).toBe(null);
+    });
+
+    const initialState = { count: 0 };
+    new GlobalStore(initialState, null, {
+      onInit: spy,
+    });
 
     expect(spy).toBeCalledTimes(1);
-    expect(result).toBe(1);
+    expect(spy).toBeCalledWith(params);
+    expect(params).toBeDefined();
+  });
+
+  it('should execute onInit callback', () => {
+    expect.assertions(8);
+
+    let params!: StateConfigCallbackParam<number, null>;
+
+    const spy = jest.fn().mockImplementation((_parameters) => {
+      params = _parameters;
+
+      const { setState, getState, getMetadata, setMetadata, actions } = params;
+
+      expect(getState()).toEqual(initialState);
+      expect(getMetadata()).toBeNull();
+      expect(setState).toBeInstanceOf(Function);
+      expect(setMetadata).toBeInstanceOf(Function);
+      expect(actions).toBe(null);
+    });
+
+    const initialState = { count: 0 };
+    new GlobalStore(initialState, null, {
+      onInit: spy,
+    });
+
+    expect(spy).toBeCalledTimes(1);
+    expect(spy).toBeCalledWith(params);
+    expect(params).toBeDefined();
   });
 });

@@ -7,23 +7,44 @@ import {
   ActionCollectionResult,
   StateOrchestrator,
   StateConfigCallbackParam,
+  StateChangesParam,
 } from './GlobalStore.types';
 
 import { clone } from './GlobalStore.utils';
+
+const throwWrongKeyOnActionCollectionConfig = (action_key: string) => {
+  throw new Error(`[WRONG CONFIGURATION!]: Every key inside the storeActionsConfig must be a higher order function that returns a function \n[${action_key}]: key is not a valid function, try something like this: \n{\n
+    ${action_key}: (param) => ({ setState, getState, setMetadata, getMetadata }) => {\n
+      setState((state) => ({ ...state, ...param }))\n
+    }\n
+}\n`);
+};
 
 /**
  * The GlobalStore class is the main class of the library and it is used to create a GlobalStore instances
  * @template {TState} TState - The type of the state
  * @template {TMetadata} TMetadata - The type of the metadata object (optional) (default: null) no reactive information set to share with the subscribers
  * @template {ActionCollectionConfig<TState> | null} TStoreActionsConfig - The type of the actions configuration object (optional) (default: null) if not null the store manipulation will be done through the actions
+ * @template {ActionCollectionResult<TState, TMetadata, NonNullable<TStoreActionsConfig>> | null} TStoreActions - The type of the actions object returned by the hook when you pass an storeActionsConfig configuration otherwise null
  * */
 export class GlobalStore<
   TState,
+  TMetadata extends Record<string, unknown> | null = null,
   TStoreActionsConfig extends ActionCollectionConfig<
     TState,
     TMetadata
   > | null = null,
-  TMetadata extends Record<string, unknown> | null = null
+  TStoreActions extends null | ActionCollectionResult<
+    TState,
+    TMetadata,
+    NonNullable<TStoreActionsConfig>
+  > = TStoreActionsConfig extends null
+    ? null
+    : ActionCollectionResult<
+        TState,
+        TMetadata,
+        NonNullable<TStoreActionsConfig>
+      >
 > {
   public subscribers: Set<StateSetter<TState>> = new Set();
 
@@ -34,13 +55,18 @@ export class GlobalStore<
    * @param {GlobalStoreConfig<TState, TMetadata>} config - The configuration object (optional) (default: { metadata: null })
    * @param {TMetadata} config.metadata - The metadata object (optional) (default: null) no reactive information set
    * @param {StateConfigCallbackParam<TState, TMetadata>} config.onInit - The callback to execute when the store is initialized (optional) (default: null)
-   * @param {StateConfigCallbackParam<TState, TMetadata>} config.onStateChange - The callback to execute when the state is changed (optional) (default: null)
-   *
+   * @param {StateConfigCallbackParam<TState, TMetadata>} config.onStateChanged - The callback to execute when the state is changed (optional) (default: null)
+   * @param {StateConfigCallbackParam<TState, TMetadata>} config.onSubscribed - The callback to execute when a subscriber is added (optional) (default: null)
+   * @param {StateConfigCallbackParam<TState, TMetadata>} config.computePreventStateChange - The callback to execute when the state is changed to compute if the state change should be prevented (optional) (default: null)
    * */
   constructor(
     protected state: TState,
     protected storeActionsConfig: TStoreActionsConfig = null as TStoreActionsConfig,
-    protected config: GlobalStoreConfig<TState, TMetadata> = {}
+    protected config: GlobalStoreConfig<
+      TState,
+      TMetadata,
+      NonNullable<TStoreActionsConfig>
+    > = {}
   ) {
     const { onInit } = this.config;
     if (!onInit) return;
@@ -71,16 +97,25 @@ export class GlobalStore<
 
   protected getConfigCallbackParam = (): StateConfigCallbackParam<
     TState,
-    TMetadata
+    TMetadata,
+    NonNullable<TStoreActionsConfig>
   > => {
-    const { setMetadata, getMetadataClone: getMetadata } = this;
+    const {
+      setMetadata,
+      getMetadataClone: getMetadata,
+      getStateCopy: getState,
+    } = this;
     const setState = this.getSetStateWrapper({});
 
-    const actions = this.storeActionsConfig
-      ? this.getStoreActionsMap({})
-      : null;
+    const actions = this.getStoreActionsMap({});
 
-    return { setMetadata, getMetadata, setState, actions };
+    return {
+      setMetadata,
+      getMetadata,
+      getState,
+      setState,
+      actions,
+    };
   };
 
   /**
@@ -89,23 +124,10 @@ export class GlobalStore<
    * @retusn {() => [TState, StateOrchestrator<TState, TStoreActionsConfig, TStoreActionsConfigApi>, TMetadata]} - The hook function that returns the state, the state setter or the actions api (if any) and the metadata (if any)
    * */
   public getHook =
-    <
-      TStoreActionsConfigApi extends ActionCollectionResult<
-        TState,
-        TMetadata,
-        TStoreActionsConfig
-      > | null = TStoreActionsConfig extends null
-        ? null
-        : ActionCollectionResult<TState, TMetadata, TStoreActionsConfig>
-    >() =>
+    () =>
     (): [
       TState,
-      StateOrchestrator<
-        TState,
-        TMetadata,
-        TStoreActionsConfig,
-        TStoreActionsConfigApi
-      >,
+      StateOrchestrator<TState, TMetadata, TStoreActionsConfig, TStoreActions>,
       TMetadata
     ] => {
       const [value, invokerSetState] = useState(() => this.state);
@@ -126,18 +148,14 @@ export class GlobalStore<
 
       const stateOrchestrator = this.getStateOrchestrator(
         invokerSetState
-      ) as StateSetter<TState>;
+      ) as StateOrchestrator<
+        TState,
+        TMetadata,
+        TStoreActionsConfig,
+        TStoreActions
+      >;
 
-      return [
-        value,
-        stateOrchestrator as StateOrchestrator<
-          TState,
-          TMetadata,
-          TStoreActionsConfig,
-          TStoreActionsConfigApi
-        >,
-        this.getMetadataClone(),
-      ];
+      return [value, stateOrchestrator, this.getMetadataClone()];
     };
 
   /**
@@ -145,22 +163,9 @@ export class GlobalStore<
    * @template TStoreActionsConfigApi - The type of the actions api returned by the hook (if any) (optional)
    * @returns {[StateSetter<TState>, TStoreActionsConfigApi, TMetadata]} - The getter of the state, the state setter or the actions api (if any) and a getter of the metadata (if any)
    * */
-  public getHookDecoupled = <
-    TStoreActionsConfigApi extends ActionCollectionResult<
-      TState,
-      TMetadata,
-      TStoreActionsConfig
-    > | null = TStoreActionsConfig extends null
-      ? null
-      : ActionCollectionResult<TState, TMetadata, TStoreActionsConfig>
-  >(): [
+  public getHookDecoupled = (): [
     () => TState,
-    StateOrchestrator<
-      TState,
-      TMetadata,
-      TStoreActionsConfig,
-      TStoreActionsConfigApi
-    >,
+    StateOrchestrator<TState, TMetadata, TStoreActionsConfig, TStoreActions>,
     () => TMetadata
   ] => {
     const { getStateCopy: getState, getMetadataClone: getMetadata } = this;
@@ -169,7 +174,7 @@ export class GlobalStore<
       TState,
       TMetadata,
       TStoreActionsConfig,
-      TStoreActionsConfigApi
+      TStoreActions
     >;
 
     return [getState, stateOrchestrator, getMetadata];
@@ -231,19 +236,30 @@ export class GlobalStore<
     const shouldComputeParameter = computePreventStateChange || onStateChanged;
     const setState = this.getSetStateWrapper({ invokerSetState });
 
-    const { setMetadata, getMetadataClone: getMetadata } = this;
+    const {
+      setMetadata,
+      getMetadataClone: getMetadata,
+      getStateCopy: getState,
+    } = this;
 
-    const actions =
-      shouldComputeParameter && this.storeActionsConfig
-        ? this.getStoreActionsMap({})
-        : null;
+    const actions = (shouldComputeParameter &&
+      this.getStoreActionsMap(
+        {}
+      )) as NonNullable<TStoreActionsConfig> extends null
+      ? null
+      : ActionCollectionResult<
+          TState,
+          TMetadata,
+          NonNullable<NonNullable<TStoreActionsConfig>>
+        >;
 
     // check if the state change should be prevented
     if (computePreventStateChange) {
       const preventStateChange = computePreventStateChange({
+        setMetadata,
         getMetadata,
         setState,
-        setMetadata,
+        getState,
         actions,
         previousState,
         state: newState,
@@ -269,9 +285,10 @@ export class GlobalStore<
 
     // execute the onStateChanged callback
     onStateChanged({
+      setMetadata,
       getMetadata,
       setState,
-      setMetadata,
+      getState,
       actions,
       previousState,
       state: newState,
@@ -283,17 +300,26 @@ export class GlobalStore<
    * @param {React.Dispatch<React.SetStateAction<TState>>} invokerSetState - The setState function wrapped by the hook
    * @returns {TStoreActionsConfigApi} - The actions API with the actions as properties depending on the actions config passed to the constructor
    * */
-  protected getStoreActionsMap = <
-    TStoreActionsConfigApi extends ActionCollectionResult<
-      TState,
-      TMetadata,
-      ActionCollectionConfig<TState, TMetadata>
-    >
-  >({
+  protected getStoreActionsMap = ({
     invokerSetState,
   }: {
     invokerSetState?: React.Dispatch<React.SetStateAction<TState>>;
-  }): TStoreActionsConfigApi => {
+  }): NonNullable<TStoreActionsConfig> extends null
+    ? null
+    : ActionCollectionResult<
+        TState,
+        TMetadata,
+        NonNullable<NonNullable<TStoreActionsConfig>>
+      > => {
+    if (!this.storeActionsConfig)
+      return null as NonNullable<TStoreActionsConfig> extends null
+        ? null
+        : ActionCollectionResult<
+            TState,
+            TMetadata,
+            NonNullable<NonNullable<TStoreActionsConfig>>
+          >;
+
     const { storeActionsConfig, setMetadata } = this;
     const actionsConfig = storeActionsConfig as ActionCollectionConfig<
       TState,
@@ -308,29 +334,50 @@ export class GlobalStore<
 
     const { getStateCopy: getState, getMetadataClone: getMetadata } = this;
 
+    // we bind the functions to the actions object to allow reusing actions in the same api config
     const actions = actionsKeys.reduce(
-      (accumulator, key) => ({
+      (accumulator, action_key) => ({
         ...accumulator,
-        [key]: (...parameres: unknown[]) => {
-          const actionConfig = actionsConfig[key];
-          const action = actionConfig(...parameres);
+        [action_key](...parameres: unknown[]) {
+          const actionConfig = actionsConfig[action_key];
+          const action = actionConfig.apply(actions, parameres);
+
+          const actionIsNotAFunction =
+            typeof action !== 'function' || !action || !action.call;
+
+          if (actionIsNotAFunction) {
+            throwWrongKeyOnActionCollectionConfig(action_key);
+          }
 
           // executes the actions bringing access to the state setter and a copy of the state
-          const result = action({
+          const result = action.call(actions, {
             setState,
             getState,
             setMetadata,
             getMetadata,
-            actions,
           });
 
           return result;
         },
       }),
-      {} as TStoreActionsConfigApi
-    );
+      {} as ActionCollectionResult<
+        TState,
+        NonNullable<TMetadata>,
+        ActionCollectionConfig<TState, NonNullable<TMetadata>>
+      >
+    ) as ActionCollectionResult<
+      TState,
+      NonNullable<TMetadata>,
+      ActionCollectionConfig<TState, NonNullable<TMetadata>>
+    >;
 
-    return actions;
+    return actions as NonNullable<TStoreActionsConfig> extends null
+      ? null
+      : ActionCollectionResult<
+          TState,
+          TMetadata,
+          NonNullable<NonNullable<TStoreActionsConfig>>
+        >;
   };
 }
 

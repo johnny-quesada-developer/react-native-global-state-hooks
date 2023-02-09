@@ -1,97 +1,10 @@
 /**
- * @param {StateSetter<TState>} setter - add a new value to the state
+ * @param {StateSetter<TState>} setter - add a new state to an existing state
  * @returns {void} result - void
  */
 export type StateSetter<TState> = (
   setter: TState | ((state: TState) => TState)
 ) => void;
-
-export type ActionConfigCallbackParam<TState = unknown, TMetadata = null> = {
-  setMetadata: StateSetter<TMetadata>;
-  setState: StateSetter<TState>;
-  getState: () => TState;
-  getMetadata: () => TMetadata;
-  actions: ActionCollectionResult<
-    TState,
-    TMetadata,
-    ActionCollectionConfig<TState, TMetadata>
-  >;
-};
-
-/**
- * This is the structure required by the actions callback into the storeActionsConfig object
- */
-export type ActionConfigCallback<TState, TMetadata> = (
-  ...parameters: any[]
-) => (parameters: ActionConfigCallbackParam<TState, TMetadata>) => unknown;
-
-/**
- * Basic contract for the storeActionsConfig configuration
- */
-export interface ActionCollectionConfig<TState, TMetadata> {
-  [key: string]: (
-    ...params: any[]
-  ) => (parameters: ActionConfigCallbackParam<TState, TMetadata>) => unknown;
-}
-
-/**
- * This is the actions object returned by the hook when you pass an storeActionsConfig configuration
- * whatever data manipulation of the state should be executed through the custom actions with as access to the state and metadata
- */
-export type ActionCollectionResult<
-  TState,
-  TMetadata,
-  TStoreActionsConfig extends ActionCollectionConfig<TState, TMetadata> | null
-> = {
-  [key in keyof TStoreActionsConfig]: (
-    ...params: Parameters<
-      TStoreActionsConfig[key] extends ActionConfigCallback<TState, TMetadata>
-        ? TStoreActionsConfig[key]
-        : never
-    >
-  ) => ReturnType<
-    ReturnType<
-      TStoreActionsConfig[key] extends (
-        ...params: any[]
-      ) => (parameters: ActionConfigCallbackParam<TState, TMetadata>) => unknown
-        ? TStoreActionsConfig[key]
-        : never
-    >
-  >;
-};
-
-/**
- * This is the structure returned by the orchestrator of the state which could be a function or an object with specific actions
- * if you pass an storeActionsConfig configuration, you will get an object with the actions
- * if you don't pass an storeActionsConfig configuration, you will get a function to set the state
- * @template TState - the type of the state
- * @template TMetadata - the type of the metadata (optional) - if you don't pass an metadata as a parameter, you can pass null
- * @template {ActionCollectionConfig<TState,TMetadata> | null} TStoreActionsConfig - the configuration of the API (optional) - if you don't pass an API as a parameter, you can pass null
- * @template {ActionCollectionResult<TState,TStoreActionsConfig>} TStoreActions - the result of the API (optional) - if you don't pass an API as a parameter, you can pass null
- * @returns {StateOrchestrator<TState, TMetadata, TStoreActionsConfig, TStoreActions>} - the orchestrator of the state
- * */
-export type StateOrchestrator<
-  TState,
-  TMetadata,
-  TStoreActionsConfig extends ActionCollectionConfig<TState, TMetadata> | null,
-  TStoreActions extends ActionCollectionResult<
-    TState,
-    TMetadata,
-    TStoreActionsConfig
-  > | null = TStoreActionsConfig extends null
-    ? null
-    : ActionCollectionResult<TState, TMetadata, TStoreActionsConfig>
-> = TStoreActions extends null
-  ? StateSetter<TState>
-  : TStoreActionsConfig extends ActionCollectionConfig<TState, TMetadata>
-  ? TStoreActions extends ActionCollectionResult<
-      TState,
-      TMetadata,
-      TStoreActionsConfig
-    >
-    ? TStoreActions
-    : StateSetter<TState>
-  : StateSetter<TState>;
 
 /**
  * Parameters of the onStateChanged callback function
@@ -104,28 +17,161 @@ export type StateChanges<TState> = {
 };
 
 /**
- * Common parameters of the store configuration callback functions
- * @param {StateSetter<TState>} setState - add a new value to the state
- * @param {StateSetter<TMetadata>} setMetadata - add a new value to the metadata
- * @param {ActionCollectionResult<TState, ActionCollectionConfig<TState, TMetadata>> | null} actions - the actions object returned by the hook when you pass an storeActionsConfig configuration
- * if you don't pass an storeActionsConfig configuration, you will get a function to set the state
- * @param {() => TMetadata} getMetadata - get the current metadata
- * */
-export type StateConfigCallbackParam<TState, TMetadata> = {
-  setState: StateSetter<TState>;
+ * Callbacks to be passed to the configurating function of the store
+ * @template {TState} TState - The state type
+ * @template {TMetadata} TMetadata - The metadata type
+ * @property {StateSetter<TState>} setMetadata - Set the metadata
+ * @property {StateSetter<TState>} setState - Set the state
+ * @property {() => TState} getState - Get the state
+ * @property {() => TMetadata} getMetadata - Get the metadata
+ **/
+export type StoreTools<TState, TMetadata> = {
   setMetadata: StateSetter<TMetadata>;
-  actions: ActionCollectionResult<
-    TState,
-    TMetadata,
-    ActionCollectionConfig<TState, TMetadata>
-  > | null;
+  setState: StateSetter<TState>;
+  getState: () => TState;
   getMetadata: () => TMetadata;
 };
 
-export type StateChangesParam<TState, TMetadata> = StateConfigCallbackParam<
+/**
+ * Basic contract for the storeActionsConfig configuration
+ * @template {TState} TState - The state type
+ * @template {TMetadata} TMetadata - The metadata type
+ * @property {string} key - The action name
+ * @property {(...parameters: unknown[]) => (storeTools: { setMetadata: StateSetter<TMetadata>; setState: StateSetter<TState>; getState: () => TState; getMetadata: () => TMetadata; }) => unknown | void} value - The action function
+ * @returns {ActionCollectionConfig<TState, TMetadata>} result - The action collection configuration
+ */
+export interface ActionCollectionConfig<TState, TMetadata> {
+  [key: string]: // function
+  | {
+        (...parameters: unknown[]): (storeTools: {
+          setMetadata: StateSetter<TMetadata>;
+          setState: StateSetter<TState>;
+          getState: () => TState;
+          getMetadata: () => TMetadata;
+        }) => unknown | void;
+      }
+    //arrow function
+    | ((
+        ...parameters: unknown[]
+      ) => (storeTools: {
+        setMetadata: StateSetter<TMetadata>;
+        setState: StateSetter<TState>;
+        getState: () => TState;
+        getMetadata: () => TMetadata;
+      }) => unknown | void);
+}
+
+/**
+ * This is the actions object returned by the hook when you pass an storeActionsConfig configuration
+ * if you pass an storeActionsConfig configuration, the hook will return an object with the actions
+ * whatever data manipulation of the state should be executed through the custom actions with as access to the state and metadata
+ * @template {TState} TState - The state type
+ * @template {TMetadata} TMetadata - The metadata type
+ * @template {TStoreActionsConfig} TStoreActionsConfig - The storeActionsConfig type (optional) - if you pass an storeActionsConfig the hook will return an object with the actions
+ *
+ * @example
+ *
+ * const store = new GlobalStore(0, {
+ *  increment: () => ({ setState }) => {
+ *    setState((state) => state + 1);
+ *  },
+ *  decrement: () => ({ setState }) => {
+ *    setState((state) => state - 1);
+ *  },
+ * });
+ *
+ * const [state, actions] = store.getHook();
+ *
+ * actions.increment();
+ * actions.decrement();
+ *
+ * console.log(state); // 0
+ */
+export type ActionCollectionResult<
   TState,
-  TMetadata
-> &
+  TMetadata,
+  TStoreActionsConfig extends ActionCollectionConfig<TState, TMetadata>
+> = {
+  [key in keyof TStoreActionsConfig]: (
+    ...params: Parameters<TStoreActionsConfig[key]>
+  ) => ReturnType<ReturnType<TStoreActionsConfig[key]>>;
+};
+
+/**
+ * This is the structure returned by the orchestrator of the state which could be a function or an object with specific actions
+ * if you pass an storeActionsConfig configuration, you will get an object with the actions
+ * if you don't pass an storeActionsConfig configuration, you will get a function to set the state
+ * @template TState - the type of the state
+ * @template TMetadata - the type of the metadata (optional) - if you don't pass an metadata as a parameter, you can pass null
+ * @template {ActionCollectionConfig<TState,TMetadata> | null} TStoreActionsConfig - the configuration of the API (optional) - if you don't pass an API as a parameter, you can pass null
+ * @template {ActionCollectionResult<TState,TStoreActionsConfig>} TStoreActions - the result of the API (optional) - if you don't pass an API as a parameter, you can pass null
+ * @returns {StateOrchestrator<TState, TMetadata, TStoreActionsConfig, TStoreActions>} - the orchestrator of the state which could be a function or an object with specific actions
+ * */
+export type StateOrchestrator<
+  TState,
+  TMetadata,
+  TStoreActionsConfig extends ActionCollectionConfig<
+    TState,
+    TMetadata
+  > | null = null,
+  TStoreActions extends null | ActionCollectionResult<
+    TState,
+    TMetadata,
+    NonNullable<TStoreActionsConfig>
+  > = TStoreActionsConfig extends null
+    ? null
+    : ActionCollectionResult<
+        TState,
+        TMetadata,
+        NonNullable<TStoreActionsConfig>
+      >
+> = TStoreActions extends null ? StateSetter<TState> : TStoreActions;
+
+/**
+ * Common parameters of the store configuration callback functions
+ * @param {StateSetter<TState>} setState - add a new value to the state
+ * @param {() => TState} getState - get the current state
+ * @param {StateSetter<TMetadata>} setMetadata - add a new value to the metadata
+ * @param {() => TMetadata} getMetadata - get the current metadata
+ * @param {ActionCollectionResult<TState, ActionCollectionConfig<TState, TMetadata>> | null} actions - the actions object returned by the hook when you pass an storeActionsConfig configuration otherwise null
+ * @template {TState} TState - The state type
+ * @template {TMetadata} TMetadata - The metadata type
+ * @template {TStoreActionsConfig} TStoreActionsConfig - The storeActionsConfig type (optional) - if you pass an storeActionsConfig the hook will return an object with the actions
+ * @template {ActionCollectionResult<TState, TStoreActionsConfig>} TStoreActions - the result of the API (optional) - if you don't pass an API as a parameter, you can pass null
+ * */
+export type StateConfigCallbackParam<
+  TState,
+  TMetadata,
+  TStoreActionsConfig extends ActionCollectionConfig<
+    TState,
+    TMetadata
+  > | null = null,
+  TStoreActions extends ActionCollectionResult<
+    TState,
+    TMetadata,
+    NonNullable<TStoreActionsConfig>
+  > | null = TStoreActionsConfig extends null
+    ? null
+    : ActionCollectionResult<
+        TState,
+        TMetadata,
+        NonNullable<TStoreActionsConfig>
+      >
+> = {
+  actions: TStoreActions;
+} & StoreTools<TState, TMetadata>;
+
+/**
+ * Parameters of the onStateChanged callback function
+ * @template {TState} TState - The state type
+ * @template {TMetadata} TMetadata - The metadata type
+ * @template {TStoreActionsConfig} TStoreActionsConfig - The storeActionsConfig type (optional) - if you pass an storeActionsConfig the hook will return an object with the actions
+ */
+export type StateChangesParam<
+  TState,
+  TMetadata,
+  TStoreActions extends ActionCollectionConfig<TState, TMetadata> | null
+> = StateConfigCallbackParam<TState, TMetadata, TStoreActions> &
   StateChanges<TState>;
 
 /**
@@ -137,13 +183,28 @@ export type StateChangesParam<TState, TMetadata> = StateConfigCallbackParam<
  * @param {StateChangesParam<TState, TMetadata> => void} onStateChanged - callback function called every time the state is changed
  * @template TState - the type of the state
  * @template TMetadata - the type of the metadata (optional) - if you don't pass an metadata as a parameter, you can pass null
+ * @template {ActionCollectionConfig<TState,TMetadata> | null} TStoreActionsConfig - the configuration of the API (optional) - if you don't pass an API as a parameter, you can pass null
  * */
-export type GlobalStoreConfig<TState, TMetadata> = {
+export type GlobalStoreConfig<
+  TState,
+  TMetadata,
+  TStoreActions extends ActionCollectionConfig<TState, TMetadata>
+> = {
   metadata?: TMetadata;
-  onInit?: (params: StateConfigCallbackParam<TState, TMetadata>) => void;
-  onSubscribed?: (params: StateConfigCallbackParam<TState, TMetadata>) => void;
+
+  onInit?: (
+    params: StateConfigCallbackParam<TState, TMetadata, TStoreActions>
+  ) => void;
+
+  onStateChanged?: (
+    params: StateChangesParam<TState, TMetadata, TStoreActions>
+  ) => void;
+
+  onSubscribed?: (
+    params: StateConfigCallbackParam<TState, TMetadata, TStoreActions>
+  ) => void;
+
   computePreventStateChange?: (
-    params: StateChangesParam<TState, TMetadata>
+    params: StateChangesParam<TState, TMetadata, TStoreActions>
   ) => boolean;
-  onStateChanged?: (params: StateChangesParam<TState, TMetadata>) => void;
 };
