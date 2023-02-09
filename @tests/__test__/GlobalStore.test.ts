@@ -2,39 +2,39 @@ import { GlobalStore } from '../../src/GlobalStore';
 import {
   ActionCollectionConfig,
   ActionCollectionResult,
+  ActionConfigCallbackParam,
   StateSetter,
 } from '../../src/GlobalStore.types';
+
 import { useState, useEffect } from 'react';
 
 const countStoreInitialState = 1;
 const createCountStoreWithActions = (spy?: jest.Mock) => {
-  const countStore = new GlobalStore<number, null, any>(
+  const countStore = new GlobalStore(
     countStoreInitialState,
     {
-      increase: () => (setter: StateSetter<number>) => {
-        setter((state) => state + 1);
-
-        spy?.();
-      },
-    }
+      increase:
+        (n: number) =>
+        ({ setState }: ActionConfigCallbackParam<number>) => {
+          setState((state) => state + 1);
+        },
+    },
+    {}
   );
 
-  return countStore as GlobalStore<
-    number,
-    null,
-    {
-      increase: () => (setter: StateSetter<number>) => void;
-    }
-  > as GlobalStore<
-    number,
-    null,
-    {
-      increase: () => (setter: StateSetter<number>) => void;
-    }
-  > & {
+  return countStore as typeof countStore & {
     state: number;
-    actions: Record<string, () => (setter: StateSetter<number>) => unknown>;
-    getApiActions: (param: {}) => Record<string, () => unknown>;
+    storeActionsConfig: Record<
+      string,
+      () => (setter: StateSetter<number>) => unknown
+    >;
+    getStoreActionsMap: (param: {
+      invokerSetState?: React.Dispatch<React.SetStateAction<number>>;
+    }) => ActionCollectionResult<
+      number,
+      null,
+      ActionCollectionConfig<number, null>
+    >;
   };
 };
 
@@ -45,6 +45,15 @@ describe('Basic GlobalStore', () => {
 
     expect(store).toBeInstanceOf(GlobalStore);
     expect((store as unknown as { state: unknown }).state).toBe(stateValue);
+  });
+
+  it('state setter should be a function', () => {
+    const stateValue = 'test';
+    const store = new GlobalStore(stateValue);
+
+    const [, setState] = store.getHookDecoupled();
+
+    expect(setState).toBeInstanceOf(Function);
   });
 
   it('should be able to get the state', () => {
@@ -93,15 +102,16 @@ describe('Basic GlobalStore', () => {
 });
 
 describe('GlobalStore with actions', () => {
-  it('should be able to create a new instance with state and actions', () => {
+  it('should be able to create a new instance with state and actions, setter should be and object', () => {
     const store = createCountStoreWithActions();
 
     expect(store).toBeInstanceOf(GlobalStore);
     expect(store.state).toBe(countStoreInitialState);
-    expect(store.actions).toBeDefined();
+    expect(store.storeActionsConfig).toBeDefined();
 
-    const actions = store.getApiActions({});
+    const actions = store.getStoreActionsMap({});
 
+    expect(actions).not.toBeInstanceOf(Function);
     expect(actions.increase).toBeDefined();
   });
 
@@ -118,7 +128,7 @@ describe('GlobalStore with actions', () => {
 
     const [getState, actions] = store.getHookDecoupled();
 
-    actions.increase();
+    const test = actions.increase(1);
 
     expect(getState()).toBe(2);
   });
@@ -153,7 +163,7 @@ describe('GlobalStore with actions', () => {
 
     const [setter1, setter2] = store.subscribers;
 
-    actions.increase();
+    actions.increase(1);
 
     expect(getState()).toBe(2);
     expect(useState).toHaveBeenCalledTimes(2);

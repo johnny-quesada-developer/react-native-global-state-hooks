@@ -1,216 +1,258 @@
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
-import { formatToStore, formatFromStore, clone } from 'json-storage-formatter';
-import * as IGlobalStore from './GlobalStore.types';
 
+import {
+  ActionCollectionConfig,
+  StateSetter,
+  GlobalStoreConfig,
+  ActionCollectionResult,
+  StateOrchestrator,
+  StateConfigCallbackParam,
+} from './GlobalStore.types';
+
+import { clone } from './GlobalStore.utils';
+
+/**
+ * The GlobalStore class is the main class of the library and it is used to create a GlobalStore instances
+ * @template {TState} TState - The type of the state
+ * @template {TMetadata} TMetadata - The type of the metadata object (optional) (default: null) no reactive information set to share with the subscribers
+ * @template {ActionCollectionConfig<TState> | null} TStoreActionsConfig - The type of the actions configuration object (optional) (default: null) if not null the store manipulation will be done through the actions
+ * */
 export class GlobalStore<
-  IState,
-  IPersist extends string | null,
-  IActions extends IGlobalStore.ActionCollectionConfig<IState> | null = null
+  TState,
+  TStoreActionsConfig extends ActionCollectionConfig<
+    TState,
+    TMetadata
+  > | null = null,
+  TMetadata extends Record<string, unknown> | null = null
 > {
-  public subscribers: IGlobalStore.StateSetter<IState>[] = [];
+  public subscribers: Set<StateSetter<TState>> = new Set();
 
-  public get isPersistStore(): boolean {
-    return !!this.persistStoreAs;
-  }
-
+  /**
+   * Create a new instance of the GlobalStore
+   * @param {TState} state - The initial state
+   * @param {TStoreActionsConfig} storeActionsConfig - The actions configuration object (optional) (default: null) if not null the store manipulation will be done through the actions
+   * @param {GlobalStoreConfig<TState, TMetadata>} config - The configuration object (optional) (default: { metadata: null })
+   * @param {TMetadata} config.metadata - The metadata object (optional) (default: null) no reactive information set
+   * @param {StateConfigCallbackParam<TState, TMetadata>} config.onInit - The callback to execute when the store is initialized (optional) (default: null)
+   * @param {StateConfigCallbackParam<TState, TMetadata>} config.onStateChange - The callback to execute when the state is changed (optional) (default: null)
+   *
+   * */
   constructor(
-    protected state: IState,
-    protected actions: IActions = null as IActions,
-    public persistStoreAs: IPersist = null as IPersist,
+    protected state: TState,
+    protected storeActionsConfig: TStoreActionsConfig = null as TStoreActionsConfig,
+    protected config: GlobalStoreConfig<TState, TMetadata> = {}
+  ) {
+    const { onInit } = this.config;
+    if (!onInit) return;
 
-    /**
-     * This function can be used to format the data after it is loaded from the asyncStorage
-     */
-    public onPersistStorageLoad: (obj: unknown) => IState | null = () => null
-  ) {}
-
-  private get isStoredStateItemUpdated() {
-    return this.storedStateItem !== undefined;
+    const parameters = this.getConfigCallbackParam();
+    onInit(parameters);
   }
 
-  private storedStateItem: IState | undefined = undefined;
+  protected getStateCopy = (): TState => clone(this.state);
 
-  protected getAsyncStoreItemPromise: Promise<IState> | null = null;
+  /**
+   * Set the value of the metadata property, this is no reactive and will not trigger a re-render
+   * @param {StateSetter<TMetadata>} setter - The setter function or the value to set
+   * */
+  public setMetadata: StateSetter<TMetadata> = (setter) => {
+    const isSetterFunction = typeof setter === 'function';
 
-  protected asyncStorageGetItem(): Promise<string | null> {
-    // return asyncStorage.getItem(this.persistStoreAs as string);
+    const metadata = isSetterFunction
+      ? setter(this.getMetadataClone())
+      : setter;
 
-    return Promise.resolve(null);
-  }
+    this.config.metadata = metadata;
+  };
 
-  protected async getAsyncStoreItem({
-    invokerSetState,
-  }: {
-    invokerSetState?: React.Dispatch<React.SetStateAction<IState>>;
-  }): Promise<IState> {
-    // If the state is already updated, return it
-    if (this.isStoredStateItemUpdated) return this.storedStateItem as IState;
+  protected getMetadataClone = (): TMetadata => {
+    return clone(this.config.metadata ?? null) as TMetadata;
+  };
 
-    // If the promise to get the state is already running, return it
-    if (this.getAsyncStoreItemPromise) return this.getAsyncStoreItemPromise;
+  protected getConfigCallbackParam = (): StateConfigCallbackParam<
+    TState,
+    TMetadata
+  > => {
+    const { setMetadata, getMetadataClone: getMetadata } = this;
+    const setState = this.getSetStateWrapper({});
 
-    this.getAsyncStoreItemPromise = new Promise((resolve) => {
-      (async () => {
-        const item = await this.asyncStorageGetItem();
+    const actions = this.storeActionsConfig
+      ? this.getStoreActionsMap({})
+      : null;
 
-        if (item) {
-          let value = JSON.parse(item) as IState;
+    return { setMetadata, getMetadata, setState, actions };
+  };
 
-          /** This allow users to review what is been stored */
-          value = this.onPersistStorageLoad(value) ?? value;
-
-          const newState = formatFromStore(value) as IState;
-          const stateSetter = this.getInternalSetter({ invokerSetState });
-
-          stateSetter(newState);
-        }
-
-        resolve(this.state);
-      })();
-    });
-
-    return this.getAsyncStoreItemPromise;
-  }
-
-  protected async asyncStorageSetItem(valueToStore: string): Promise<void> {
-    // await asyncStorage.setItem(this.persistStoreAs as string, valueToStore);
-  }
-
-  protected async setAsyncStoreItem(): Promise<void> {
-    if (this.storedStateItem === this.state) return;
-
-    this.storedStateItem = this.state;
-
-    const valueToStore = formatToStore(this.state);
-
-    await this.asyncStorageSetItem(JSON.stringify(valueToStore));
-  }
-
-  protected getStateCopy = (): IState => Object.freeze(clone(this.state));
-
+  /**
+   * Returns the global hook
+   * @template TStoreActionsConfigApi - The type of the actions api returned by the hook (if you passed an API as a parameter)
+   * @retusn {() => [TState, StateOrchestrator<TState, TStoreActionsConfig, TStoreActionsConfigApi>, TMetadata]} - The hook function that returns the state, the state setter or the actions api (if any) and the metadata (if any)
+   * */
   public getHook =
     <
-      IApi extends IGlobalStore.ActionCollectionResult<
-        IState,
-        IActions
-      > | null = IActions extends null
+      TStoreActionsConfigApi extends ActionCollectionResult<
+        TState,
+        TMetadata,
+        TStoreActionsConfig
+      > | null = TStoreActionsConfig extends null
         ? null
-        : IGlobalStore.ActionCollectionResult<IState, IActions>
+        : ActionCollectionResult<TState, TMetadata, TStoreActionsConfig>
     >() =>
     (): [
-      IState,
-      IGlobalStore.HookResult<IState, IActions, IApi>,
-      IPersist extends null ? false : true extends true ? boolean : null
+      TState,
+      StateOrchestrator<
+        TState,
+        TMetadata,
+        TStoreActionsConfig,
+        TStoreActionsConfigApi
+      >,
+      TMetadata
     ] => {
       const [value, invokerSetState] = useState(() => this.state);
 
       useEffect(() => {
-        this.subscribers.push(
-          invokerSetState as IGlobalStore.StateSetter<IState>
-        );
+        this.subscribers.add(invokerSetState);
 
-        if (this.isPersistStore) {
-          this.getAsyncStoreItem({ invokerSetState });
+        const { onSubscribed } = this.config;
+        if (onSubscribed) {
+          const parameters = this.getConfigCallbackParam();
+          onSubscribed(parameters);
         }
 
         return () => {
-          this.subscribers = this.subscribers.filter(
-            (hook) => invokerSetState !== hook
-          );
+          this.subscribers.delete(invokerSetState);
         };
       }, []);
 
+      const stateOrchestrator = this.getStateOrchestrator(
+        invokerSetState
+      ) as StateSetter<TState>;
+
       return [
         value,
-        this.getStateOrchestrator(invokerSetState) as IGlobalStore.HookResult<
-          IState,
-          IActions,
-          IApi
+        stateOrchestrator as StateOrchestrator<
+          TState,
+          TMetadata,
+          TStoreActionsConfig,
+          TStoreActionsConfigApi
         >,
-        this.isStoredStateItemUpdated as IPersist extends null
-          ? false
-          : true extends true
-          ? boolean
-          : null,
+        this.getMetadataClone(),
       ];
     };
 
+  /**
+   * Returns the orchestrator of the state setter depending on whether the state has custom actions
+   * @template TStoreActionsConfigApi - The type of the actions api returned by the hook (if any) (optional)
+   * @returns {[StateSetter<TState>, TStoreActionsConfigApi, TMetadata]} - The getter of the state, the state setter or the actions api (if any) and a getter of the metadata (if any)
+   * */
   public getHookDecoupled = <
-    IApi extends IGlobalStore.ActionCollectionResult<
-      IState,
-      IActions
-    > | null = IActions extends null
+    TStoreActionsConfigApi extends ActionCollectionResult<
+      TState,
+      TMetadata,
+      TStoreActionsConfig
+    > | null = TStoreActionsConfig extends null
       ? null
-      : IGlobalStore.ActionCollectionResult<IState, IActions>
+      : ActionCollectionResult<TState, TMetadata, TStoreActionsConfig>
   >(): [
-    () => IPersist extends string ? Promise<IState> : IState,
-    IGlobalStore.HookResult<IState, IActions, IApi>
+    () => TState,
+    StateOrchestrator<
+      TState,
+      TMetadata,
+      TStoreActionsConfig,
+      TStoreActionsConfigApi
+    >,
+    () => TMetadata
   ] => {
-    const getState = () => {
-      if (this.isPersistStore) {
-        return this.getAsyncStoreItem({});
-      }
+    const { getStateCopy: getState, getMetadataClone: getMetadata } = this;
 
-      return this.state;
-    };
+    const stateOrchestrator = this.getStateOrchestrator() as StateOrchestrator<
+      TState,
+      TMetadata,
+      TStoreActionsConfig,
+      TStoreActionsConfigApi
+    >;
 
-    return [
-      getState as () => IPersist extends string ? Promise<IState> : IState,
-      this.getStateOrchestrator() as IGlobalStore.HookResult<
-        IState,
-        IActions,
-        IApi
-      >,
-    ];
+    return [getState, stateOrchestrator, getMetadata];
   };
 
-  protected getInternalSetter = ({
+  /**
+   * returns a wrapper for the setState function that will update the state and all the subscribers
+   * @param {React.Dispatch<React.SetStateAction<TState>>} invokerSetState - The setState function wrapped by the hook
+   * @returns {StateSetter<TState>} - The state setter
+   * */
+  protected getSetStateWrapper = ({
     invokerSetState,
   }: {
-    invokerSetState?: React.Dispatch<React.SetStateAction<IState>>;
-  } = {}): IGlobalStore.StateSetter<IState> => {
-    let stateOrchestrator: (params: {
-      invokerSetState?: Dispatch<SetStateAction<IState>>;
-      setter: IState | ((state: IState) => IState);
-    }) => void;
-
-    if (this.persistStoreAs) {
-      stateOrchestrator = this.globalSetterToPersistStoreAsync;
-    } else {
-      stateOrchestrator = this.globalSetter;
-    }
-
+    invokerSetState?: React.Dispatch<React.SetStateAction<TState>>;
+  } = {}): StateSetter<TState> => {
     return (setter) => {
-      stateOrchestrator({ invokerSetState, setter });
+      this.storeSetState({ invokerSetState, setter });
     };
   };
 
+  /**
+   * Returns the orchestrator of the state setter depending on whether the state has custom actions or not
+   * @param {React.Dispatch<React.SetStateAction<TState>>} invokerSetState - The setState function wrapped by the hook
+   * @returns {StateSetter<TState> | ActionCollectionResult<TState, TStoreActionsConfig>} - The state setter or the actions API
+   * */
   protected getStateOrchestrator(
-    invokerSetState?: React.Dispatch<React.SetStateAction<IState>>
-  ):
-    | IGlobalStore.StateSetter<IState>
-    | IGlobalStore.ActionCollectionResult<IState, IActions> {
-    if (this.actions) {
-      return this.getApiActions({
-        invokerSetState,
-      }) as IGlobalStore.ActionCollectionResult<IState, IActions>;
+    invokerSetState?: React.Dispatch<React.SetStateAction<TState>>
+  ) {
+    const stateHasCustomActions = this.storeActionsConfig;
+
+    if (stateHasCustomActions) {
+      return this.getStoreActionsMap({ invokerSetState });
     }
 
-    return this.getInternalSetter({ invokerSetState });
+    return this.getSetStateWrapper({ invokerSetState });
   }
 
-  protected globalSetter = ({
+  /**
+   * This method is responsible for updating the state and all the subscribers
+   * @param {TState | ((state: TState) => TState)} setter - The new state or a function that returns the new state
+   * @param {React.Dispatch<React.SetStateAction<TState>>} invokerSetState - The setState function wrapped by the hook
+   * @returns {void}
+   */
+  protected storeSetState = ({
     setter,
     invokerSetState,
   }: {
-    setter: IState | ((state: IState) => IState);
-    invokerSetState?: React.Dispatch<React.SetStateAction<IState>>;
+    setter: TState | ((state: TState) => TState);
+    invokerSetState?: React.Dispatch<React.SetStateAction<TState>>;
   }) => {
-    const newState: IState =
-      typeof setter === 'function'
-        ? (setter as (state: IState) => IState)(this.getStateCopy())
-        : setter;
+    const isSetterFunction = typeof setter === 'function';
+    const previousState = this.getStateCopy();
 
+    const newState = isSetterFunction
+      ? (setter as (state: TState) => TState)(previousState)
+      : setter;
+
+    const { computePreventStateChange, onStateChanged } = this.config;
+    const shouldComputeParameter = computePreventStateChange || onStateChanged;
+    const setState = this.getSetStateWrapper({ invokerSetState });
+
+    const { setMetadata, getMetadataClone: getMetadata } = this;
+
+    const actions =
+      shouldComputeParameter && this.storeActionsConfig
+        ? this.getStoreActionsMap({})
+        : null;
+
+    // check if the state change should be prevented
+    if (computePreventStateChange) {
+      const preventStateChange = computePreventStateChange({
+        getMetadata,
+        setState,
+        setMetadata,
+        actions,
+        previousState,
+        state: newState,
+      });
+
+      if (preventStateChange) return;
+    }
+
+    // update the state
     this.state = newState;
 
     // execute the invoke setter before the batched updates to avoid delays on the UI
@@ -222,38 +264,49 @@ export class GlobalStore<
 
       setState(newState);
     });
+
+    if (!onStateChanged) return;
+
+    // execute the onStateChanged callback
+    onStateChanged({
+      getMetadata,
+      setState,
+      setMetadata,
+      actions,
+      previousState,
+      state: newState,
+    });
   };
 
-  protected globalSetterToPersistStoreAsync = async ({
-    setter,
-    invokerSetState,
-  }: {
-    setter: IState | ((state: IState) => IState);
-    invokerSetState?: React.Dispatch<React.SetStateAction<IState>>;
-  }): Promise<IState> => {
-    this.globalSetter({ invokerSetState, setter });
-
-    await this.setAsyncStoreItem();
-
-    return this.state;
-  };
-
-  protected getApiActions = <
-    IApi extends IGlobalStore.ActionCollectionResult<
-      IState,
-      IGlobalStore.ActionCollectionConfig<IState>
+  /**
+   * This method is responsible for creating the actions API
+   * @param {React.Dispatch<React.SetStateAction<TState>>} invokerSetState - The setState function wrapped by the hook
+   * @returns {TStoreActionsConfigApi} - The actions API with the actions as properties depending on the actions config passed to the constructor
+   * */
+  protected getStoreActionsMap = <
+    TStoreActionsConfigApi extends ActionCollectionResult<
+      TState,
+      TMetadata,
+      ActionCollectionConfig<TState, TMetadata>
     >
   >({
     invokerSetState,
   }: {
-    invokerSetState?: React.Dispatch<React.SetStateAction<IState>>;
-  }): IApi => {
-    const actionsConfig = this
-      .actions as IGlobalStore.ActionCollectionConfig<IState>;
+    invokerSetState?: React.Dispatch<React.SetStateAction<TState>>;
+  }): TStoreActionsConfigApi => {
+    const { storeActionsConfig, setMetadata } = this;
+    const actionsConfig = storeActionsConfig as ActionCollectionConfig<
+      TState,
+      TMetadata
+    >;
+
     const actionsKeys = Object.keys(actionsConfig);
 
-    const internalSetter: IGlobalStore.StateSetter<IState> =
-      this.getInternalSetter({ invokerSetState });
+    const setState: StateSetter<TState> = this.getSetStateWrapper({
+      invokerSetState,
+    });
+
+    const { getStateCopy: getState, getMetadataClone: getMetadata } = this;
 
     const actionsApi = actionsKeys.reduce(
       (accumulator, key) => ({
@@ -262,22 +315,23 @@ export class GlobalStore<
           const actionConfig = actionsConfig[key];
           const action = actionConfig(...parameres);
 
+          action.bind(actionsApi);
+
           // executes the actions bringing access to the state setter and a copy of the state
-          const result = action(internalSetter, this.getStateCopy());
+          const result = action({
+            setState,
+            getState,
+            setMetadata,
+            getMetadata,
+          });
 
           return result;
         },
       }),
-      {} as IApi
+      {} as TStoreActionsConfigApi
     );
 
     return actionsApi;
-  };
-
-  public deleteAsyncStoreItem = async (): Promise<void> => {
-    if (!this.isPersistStore) return;
-
-    // await asyncStorage.removeItem(this.persistStoreAs as string);
   };
 }
 
