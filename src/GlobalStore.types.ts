@@ -11,6 +11,11 @@ export type ActionConfigCallbackParam<TState = unknown, TMetadata = null> = {
   setState: StateSetter<TState>;
   getState: () => TState;
   getMetadata: () => TMetadata;
+  actions: ActionCollectionResult<
+    TState,
+    TMetadata,
+    ActionCollectionConfig<TState, TMetadata>
+  >;
 };
 
 /**

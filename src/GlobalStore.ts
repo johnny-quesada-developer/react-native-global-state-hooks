@@ -308,14 +308,12 @@ export class GlobalStore<
 
     const { getStateCopy: getState, getMetadataClone: getMetadata } = this;
 
-    const actionsApi = actionsKeys.reduce(
+    const actions = actionsKeys.reduce(
       (accumulator, key) => ({
         ...accumulator,
         [key]: (...parameres: unknown[]) => {
           const actionConfig = actionsConfig[key];
           const action = actionConfig(...parameres);
-
-          action.bind(actionsApi);
 
           // executes the actions bringing access to the state setter and a copy of the state
           const result = action({
@@ -323,6 +321,7 @@ export class GlobalStore<
             getState,
             setMetadata,
             getMetadata,
+            actions,
           });
 
           return result;
@@ -331,7 +330,7 @@ export class GlobalStore<
       {} as TStoreActionsConfigApi
     );
 
-    return actionsApi;
+    return actions;
   };
 }
 

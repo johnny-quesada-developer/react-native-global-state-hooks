@@ -31,7 +31,8 @@
     "skipLibCheck": false,
     "forceConsistentCasingInFileNames": true,
     "allowUnusedLabels": false,
-    "pretty": true
+    "pretty": true,
+    "allowUnreachableCode": true
   },
   "include": ["src", "@test"],
   "exclude": ["node_modules"]

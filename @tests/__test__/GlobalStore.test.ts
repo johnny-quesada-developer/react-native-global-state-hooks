@@ -13,11 +13,16 @@ const createCountStoreWithActions = (spy?: jest.Mock) => {
   const countStore = new GlobalStore(
     countStoreInitialState,
     {
-      increase:
-        (n: number) =>
-        ({ setState }: ActionConfigCallbackParam<number>) => {
+      log: () => {
+        return spy ?? jest.fn(() => null);
+      },
+      increase: () => {
+        return ({ setState, actions }: ActionConfigCallbackParam<number>) => {
           setState((state) => state + 1);
-        },
+
+          return actions.log();
+        };
+      },
     },
     {}
   );
@@ -128,7 +133,7 @@ describe('GlobalStore with actions', () => {
 
     const [getState, actions] = store.getHookDecoupled();
 
-    const test = actions.increase(1);
+    actions.increase();
 
     expect(getState()).toBe(2);
   });
@@ -163,7 +168,7 @@ describe('GlobalStore with actions', () => {
 
     const [setter1, setter2] = store.subscribers;
 
-    actions.increase(1);
+    actions.increase();
 
     expect(getState()).toBe(2);
     expect(useState).toHaveBeenCalledTimes(2);
@@ -171,5 +176,17 @@ describe('GlobalStore with actions', () => {
 
     expect(setter1).toBeCalledTimes(1);
     expect(setter2).toBeCalledTimes(1);
+  });
+
+  it('actions should be able to call other actions', () => {
+    const spy = jest.fn(() => 1);
+    const store = createCountStoreWithActions(spy);
+
+    const [, actions] = store.getHookDecoupled();
+
+    const result = actions.increase();
+
+    expect(spy).toBeCalledTimes(1);
+    expect(result).toBe(1);
   });
 });
