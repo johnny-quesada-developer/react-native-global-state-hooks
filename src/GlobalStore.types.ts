@@ -98,36 +98,6 @@ export type ActionCollectionResult<
 };
 
 /**
- * This is the structure returned by the orchestrator of the state which could be a function or an object with specific actions
- * if you pass an storeActionsConfig configuration, you will get an object with the actions
- * if you don't pass an storeActionsConfig configuration, you will get a function to set the state
- * @template TState - the type of the state
- * @template TMetadata - the type of the metadata (optional) - if you don't pass an metadata as a parameter, you can pass null
- * @template {ActionCollectionConfig<TState,TMetadata> | null} TStoreActionsConfig - the configuration of the API (optional) - if you don't pass an API as a parameter, you can pass null
- * @template {ActionCollectionResult<TState,TStoreActionsConfig>} TStoreActions - the result of the API (optional) - if you don't pass an API as a parameter, you can pass null
- * @returns {StateOrchestrator<TState, TMetadata, TStoreActionsConfig, TStoreActions>} - the orchestrator of the state which could be a function or an object with specific actions
- * */
-export type StateOrchestrator<
-  TState,
-  TMetadata,
-  TStoreActionsConfig extends ActionCollectionConfig<
-    TState,
-    TMetadata
-  > | null = null,
-  TStoreActions extends null | ActionCollectionResult<
-    TState,
-    TMetadata,
-    NonNullable<TStoreActionsConfig>
-  > = TStoreActionsConfig extends null
-    ? null
-    : ActionCollectionResult<
-        TState,
-        TMetadata,
-        NonNullable<TStoreActionsConfig>
-      >
-> = TStoreActions extends null ? StateSetter<TState> : TStoreActions;
-
-/**
  * Common parameters of the store configuration callback functions
  * @param {StateSetter<TState>} setState - add a new value to the state
  * @param {() => TState} getState - get the current state

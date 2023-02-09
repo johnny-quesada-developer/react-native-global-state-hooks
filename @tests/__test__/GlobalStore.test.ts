@@ -11,26 +11,24 @@ import { useState, useEffect } from 'react';
 
 const countStoreInitialState = 1;
 const createCountStoreWithActions = (spy?: jest.Mock) => {
-  const countStore = new GlobalStore(
-    countStoreInitialState,
-    {
-      log(message: string) {
-        return () => spy?.(message);
-      },
-      increase(increase: number = 1) {
-        this.log('wrapper');
+  const actionsConfig = {
+    log(message: string) {
+      return () => spy?.(message);
+    },
+    increase(increase: number = 1) {
+      this.log('wrapper');
 
-        return ({ setState, getState }) => {
-          setState((state) => state + increase);
+      return ({ setState, getState }) => {
+        setState((state) => state + increase);
 
-          this.log('execution');
+        this.log('execution');
 
-          return getState();
-        };
-      },
-    } as ActionCollectionConfig<number, null>,
-    {}
-  );
+        return getState();
+      };
+    },
+  } as ActionCollectionConfig<number, null>;
+
+  const countStore = new GlobalStore(countStoreInitialState, actionsConfig);
 
   return countStore as typeof countStore & {
     state: number;
