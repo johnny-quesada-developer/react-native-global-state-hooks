@@ -6,6 +6,7 @@ import {
   GlobalStoreConfig,
   ActionCollectionResult,
   StateConfigCallbackParam,
+  StateChangesParam,
 } from './GlobalStore.types';
 
 import { clone } from './GlobalStore.utils';
@@ -27,7 +28,7 @@ const throwWrongKeyOnActionCollectionConfig = (action_key: string) => {
  * */
 export class GlobalStore<
   TState,
-  TMetadata extends Record<string, unknown> | null = null,
+  TMetadata,
   TStoreActionsConfig extends ActionCollectionConfig<
     TState,
     TMetadata
@@ -52,9 +53,9 @@ export class GlobalStore<
   /**
    * Create a new instance of the GlobalStore
    * @param {TState} state - The initial state
+   * @param {TMetadata} metadata - The metadata object (optional) (default: null) no reactive information set to share with the subscribers
    * @param {TStoreActionsConfig} storeActionsConfig - The actions configuration object (optional) (default: null) if not null the store manipulation will be done through the actions
    * @param {GlobalStoreConfig<TState, TMetadata>} config - The configuration object (optional) (default: { metadata: null })
-   * @param {TMetadata} config.metadata - The metadata object (optional) (default: null) no reactive information set
    * @param {StateConfigCallbackParam<TState, TMetadata>} config.onInit - The callback to execute when the store is initialized (optional) (default: null)
    * @param {StateConfigCallbackParam<TState, TMetadata>} config.onStateChanged - The callback to execute when the state is changed (optional) (default: null)
    * @param {StateConfigCallbackParam<TState, TMetadata>} config.onSubscribed - The callback to execute when a subscriber is added (optional) (default: null)
@@ -62,11 +63,12 @@ export class GlobalStore<
    * */
   constructor(
     protected state: TState,
-    protected storeActionsConfig: TStoreActionsConfig = null as TStoreActionsConfig,
+    protected metadata: TMetadata = null,
+    protected storeActionsConfig: TStoreActionsConfig = null,
     public config: GlobalStoreConfig<
       TState,
       TMetadata,
-      NonNullable<TStoreActionsConfig>
+      TStoreActionsConfig
     > = {}
   ) {
     const { onInit } = this.config;
@@ -86,14 +88,14 @@ export class GlobalStore<
     const isSetterFunction = typeof setter === 'function';
 
     const metadata = isSetterFunction
-      ? setter(this.getMetadataClone())
+      ? (setter as (state: TMetadata) => TMetadata)(this.getMetadataClone())
       : setter;
 
-    this.config.metadata = metadata;
+    this.metadata = metadata;
   };
 
-  protected getMetadataClone = (): TMetadata => {
-    return clone(this.config.metadata ?? null) as TMetadata;
+  public getMetadataClone = (): TMetadata => {
+    return clone(this.metadata ?? null) as TMetadata;
   };
 
   protected getConfigCallbackParam = (): StateConfigCallbackParam<
@@ -346,6 +348,14 @@ export class GlobalStore<
 
     return actions;
   };
+
+  protected onInit: (
+    params: StateConfigCallbackParam<TState, TMetadata, TStoreActionsConfig>
+  ) => void;
+
+  protected onStateChanged: (
+    params: StateChangesParam<TState, TMetadata, TStoreActionsConfig>
+  ) => void;
 }
 
 export default GlobalStore;

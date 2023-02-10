@@ -146,7 +146,6 @@ export type StateChangesParam<
 
 /**
  * Configuration of the store (optional) - if you don't need to use the store configuration you don't need to pass this parameter
- * @param {TMetadata} metadata - the initial metadata
  * @param {StateConfigCallbackParam<TState, TMetadata> => void} onInit - callback function called when the store is initialized
  * @param {StateConfigCallbackParam<TState, TMetadata> => void} onSubscribed - callback function called every time a component is subscribed to the store
  * @param {StateChangesParam<TState, TMetadata> => boolean} computePreventStateChange - callback function called every time the state is changed and it allows you to prevent the state change
@@ -160,8 +159,6 @@ export type GlobalStoreConfig<
   TMetadata,
   TStoreActions extends ActionCollectionConfig<TState, TMetadata>
 > = {
-  metadata?: TMetadata;
-
   onInit?: (
     params: StateConfigCallbackParam<TState, TMetadata, TStoreActions>
   ) => void;
