@@ -1,4 +1,5 @@
 import { GlobalStore } from '../../src/GlobalStore';
+
 import {
   CancelablePromise,
   createDecoupledPromise,
@@ -642,7 +643,7 @@ describe('Custome store by using config parameter', () => {
       const stored = await fakeAsyncStorage.getItem('items');
 
       expect(stored).toEqual(
-        '{"_type_":"map","value":[[1,{"name":"john"}],[2,{"name":"doe"}],[3,{"name":"jane"}]]}'
+        '{"$t":"map","$v":[[1,{"name":"john"}],[2,{"name":"doe"}],[3,{"name":"jane"}]]}'
       );
 
       // should have been called once to update the state based on the async storage data

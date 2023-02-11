@@ -13,32 +13,65 @@ import {
 
 import { useState, useEffect } from 'react';
 import { formatFromStore, formatToStore } from 'json-storage-formatter';
-import { getFakeAsyncStorage } from './getFakeAsyncStorage';
-import { GlobalStoreAsync } from './GlobalStoreAsyc';
+import { GlobalStoreAsync, asyncStorage } from './GlobalStoreAsyc';
 
 describe('GlobalStoreAsync Basics', () => {
-  it.skip('should create a store with async storage', async () => {
+  it('should create a store with async storage', async () => {
     const metadata = {
       // determine if the async storage it already loaded
       isAsyncStorageReady: false,
     };
 
-    const { promise: onInitPromise, resolve: onInitResolve } =
-      createDecoupledPromise();
+    asyncStorage.setItem('counter', 0);
 
-    const storage = new GlobalStoreAsync(0, metadata, null, {
-      asyncStorageKey: 'counter',
-    });
+    const { promise, resolve } = createDecoupledPromise();
 
-    jest.spyOn(storage as any, 'onInit').mockImplementation(async () => {
-      onInitResolve();
-    });
+    setTimeout(async () => {
+      const { promise: onStateChangedPromise, resolve: onStateChangedResolve } =
+        createDecoupledPromise();
 
-    expect(storage).toBeInstanceOf(GlobalStoreAsync);
-    expect((storage as any).isAsyncStorageReady).toBe(false);
+      const storage = new GlobalStoreAsync(0, metadata, null, {
+        asyncStorageKey: 'counter',
+      });
 
-    await onInitPromise;
+      const onStateChanged = (storage as any).onStateChanged;
+      onStateChanged.bind(storage);
 
-    expect((storage as any).isAsyncStorageReady).toBe(true);
+      jest
+        .spyOn(storage, 'onStateChanged' as any)
+        .mockImplementation((...parameters) => {
+          onStateChanged(...parameters);
+
+          onStateChangedResolve();
+        });
+
+      expect(storage).toBeInstanceOf(GlobalStoreAsync);
+      expect((storage as any).isAsyncStorageReady).toBe(false);
+
+      const [getState] = storage.getHookDecoupled();
+
+      // add a subscriber to the store
+      storage.getHook()();
+
+      const [setter] = storage.subscribers;
+      const setState = jest.fn(setter);
+
+      storage.subscribers = new Set([setState]);
+
+      await onStateChangedPromise;
+
+      expect((storage as any).isAsyncStorageReady).toBe(true);
+      expect(setState).toBeCalledTimes(1);
+
+      expect(getState()).toBe(0);
+
+      const storedValue = await asyncStorage.getItem('counter');
+
+      expect(storedValue).toBe('"0"');
+
+      resolve();
+    }, 0);
+
+    return promise;
   });
 });

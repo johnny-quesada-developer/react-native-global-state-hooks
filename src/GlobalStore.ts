@@ -123,7 +123,7 @@ export class GlobalStore<
     protected state: TState,
     protected metadata: TMetadata = null,
     protected setterConfig: TStateSetter | null = null,
-    private config: GlobalStoreConfig<TState, TMetadata, TStateSetter> = {}
+    protected config: GlobalStoreConfig<TState, TMetadata, TStateSetter> = {}
   ) {
     this.onInitializeStore();
   }

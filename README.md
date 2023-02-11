@@ -1,14 +1,14 @@
 # react-native-global-state-hooks
 
-This is a package to easily handling global-state across your react-native-components **No-redux**, **No-context**
+This is a package to easily handling global-state across your react-native-components
 
-This utility follows the same style as the default **useState** hook, with a subscription pattern and **HOFs** to create a more intuitive, atomic and easy way of sharing state between components
-
-...
+This utility uses the **useState** hook within a subscription pattern and **HOFs** to create a more intuitive, atomic and easy way of sharing state between components
 
 ...
 
-# Creating a global store, an a simple hook
+...
+
+# Creating a global store
 
 We are gonna create a global count example **useCountGlobal.ts**:
 
@@ -148,15 +148,31 @@ export class GlobalStoreAsync<
 > extends GlobalStore<TState, TMetadata, TStateSetter> {
   protected isAsyncStorageReady: boolean = false;
 
+  protected config: GlobalStoreConfig<
+    TState,
+    TMetadata,
+    NonNullable<TStateSetter>
+  > & {
+    asyncStorageKey: string; // key of the async storage
+  };
+
   constructor(
     state: TState,
     metadata: TMetadata = { isAsyncStorageReady: false } as TMetadata,
     setterConfig: TStateSetter | null = null,
-    config: GlobalStoreConfig<TState, TMetadata, NonNullable<TStateSetter>> & {
+    {
+      onInit: onInitConfig,
+      ...config
+    }: GlobalStoreConfig<TState, TMetadata, NonNullable<TStateSetter>> & {
       asyncStorageKey: string; // key of the async storage
     }
   ) {
     super(state, metadata, setterConfig, config);
+
+    const parameters = this.getConfigCallbackParam({});
+
+    this.onInit(parameters);
+    onInitConfig?.(parameters);
   }
 
   /**
@@ -172,7 +188,8 @@ export class GlobalStoreAsync<
     TMetadata,
     NonNullable<TStateSetter>
   >) => {
-    const storedItem: string = await asyncStorage.getItem('items');
+    const { asyncStorageKey } = this.config;
+    const storedItem: string = await asyncStorage.getItem(asyncStorageKey);
 
     this.isAsyncStorageReady = true;
 
@@ -193,10 +210,11 @@ export class GlobalStoreAsync<
     getState,
   }: StateChangesParam<TState, TMetadata, NonNullable<TStateSetter>>) => {
     const state = getState();
-    const formattedObject: Object = formatToStore(state);
+    const formattedObject = formatToStore(state);
     const jsonValue = JSON.stringify(formattedObject);
+    const { asyncStorageKey } = this.config;
 
-    asyncStorage.setItem('items', jsonValue);
+    asyncStorage.setItem(asyncStorageKey, jsonValue);
   };
 }
 ```
