@@ -25,7 +25,7 @@ export type StateChanges<TState> = {
  * @property {() => TState} getState - Get the state
  * @property {() => TMetadata} getMetadata - Get the metadata
  **/
-export type StoreTools<TState, TMetadata> = {
+export type StoreTools<TState, TMetadata = null> = {
   setMetadata: StateSetter<TMetadata>;
   setState: StateSetter<TState>;
   getState: () => TState;

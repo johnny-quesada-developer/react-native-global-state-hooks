@@ -8,7 +8,7 @@ import {
   ActionCollectionConfig,
   ActionCollectionResult,
   GlobalStoreConfig,
-  StateSetter,
+  StoreTools,
 } from '../../src/GlobalStore.types';
 
 import { useState, useEffect } from 'react';
@@ -19,16 +19,24 @@ const countStoreInitialState = 1;
 const createCountStoreWithActions = (spy?: jest.Mock) => {
   const countStore = new GlobalStore(countStoreInitialState, null, {
     log(message: string) {
-      return () => spy?.(message);
+      return (): void => spy?.(message);
     },
 
     increase(increase: number = 1) {
-      this.log('wrapper');
-
-      return ({ setState, getState }) => {
+      return ({ setState, getState }: StoreTools<number>) => {
         setState((state) => state + increase);
 
-        this.log('execution');
+        this.log('increase');
+
+        return getState();
+      };
+    },
+
+    decrease(decrease: number = 1) {
+      return ({ setState, getState }: StoreTools<number>) => {
+        setState((state) => state - decrease);
+
+        this.log('decrease');
 
         return getState();
       };
@@ -51,7 +59,7 @@ const createCountStoreWithActions = (spy?: jest.Mock) => {
     } & GlobalStoreConfig<number, null, ActionCollectionConfig<number, null>>);
 };
 
-describe('Basic GlobalStore', () => {
+describe('GlobalStore Basic', () => {
   it('should be able to create a new instance with state', () => {
     const stateValue = 'test';
     const store = new GlobalStore(stateValue);
@@ -184,22 +192,6 @@ describe('GlobalStore with actions', () => {
 
     expect(setter1).toBeCalledTimes(1);
     expect(setter2).toBeCalledTimes(1);
-  });
-
-  it('actions should be able to call other actions', () => {
-    const spy = jest.fn(() => 1);
-    const store = createCountStoreWithActions(spy);
-
-    const [, actions] = store.getHookDecoupled();
-
-    const result = actions.increase(1);
-
-    expect(spy).toBeCalledTimes(2);
-
-    expect(spy).toBeCalledWith('wrapper');
-    expect(spy).toBeCalledWith('execution');
-
-    expect(result).toBe(2);
   });
 });
 
@@ -660,5 +652,32 @@ describe('Custome store by using config parameter', () => {
     }, 0);
 
     return mainPromise;
+  });
+});
+
+describe('GlobalStore Accessing custom actions from other actions', () => {
+  it('should be able to access custom actions from other actions', () => {
+    expect.assertions(8);
+
+    const logSpy = jest.fn();
+
+    const store = createCountStoreWithActions(logSpy);
+
+    const [getState, actions] = store.getHookDecoupled();
+
+    expect(getState()).toEqual(1);
+    expect(logSpy).toBeCalledTimes(0);
+
+    actions.increase();
+
+    expect(getState()).toEqual(2);
+    expect(logSpy).toBeCalledTimes(1);
+    expect(logSpy).toBeCalledWith('increase');
+
+    actions.decrease();
+
+    expect(getState()).toEqual(1);
+    expect(logSpy).toBeCalledTimes(2);
+    expect(logSpy).toBeCalledWith('decrease');
   });
 });
