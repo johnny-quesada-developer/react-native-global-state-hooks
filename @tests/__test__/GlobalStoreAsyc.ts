@@ -42,7 +42,7 @@ export class GlobalStoreAsync<
       asyncStorageKey: string; // key of the async storage
     }
   ) {
-    super(state, metadata, setterConfig, config);
+    super(state, metadata, setterConfig as TStateSetter, config);
 
     const parameters = this.getConfigCallbackParam({});
 

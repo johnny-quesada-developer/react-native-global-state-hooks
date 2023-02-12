@@ -41,15 +41,6 @@ export type StoreTools<TState, TMetadata = null> = {
  * @returns {ActionCollectionConfig<TState, TMetadata>} result - The action collection configuration
  */
 export interface ActionCollectionConfig<TState, TMetadata> {
-  // [key: string]: {
-  //   (...parameters: any[]): (storeTools: {
-  //     setMetadata: StateSetter<TMetadata>;
-  //     setState: StateSetter<TState>;
-  //     getState: () => TState;
-  //     getMetadata: () => TMetadata;
-  //   }) => unknown | void;
-  // };
-
   [key: string]: (
     ...parameters: any[]
   ) => (storeTools: StoreTools<TState, TMetadata>) => unknown | void;

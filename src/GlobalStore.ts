@@ -109,6 +109,52 @@ export class GlobalStore<
   >['computePreventStateChange'] = null;
 
   /**
+   * Create a simple global store
+   * @param {TState} state - The initial state
+   * */
+  constructor(state: TState);
+
+  /**
+   * Create a simple global store with also contains a metadata object
+   * The metadata object is not reactive, but it can be used to share information with the subscribers
+   * @param {TState} state - The initial state
+   * @param {TMetadata} metadata - The metadata object (optional) (default: null) no reactive information set to share with the subscribers
+   * */
+  constructor(state: TState, metadata: TMetadata);
+
+  /**
+   * Create a new global store with custom action
+   * The metadata object could be null if not needed
+   * The setter Object is used to define the actions that will be used to manipulate the state
+   * @param {TState} state - The initial state
+   * @param {TMetadata} metadata - The metadata object (optional) (default: null) no reactive information set to share with the subscribers
+   * @param {TStateSetter} setterConfig - The actions configuration object (optional) (default: null) if not null the store manipulation will be done through the actions
+   * */
+  constructor(state: TState, metadata: TMetadata, setterConfig: TStateSetter);
+
+  /**
+   * Create a new global store with custom action
+   * The metadata object could be null if not needed
+   * The setter Object is used to define the actions that will be used to manipulate the state
+   * The config object is used to define the callbacks that will be executed during the store lifecycle
+   * The lifecycle callbacks are: onInit, onStateChanged, onSubscribed and computePreventStateChange
+   * @param {TState} state - The initial state
+   * @param {TMetadata} metadata - The metadata object (optional) (default: null) no reactive information set to share with the subscribers
+   * @param {TStateSetter} setterConfig - The actions configuration object (optional) (default: null) if not null the store manipulation will be done through the actions
+   * @param {GlobalStoreConfig<TState, TMetadata>} config - The configuration object (optional) (default: { metadata: null })
+   * @param {StateConfigCallbackParam<TState, TMetadata>} config.onInit - The callback to execute when the store is initialized (optional) (default: null)
+   * @param {StateConfigCallbackParam<TState, TMetadata>} config.onStateChanged - The callback to execute when the state is changed (optional) (default: null)
+   * @param {StateConfigCallbackParam<TState, TMetadata>} config.onSubscribed - The callback to execute when a subscriber is added (optional) (default: null)
+   * @param {StateConfigCallbackParam<TState, TMetadata>} config.computePreventStateChange - The callback to execute when the state is changed to compute if the state change should be prevented (optional) (default: null)
+   * */
+  constructor(
+    state: TState,
+    metadata: TMetadata,
+    setterConfig: TStateSetter,
+    config: GlobalStoreConfig<TState, TMetadata, TStateSetter>
+  );
+
+  /**
    * Create a new instance of the GlobalStore
    * @param {TState} state - The initial state
    * @param {TMetadata} metadata - The metadata object (optional) (default: null) no reactive information set to share with the subscribers
