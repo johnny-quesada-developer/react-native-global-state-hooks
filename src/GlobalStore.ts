@@ -1,4 +1,3 @@
-// jsonStorageFormatter
 import * as jsonStorageFormatter from 'json-storage-formatter';
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 
@@ -42,6 +41,16 @@ export class GlobalStore<
    * @template {TState} TState - The type of the state object
    * */
   public subscribers: Set<StateSetter<TState>> = new Set();
+
+  /**
+   * additional configuration for the store
+   * @template {TState} TState - The type of the state object
+   * @template {TMetadata} TMetadata - The type of the metadata object (optional) (default: null) no reactive information set to share with the subscribers
+   * @template {TStateSetter} TStateSetter - The type of the setterConfig object (optional) (default: null) if a configuration is passed, the hook will return an object with the actions then all the store manipulation will be done through the actions
+   */
+  protected config: GlobalStoreConfig<TState, TMetadata, TStateSetter> = {
+    metadata: null,
+  };
 
   /**
    * execute once the store is created
@@ -119,22 +128,16 @@ export class GlobalStore<
   constructor(state: TState);
 
   /**
-   * Create a simple global store with also contains a metadata object
-   * The metadata object is not reactive, but it can be used to share information with the subscribers
-   * @param {TState} state - The initial state
-   * @param {TMetadata} metadata - The metadata object (optional) (default: null) no reactive information set to share with the subscribers
-   * */
-  constructor(state: TState, metadata: TMetadata);
-
-  /**
    * Create a new global store with custom action
    * The metadata object could be null if not needed
    * The setter Object is used to define the actions that will be used to manipulate the state
    * @param {TState} state - The initial state
-   * @param {TMetadata} metadata - The metadata object (optional) (default: null) no reactive information set to share with the subscribers
    * @param {TStateSetter} setterConfig - The actions configuration object (optional) (default: null) if not null the store manipulation will be done through the actions
    * */
-  constructor(state: TState, metadata: TMetadata, setterConfig: TStateSetter);
+  constructor(
+    state: TState,
+    config: GlobalStoreConfig<TState, TMetadata, TStateSetter>
+  );
 
   /**
    * Create a new global store with custom action
@@ -143,38 +146,40 @@ export class GlobalStore<
    * The config object is used to define the callbacks that will be executed during the store lifecycle
    * The lifecycle callbacks are: onInit, onStateChanged, onSubscribed and computePreventStateChange
    * @param {TState} state - The initial state
-   * @param {TMetadata} metadata - The metadata object (optional) (default: null) no reactive information set to share with the subscribers
-   * @param {TStateSetter} setterConfig - The actions configuration object (optional) (default: null) if not null the store manipulation will be done through the actions
    * @param {GlobalStoreConfig<TState, TMetadata>} config - The configuration object (optional) (default: { metadata: null })
-   * @param {StateConfigCallbackParam<TState, TMetadata>} config.onInit - The callback to execute when the store is initialized (optional) (default: null)
-   * @param {StateConfigCallbackParam<TState, TMetadata>} config.onStateChanged - The callback to execute when the state is changed (optional) (default: null)
-   * @param {StateConfigCallbackParam<TState, TMetadata>} config.onSubscribed - The callback to execute when a subscriber is added (optional) (default: null)
-   * @param {StateConfigCallbackParam<TState, TMetadata>} config.computePreventStateChange - The callback to execute when the state is changed to compute if the state change should be prevented (optional) (default: null)
+   * @param {GlobalStoreConfig<TState, TMetadata>} config.metadata - The metadata object (optional) (default: null) if not null the metadata object will be reactive
+   * @param {GlobalStoreConfig<TState, TMetadata>} config.onInit - The callback to execute when the store is initialized (optional) (default: null)
+   * @param {GlobalStoreConfig<TState, TMetadata>} config.onStateChanged - The callback to execute when the state is changed (optional) (default: null)
+   * @param {GlobalStoreConfig<TState, TMetadata>} config.onSubscribed - The callback to execute when a new component gets subscribed to the store (optional) (default: null)
+   * @param {GlobalStoreConfig<TState, TMetadata>} config.computePreventStateChange - The callback to execute everytime a state change is triggered and before the state is updated, it allows to prevent the state change by returning true (optional) (default: null)
+   * @param {TStateSetter} setterConfig - The actions configuration object (optional) (default: null) if not null the store manipulation will be done through the actions
    * */
   constructor(
     state: TState,
-    metadata: TMetadata,
-    setterConfig: TStateSetter,
-    config: GlobalStoreConfig<TState, TMetadata, TStateSetter>
+    config: GlobalStoreConfig<TState, TMetadata, TStateSetter>,
+    setterConfig: TStateSetter
   );
 
   /**
    * Create a new instance of the GlobalStore
    * @param {TState} state - The initial state
-   * @param {TMetadata} metadata - The metadata object (optional) (default: null) no reactive information set to share with the subscribers
-   * @param {TStateSetter} setterConfig - The actions configuration object (optional) (default: null) if not null the store manipulation will be done through the actions
    * @param {GlobalStoreConfig<TState, TMetadata>} config - The configuration object (optional) (default: { metadata: null })
-   * @param {StateConfigCallbackParam<TState, TMetadata>} config.onInit - The callback to execute when the store is initialized (optional) (default: null)
-   * @param {StateConfigCallbackParam<TState, TMetadata>} config.onStateChanged - The callback to execute when the state is changed (optional) (default: null)
-   * @param {StateConfigCallbackParam<TState, TMetadata>} config.onSubscribed - The callback to execute when a subscriber is added (optional) (default: null)
-   * @param {StateConfigCallbackParam<TState, TMetadata>} config.computePreventStateChange - The callback to execute when the state is changed to compute if the state change should be prevented (optional) (default: null)
+   * @param {GlobalStoreConfig<TState, TMetadata>} config.metadata - The metadata object (optional) (default: null) if not null the metadata object will be reactive
+   * @param {GlobalStoreConfig<TState, TMetadata>} config.onInit - The callback to execute when the store is initialized (optional) (default: null)
+   * @param {GlobalStoreConfig<TState, TMetadata>} config.onStateChanged - The callback to execute when the state is changed (optional) (default: null)
+   * @param {GlobalStoreConfig<TState, TMetadata>} config.onSubscribed - The callback to execute when a new component gets subscribed to the store (optional) (default: null)
+   * @param {GlobalStoreConfig<TState, TMetadata>} config.computePreventStateChange - The callback to execute everytime a state change is triggered and before the state is updated, it allows to prevent the state change by returning true (optional) (default: null)   * @param {TStateSetter} setterConfig - The actions configuration object (optional) (default: null) if not null the store manipulation will be done through the actions
    * */
   constructor(
     protected state: TState,
-    protected metadata: TMetadata = null,
-    protected setterConfig: TStateSetter | null = null,
-    protected config: GlobalStoreConfig<TState, TMetadata, TStateSetter> = {}
+    config: GlobalStoreConfig<TState, TMetadata, TStateSetter> = {},
+    protected setterConfig: TStateSetter | null = null
   ) {
+    this.config = {
+      metadata: null,
+      ...(config ?? {}),
+    };
+
     this.onInitializeStore();
   }
 
@@ -202,7 +207,7 @@ export class GlobalStore<
    * @returns {TMetadata} - The metadata clone
    * */
   protected getMetadataClone = (): TMetadata =>
-    jsonStorageFormatter.clone(this.metadata) as TMetadata;
+    jsonStorageFormatter.clone(this.config?.metadata ?? null) as TMetadata;
 
   /**
    * set the state and update all the subscribers
@@ -241,7 +246,10 @@ export class GlobalStore<
       ? (setter as (state: TMetadata) => TMetadata)(this.getMetadataClone())
       : setter;
 
-    this.metadata = metadata;
+    this.config = {
+      ...(this.config ?? {}),
+      metadata,
+    };
   };
 
   /**

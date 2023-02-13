@@ -203,7 +203,7 @@ describe('GlobalStore with configuration callbacks', () => {
     const initialState = { count: 0 };
     const onInitSpy = jest.fn();
 
-    new GlobalStore(initialState, null, null, {
+    new GlobalStore(initialState, {
       onInit: (parameters) => {
         onInitSpy();
 
@@ -227,32 +227,28 @@ describe('GlobalStore with configuration callbacks', () => {
     const initialState = { count: 0 };
     const onInitSpy = jest.fn();
 
-    new GlobalStore(
-      initialState,
-      {
+    new GlobalStore(initialState, {
+      metadata: {
         isAsyncStorageReady: false,
       },
-      null,
-      {
-        onInit: (parameters) => {
-          onInitSpy();
+      onInit: (parameters) => {
+        onInitSpy();
 
-          const { getMetadata, setMetadata } = parameters;
+        const { getMetadata, setMetadata } = parameters;
 
-          expect(getMetadata()).toEqual({
-            isAsyncStorageReady: false,
-          });
+        expect(getMetadata()).toEqual({
+          isAsyncStorageReady: false,
+        });
 
-          setMetadata({
-            isAsyncStorageReady: true,
-          });
+        setMetadata({
+          isAsyncStorageReady: true,
+        });
 
-          expect(getMetadata()).toEqual({
-            isAsyncStorageReady: true,
-          });
-        },
-      }
-    );
+        expect(getMetadata()).toEqual({
+          isAsyncStorageReady: true,
+        });
+      },
+    });
 
     expect(onInitSpy).toBeCalledTimes(1);
   });
@@ -262,21 +258,24 @@ describe('GlobalStore with configuration callbacks', () => {
 
     let onSubscribedSpy = jest.fn();
 
-    const store = new GlobalStore({ count: 0 }, null, null, {
-      onSubscribed: (parameters) => {
-        onSubscribedSpy();
+    const store = new GlobalStore(
+      { count: 0 },
+      {
+        onSubscribed: (parameters) => {
+          onSubscribedSpy();
 
-        const { setState, getState, getMetadata, setMetadata, actions } =
-          parameters;
+          const { setState, getState, getMetadata, setMetadata, actions } =
+            parameters;
 
-        // this code will be execute 3 times
-        expect(getMetadata()).toBeNull();
-        expect(setState).toBeInstanceOf(Function);
-        expect(setMetadata).toBeInstanceOf(Function);
-        expect(actions).toBe(null);
-        expect(getState()).toEqual({ count: 0 });
-      },
-    });
+          // this code will be execute 3 times
+          expect(getMetadata()).toBeNull();
+          expect(setState).toBeInstanceOf(Function);
+          expect(setMetadata).toBeInstanceOf(Function);
+          expect(actions).toBe(null);
+          expect(getState()).toEqual({ count: 0 });
+        },
+      }
+    );
 
     expect(onSubscribedSpy).toBeCalledTimes(0);
 
@@ -297,20 +296,23 @@ describe('GlobalStore with configuration callbacks', () => {
 
     const onStateChangedSpy = jest.fn();
 
-    const store = new GlobalStore({ count: 0 }, null, null, {
-      onStateChanged: (parameters) => {
-        onStateChangedSpy();
+    const store = new GlobalStore(
+      { count: 0 },
+      {
+        onStateChanged: (parameters) => {
+          onStateChangedSpy();
 
-        const { setState, getState, getMetadata, setMetadata, actions } =
-          parameters;
+          const { setState, getState, getMetadata, setMetadata, actions } =
+            parameters;
 
-        expect(getMetadata()).toBeNull();
-        expect(setState).toBeInstanceOf(Function);
-        expect(setMetadata).toBeInstanceOf(Function);
-        expect(actions).toBe(null);
-        expect(getState()).toEqual({ count: 1 });
-      },
-    });
+          expect(getMetadata()).toBeNull();
+          expect(setState).toBeInstanceOf(Function);
+          expect(setMetadata).toBeInstanceOf(Function);
+          expect(actions).toBe(null);
+          expect(getState()).toEqual({ count: 1 });
+        },
+      }
+    );
 
     expect(onStateChangedSpy).toBeCalledTimes(0);
 
@@ -326,21 +328,24 @@ describe('GlobalStore with configuration callbacks', () => {
 
     const computePreventStateChangeSpy = jest.fn();
 
-    const store = new GlobalStore({ count: 0 }, null, null, {
-      computePreventStateChange: (parameters) => {
-        computePreventStateChangeSpy();
+    const store = new GlobalStore(
+      { count: 0 },
+      {
+        computePreventStateChange: (parameters) => {
+          computePreventStateChangeSpy();
 
-        const { setState, getState, getMetadata, setMetadata, actions } =
-          parameters;
+          const { setState, getState, getMetadata, setMetadata, actions } =
+            parameters;
 
-        expect(getMetadata()).toBeNull();
-        expect(setState).toBeInstanceOf(Function);
-        expect(setMetadata).toBeInstanceOf(Function);
-        expect(actions).toBe(null);
+          expect(getMetadata()).toBeNull();
+          expect(setState).toBeInstanceOf(Function);
+          expect(setMetadata).toBeInstanceOf(Function);
+          expect(actions).toBe(null);
 
-        return false;
-      },
-    });
+          return false;
+        },
+      }
+    );
 
     expect(computePreventStateChangeSpy).toBeCalledTimes(0);
 
@@ -357,21 +362,23 @@ describe('GlobalStore with configuration callbacks', () => {
 
     const computePreventStateChangeSpy = jest.fn();
 
-    const store = new GlobalStore({ count: 0 }, null, null, {
-      computePreventStateChange: (parameters) => {
-        computePreventStateChangeSpy();
+    const store = new GlobalStore(
+      { count: 0 },
+      {
+        computePreventStateChange: (parameters) => {
+          computePreventStateChangeSpy();
 
-        const { setState, getState, getMetadata, setMetadata, actions } =
-          parameters;
+          const { setState, getMetadata, setMetadata, actions } = parameters;
 
-        expect(getMetadata()).toBeNull();
-        expect(setState).toBeInstanceOf(Function);
-        expect(setMetadata).toBeInstanceOf(Function);
-        expect(actions).toBe(null);
+          expect(getMetadata()).toBeNull();
+          expect(setState).toBeInstanceOf(Function);
+          expect(setMetadata).toBeInstanceOf(Function);
+          expect(actions).toBe(null);
 
-        return true;
-      },
-    });
+          return true;
+        },
+      }
+    );
 
     expect(computePreventStateChangeSpy).toBeCalledTimes(0);
 
@@ -411,49 +418,45 @@ describe('Custome store by using config parameter', () => {
 
     setTimeout(async () => {
       await new CancelablePromise<void>((resolve) => {
-        store = new GlobalStore(
-          initialState,
-          {
+        store = new GlobalStore(initialState, {
+          metadata: {
             isAsyncStorageReady: false as boolean,
           },
-          null,
-          {
-            onInit: async (parameters) => {
-              getMetadataClone = parameters.getMetadata;
+          onInit: async (parameters) => {
+            getMetadataClone = parameters.getMetadata;
 
-              onInitSpy();
+            onInitSpy();
 
-              const { setMetadata, setState } = parameters;
+            const { setMetadata, setState } = parameters;
 
-              const stored = (await fakeAsyncStorage.getItem('items')) ?? null;
+            const stored = (await fakeAsyncStorage.getItem('items')) ?? null;
 
-              setMetadata({
-                isAsyncStorageReady: true,
-              });
+            setMetadata({
+              isAsyncStorageReady: true,
+            });
 
-              if (!stored) {
-                resolve();
-
-                return;
-              }
-
-              const items = formatFromStore(JSON.parse(stored)) as Map<
-                number,
-                { name: string }
-              >;
-
-              setState(items);
+            if (!stored) {
               resolve();
-            },
-            onStateChanged: ({ getState }) => {
-              onStateChangedSpy();
 
-              const newState = getState();
+              return;
+            }
 
-              fakeAsyncStorage.setItem('items', formatToStore(newState));
-            },
-          }
-        );
+            const items = formatFromStore(JSON.parse(stored)) as Map<
+              number,
+              { name: string }
+            >;
+
+            setState(items);
+            resolve();
+          },
+          onStateChanged: ({ getState }) => {
+            onStateChangedSpy();
+
+            const newState = getState();
+
+            fakeAsyncStorage.setItem('items', formatToStore(newState));
+          },
+        });
 
         expect(getMetadataClone()).toEqual({
           isAsyncStorageReady: false,
@@ -497,50 +500,46 @@ describe('Custome store by using config parameter', () => {
       };
 
       await new CancelablePromise<void>((resolve) => {
-        store = new GlobalStore(
-          initialState,
-          {
+        store = new GlobalStore(initialState, {
+          metadata: {
             isAsyncStorageReady: false,
           },
-          null,
-          {
-            onInit: async (parameters) => {
-              getMetadataClone = parameters.getMetadata;
+          onInit: async (parameters) => {
+            getMetadataClone = parameters.getMetadata;
 
-              onInitSpy();
+            onInitSpy();
 
-              const { setMetadata, setState } = parameters;
+            const { setMetadata, setState } = parameters;
 
-              const stored = (await fakeAsyncStorage.getItem('items')) ?? null;
+            const stored = (await fakeAsyncStorage.getItem('items')) ?? null;
 
-              setMetadata({
-                // @ts-ignore
-                isAsyncStorageReady: true,
-              });
+            setMetadata({
+              // @ts-ignore
+              isAsyncStorageReady: true,
+            });
 
-              if (!stored) {
-                resolve();
-
-                return;
-              }
-
-              const items = formatFromStore(JSON.parse(stored)) as Map<
-                number,
-                { name: string }
-              >;
-
-              setState(items);
+            if (!stored) {
               resolve();
-            },
-            onStateChanged: ({ getState }) => {
-              onStateChangedSpy();
 
-              const newState = getState();
+              return;
+            }
 
-              fakeAsyncStorage.setItem('items', formatToStore(newState));
-            },
-          }
-        );
+            const items = formatFromStore(JSON.parse(stored)) as Map<
+              number,
+              { name: string }
+            >;
+
+            setState(items);
+            resolve();
+          },
+          onStateChanged: ({ getState }) => {
+            onStateChangedSpy();
+
+            const newState = getState();
+
+            fakeAsyncStorage.setItem('items', formatToStore(newState));
+          },
+        });
 
         expect(getMetadataClone()).toEqual({
           isAsyncStorageReady: false,
@@ -580,46 +579,42 @@ describe('Custome store by using config parameter', () => {
       };
 
       await new CancelablePromise<void>((resolve) => {
-        store = new GlobalStore(
-          initialState,
-          {
+        store = new GlobalStore(initialState, {
+          metadata: {
             isAsyncStorageReady: false,
           },
-          null,
-          {
-            onInit: async (parameters) => {
-              getMetadataClone = parameters.getMetadata;
+          onInit: async (parameters) => {
+            getMetadataClone = parameters.getMetadata;
 
-              const { setMetadata, setState } = parameters;
-              const stored = (await fakeAsyncStorage.getItem('items')) ?? null;
+            const { setMetadata, setState } = parameters;
+            const stored = (await fakeAsyncStorage.getItem('items')) ?? null;
 
-              setMetadata({
-                isAsyncStorageReady: true as false,
-              });
+            setMetadata({
+              isAsyncStorageReady: true as false,
+            });
 
-              if (!stored) {
-                resolve();
-
-                return;
-              }
-
-              const items = formatFromStore(JSON.parse(stored)) as Map<
-                number,
-                { name: string }
-              >;
-
-              setState(items);
+            if (!stored) {
               resolve();
-            },
-            onStateChanged: async ({ getState }) => {
-              const newState = getState();
 
-              await fakeAsyncStorage.setItem('items', formatToStore(newState));
+              return;
+            }
 
-              toolsOnStateChangedPromise.resolve();
-            },
-          }
-        );
+            const items = formatFromStore(JSON.parse(stored)) as Map<
+              number,
+              { name: string }
+            >;
+
+            setState(items);
+            resolve();
+          },
+          onStateChanged: async ({ getState }) => {
+            const newState = getState();
+
+            await fakeAsyncStorage.setItem('items', formatToStore(newState));
+
+            toolsOnStateChangedPromise.resolve();
+          },
+        });
 
         expect(getMetadataClone()).toEqual({
           isAsyncStorageReady: false,

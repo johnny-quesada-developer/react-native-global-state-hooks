@@ -140,34 +140,71 @@ You could just use this code right as it is by just adding also into your projec
 ```ts
 export class GlobalStoreAsync<
   TState,
-  TMetadata extends { readonly isAsyncStorageReady: boolean },
+  TMetadata extends { readonly isAsyncStorageReady: never },
+  // this restriction is needed to avoid the consumers to set the isAsyncStorageReady property from outside the store,
+  // even when the value will be ignored is better to avoid it to avoid confusion
   TStateSetter extends
-    | ActionCollectionConfig<TState, TMetadata>
+    | ActionCollectionConfig<
+        TState,
+        Omit<TMetadata, 'isAsyncStorageReady'> & {
+          readonly isAsyncStorageReady: boolean;
+        }
+      >
     | StateSetter<TState>
     | null = StateSetter<TState>
-> extends GlobalStore<TState, TMetadata, TStateSetter> {
-  protected isAsyncStorageReady: boolean = false;
-
-  protected config: GlobalStoreConfig<
-    TState,
-    TMetadata,
-    NonNullable<TStateSetter>
+> extends GlobalStore<
+  TState,
+  Omit<TMetadata, 'isAsyncStorageReady'> & {
+    readonly isAsyncStorageReady: boolean;
+  },
+  TStateSetter
+> {
+  protected config: NonNullable<
+    GlobalStoreConfig<
+      TState,
+      Omit<TMetadata, 'isAsyncStorageReady'> & {
+        readonly isAsyncStorageReady: boolean;
+      },
+      NonNullable<TStateSetter>
+    >
   > & {
-    asyncStorageKey: string; // key of the async storage
+    asyncStorageKey: string;
   };
 
   constructor(
     state: TState,
-    metadata: TMetadata = { isAsyncStorageReady: false } as TMetadata,
-    setterConfig: TStateSetter | null = null,
-    {
-      onInit: onInitConfig,
-      ...config
-    }: GlobalStoreConfig<TState, TMetadata, NonNullable<TStateSetter>> & {
-      asyncStorageKey: string; // key of the async storage
-    }
+    config: GlobalStoreConfig<
+      TState,
+      TMetadata,
+      ActionCollectionConfig<TState, TMetadata> | StateSetter<TState>
+    > & {
+      asyncStorageKey: string;
+    },
+    setterConfig: TStateSetter | null = null
   ) {
-    super(state, metadata, setterConfig, config);
+    type TConfig = NonNullable<
+      GlobalStoreConfig<
+        TState,
+        Omit<TMetadata, 'isAsyncStorageReady'> & {
+          readonly isAsyncStorageReady: boolean;
+        },
+        NonNullable<TStateSetter>
+      >
+    > & {
+      asyncStorageKey: string;
+    };
+
+    const { onInit: onInitConfig, ...configParameters } = config as TConfig;
+
+    super(state, configParameters, setterConfig as TStateSetter);
+
+    this.config = {
+      ...config,
+      metadata: {
+        ...configParameters.metadata,
+        isAsyncStorageReady: false,
+      },
+    } as TConfig;
 
     const parameters = this.getConfigCallbackParam({});
 
@@ -177,7 +214,7 @@ export class GlobalStoreAsync<
 
   /**
    * This method will be called once the store is created after the constructor,
-   * this method is different from the onInit of the confg property and it won't be overriden
+   * this method is different from the onInit of the config property and it won't be overriden
    */
   protected onInit = async ({
     setState,
@@ -185,13 +222,13 @@ export class GlobalStoreAsync<
     getMetadata,
   }: StateConfigCallbackParam<
     TState,
-    TMetadata,
+    Omit<TMetadata, 'isAsyncStorageReady'> & {
+      readonly isAsyncStorageReady: boolean;
+    },
     NonNullable<TStateSetter>
   >) => {
     const { asyncStorageKey } = this.config;
     const storedItem: string = await asyncStorage.getItem(asyncStorageKey);
-
-    this.isAsyncStorageReady = true;
 
     setMetadata({
       ...getMetadata(),
@@ -208,7 +245,13 @@ export class GlobalStoreAsync<
 
   protected onStateChanged = ({
     getState,
-  }: StateChangesParam<TState, TMetadata, NonNullable<TStateSetter>>) => {
+  }: StateChangesParam<
+    TState,
+    Omit<TMetadata, 'isAsyncStorageReady'> & {
+      readonly isAsyncStorageReady: boolean;
+    },
+    NonNullable<TStateSetter>
+  >) => {
     const { asyncStorageKey } = this.config;
 
     const state = getState();
@@ -253,13 +296,17 @@ It's super common to have the wish or the necessity of restricting the manipulat
 ```ts
 const initialValue = 0;
 
-// this is not reactive information that you could also store in the async storage
-// upating the metadata will not trigger the onStateChanged method or any update on the components
-const metadata = null;
+const config = {
+  // this is not reactive information that you could also store in the async storage
+  // upating the metadata will not trigger the onStateChanged method or any update on the components
+  metadata: null,
+
+  // The lifecycle callbacks are: onInit, onStateChanged, onSubscribed and computePreventStateChange
+};
 
 const countStore = new GlobalStore(
   initialValue,
-  metadata,
+  config,
   {
     log: (message: string) => (): void => {
       console.log(message);
@@ -311,7 +358,7 @@ import { GlobalStore } from 'react-native-global-state-hooks';
 
 const initialValue = 0;
 
-const store = new GlobalStore(0, null, null, {
+const store = new GlobalStore(0, {
   onInit: async ({ setMetadata, setState }) => {
     const data = await someApiCall();
 
@@ -332,7 +379,7 @@ This method will be called every time the state is changed
 ```ts
 import { GlobalStore } from 'react-native-global-state-hooks';
 
-const store = new GlobalStore(0, null, null, {
+const store = new GlobalStore(0, {
   onStateChanged: ({ getState }) => {
     const state = getState();
 
@@ -352,7 +399,7 @@ This method will be called every time a component is subscribed to the store
 ```ts
 import { GlobalStore } from 'react-native-global-state-hooks';
 
-const store = new GlobalStore(0, null, null, {
+const store = new GlobalStore(0, {
   onSubscribed: ({ getState }) => {
     console.log('A component was subscribed to the store');
   },
@@ -370,7 +417,7 @@ This method will be called every time the state is going to be changed, if it re
 ```ts
 import { GlobalStore } from 'react-native-global-state-hooks';
 
-const store = new GlobalStore(0, null, null, {
+const store = new GlobalStore(0, {
   computePreventStateChange: ({ getState }) => {
     const state = getState();
     const shouldPrevent = state < 0;

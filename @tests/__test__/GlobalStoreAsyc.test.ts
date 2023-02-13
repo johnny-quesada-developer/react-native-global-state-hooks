@@ -1,27 +1,9 @@
-import { GlobalStore } from '../../src/GlobalStore';
-import {
-  CancelablePromise,
-  createDecoupledPromise,
-} from 'cancelable-promise-jq';
+import { createDecoupledPromise } from 'cancelable-promise-jq';
 
-import {
-  ActionCollectionConfig,
-  ActionCollectionResult,
-  GlobalStoreConfig,
-  StoreTools,
-} from '../../src/GlobalStore.types';
-
-import { useState, useEffect } from 'react';
-import { formatFromStore, formatToStore } from 'json-storage-formatter';
 import { GlobalStoreAsync, asyncStorage } from './GlobalStoreAsyc';
 
 describe('GlobalStoreAsync Basics', () => {
   it('should create a store with async storage', async () => {
-    const metadata = {
-      // determine if the async storage it already loaded
-      isAsyncStorageReady: false,
-    };
-
     asyncStorage.setItem('counter', 0);
 
     const { promise, resolve } = createDecoupledPromise();
@@ -30,9 +12,11 @@ describe('GlobalStoreAsync Basics', () => {
       const { promise: onStateChangedPromise, resolve: onStateChangedResolve } =
         createDecoupledPromise();
 
-      const storage = new GlobalStoreAsync(0, metadata, null, {
+      const storage = new GlobalStoreAsync(0, {
         asyncStorageKey: 'counter',
       });
+
+      const [getState, _, getMetadata] = storage.getHookDecoupled();
 
       const onStateChanged = (storage as any).onStateChanged;
       onStateChanged.bind(storage);
@@ -46,9 +30,8 @@ describe('GlobalStoreAsync Basics', () => {
         });
 
       expect(storage).toBeInstanceOf(GlobalStoreAsync);
-      expect((storage as any).isAsyncStorageReady).toBe(false);
 
-      const [getState] = storage.getHookDecoupled();
+      expect(getMetadata().isAsyncStorageReady).toBe(false);
 
       // add a subscriber to the store
       storage.getHook()();
@@ -60,7 +43,7 @@ describe('GlobalStoreAsync Basics', () => {
 
       await onStateChangedPromise;
 
-      expect((storage as any).isAsyncStorageReady).toBe(true);
+      expect(getMetadata().isAsyncStorageReady).toBe(true);
       expect(setState).toBeCalledTimes(1);
 
       expect(getState()).toBe(0);

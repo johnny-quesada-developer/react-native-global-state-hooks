@@ -142,6 +142,8 @@ export type GlobalStoreConfig<
     | ActionCollectionConfig<TState, TMetadata>
     | StateSetter<TState> = StateSetter<TState>
 > = {
+  metadata?: TMetadata;
+
   onInit?: (
     parameters: StateConfigCallbackParam<TState, TMetadata, TStateSetter>
   ) => void;
@@ -157,4 +159,4 @@ export type GlobalStoreConfig<
   computePreventStateChange?: (
     parameters: StateChangesParam<TState, TMetadata, TStateSetter>
   ) => boolean;
-};
+} | null;
