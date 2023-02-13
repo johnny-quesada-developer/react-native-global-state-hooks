@@ -73,7 +73,7 @@ export class GlobalStoreAsync<
       isAsyncStorageReady: true,
     });
 
-    if (!storedItem) return;
+    if (storedItem === null) return;
 
     const jsonParsed = JSON.parse(storedItem);
     const items = formatFromStore<TState>(jsonParsed);
