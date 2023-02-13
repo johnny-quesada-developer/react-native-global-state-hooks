@@ -1,4 +1,5 @@
-import * as jsonStorageFormatter from 'json-storage-formatter';
+export * from 'json-storage-formatter';
+import { clone } from 'json-storage-formatter';
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 
 import {
@@ -17,10 +18,6 @@ const throwWrongKeyOnActionCollectionConfig = (action_key: string) => {
     }\n
 }\n`);
 };
-
-export const clone = jsonStorageFormatter.clone;
-export const formatFromStore = jsonStorageFormatter.formatFromStore;
-export const formatToStore = jsonStorageFormatter.formatToStore;
 
 /**
  * The GlobalStore class is the main class of the library and it is used to create a GlobalStore instances
@@ -47,6 +44,11 @@ export class GlobalStore<
    * @template {TState} TState - The type of the state object
    * @template {TMetadata} TMetadata - The type of the metadata object (optional) (default: null) no reactive information set to share with the subscribers
    * @template {TStateSetter} TStateSetter - The type of the setterConfig object (optional) (default: null) if a configuration is passed, the hook will return an object with the actions then all the store manipulation will be done through the actions
+   * @property {GlobalStoreConfig<TState, TMetadata, TStateSetter>} config.metadata - The metadata to pass to the callbacks (optional) (default: null)
+   * @property {GlobalStoreConfig<TState, TMetadata, TStateSetter>} config.onInit - The callback to execute when the store is initialized (optional) (default: null)
+   * @property {GlobalStoreConfig<TState, TMetadata, TStateSetter>} config.onStateChanged - The callback to execute when the state is changed (optional) (default: null)
+   * @property {GlobalStoreConfig<TState, TMetadata, TStateSetter>} config.onSubscribed - The callback to execute when a component is subscribed to the store (optional) (default: null)
+   * @property {GlobalStoreConfig<TState, TMetadata, TStateSetter>} config.computePreventStateChange - The callback to execute when the state is changed to compute if the state change should be prevented (optional) (default: null)
    */
   protected config: GlobalStoreConfig<TState, TMetadata, TStateSetter> = {
     metadata: null,
@@ -199,15 +201,14 @@ export class GlobalStore<
    * gets a clone of the state
    * @returns {TState} - The state clone
    * */
-  protected getStateClone = (): TState =>
-    jsonStorageFormatter.clone(this.state);
+  protected getStateClone = (): TState => clone(this.state);
 
   /**
    * gets a clone of the metadata
    * @returns {TMetadata} - The metadata clone
    * */
   protected getMetadataClone = (): TMetadata =>
-    jsonStorageFormatter.clone(this.config?.metadata ?? null) as TMetadata;
+    clone(this.config?.metadata ?? null) as TMetadata;
 
   /**
    * set the state and update all the subscribers
