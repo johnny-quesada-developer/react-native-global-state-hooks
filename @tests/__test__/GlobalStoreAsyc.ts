@@ -84,11 +84,13 @@ export class GlobalStoreAsync<
   protected onStateChanged = ({
     getState,
   }: StateChangesParam<TState, TMetadata, NonNullable<TStateSetter>>) => {
-    const state = getState();
-    const formattedObject = formatToStore(state);
-    const jsonValue = JSON.stringify(formattedObject);
     const { asyncStorageKey } = this.config;
 
-    asyncStorage.setItem(asyncStorageKey, jsonValue);
+    const state = getState();
+    const formattedObject = formatToStore(state, {
+      stringify: true,
+    });
+
+    asyncStorage.setItem(asyncStorageKey, formattedObject);
   };
 }

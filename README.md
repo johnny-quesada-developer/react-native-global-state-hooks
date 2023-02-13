@@ -209,12 +209,14 @@ export class GlobalStoreAsync<
   protected onStateChanged = ({
     getState,
   }: StateChangesParam<TState, TMetadata, NonNullable<TStateSetter>>) => {
-    const state = getState();
-    const formattedObject = formatToStore(state);
-    const jsonValue = JSON.stringify(formattedObject);
     const { asyncStorageKey } = this.config;
 
-    asyncStorage.setItem(asyncStorageKey, jsonValue);
+    const state = getState();
+    const formattedObject = formatToStore(state, {
+      stringify: true,
+    });
+
+    asyncStorage.setItem(asyncStorageKey, formattedObject);
   };
 }
 ```
@@ -222,6 +224,14 @@ export class GlobalStoreAsync<
 The methods **formatToStore** and **formatFromStore** are part of another library of my [json-storage-formatter](https://www.npmjs.com/package/json-storage-formatter)...
 
 this super small library will help you to transform objects into json string and get them back without losing any of the original data types... no more problems when **stringify** Dates, Maps, Sets, etc...
+
+## How to use the **GlobalStoreAsync**
+
+It will work exactly the same as the **GlobalStore**, the main difference is that by default the metadata object will include the {**isAsyncStorageReady** } which will allow you to know if the async data was already retrieved.
+
+```ts
+const [count, setCount, { isAsyncStorageReady }] = useCountGlobal();
+```
 
 ...
 

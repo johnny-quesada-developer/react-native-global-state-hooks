@@ -1,4 +1,5 @@
-import { clone } from 'json-storage-formatter';
+// jsonStorageFormatter
+import * as jsonStorageFormatter from 'json-storage-formatter';
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 
 import {
@@ -17,6 +18,10 @@ const throwWrongKeyOnActionCollectionConfig = (action_key: string) => {
     }\n
 }\n`);
 };
+
+export const clone = jsonStorageFormatter.clone;
+export const formatFromStore = jsonStorageFormatter.formatFromStore;
+export const formatToStore = jsonStorageFormatter.formatToStore;
 
 /**
  * The GlobalStore class is the main class of the library and it is used to create a GlobalStore instances
@@ -189,14 +194,15 @@ export class GlobalStore<
    * gets a clone of the state
    * @returns {TState} - The state clone
    * */
-  protected getStateClone = (): TState => clone(this.state);
+  protected getStateClone = (): TState =>
+    jsonStorageFormatter.clone(this.state);
 
   /**
    * gets a clone of the metadata
    * @returns {TMetadata} - The metadata clone
    * */
   protected getMetadataClone = (): TMetadata =>
-    clone(this.metadata) as TMetadata;
+    jsonStorageFormatter.clone(this.metadata) as TMetadata;
 
   /**
    * set the state and update all the subscribers
