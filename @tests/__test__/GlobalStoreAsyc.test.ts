@@ -1,6 +1,6 @@
 import { createDecoupledPromise } from 'cancelable-promise-jq';
 
-import { GlobalStoreAsync, asyncStorage } from './GlobalStoreAsyc';
+import { GlobalStore, asyncStorage } from './GlobalStoreAsyc';
 
 describe('GlobalStoreAsync Basics', () => {
   it('should create a store with async storage', async () => {
@@ -12,7 +12,7 @@ describe('GlobalStoreAsync Basics', () => {
       const { promise: onStateChangedPromise, resolve: onStateChangedResolve } =
         createDecoupledPromise();
 
-      const storage = new GlobalStoreAsync(0, {
+      const storage = new GlobalStore(0, {
         asyncStorageKey: 'counter',
       });
 
@@ -29,7 +29,7 @@ describe('GlobalStoreAsync Basics', () => {
           onStateChangedResolve();
         });
 
-      expect(storage).toBeInstanceOf(GlobalStoreAsync);
+      expect(storage).toBeInstanceOf(GlobalStore);
 
       expect(getMetadata().isAsyncStorageReady).toBe(false);
 
