@@ -527,5 +527,3 @@ export class GlobalStore<
     return actions;
   };
 }
-
-export default GlobalStore;
