@@ -884,4 +884,6 @@ The setMetadata is part of the store tools, so it can be used in the actions, bu
 
 ...
 
+For seen a running example of the hooks, you can check the following link: [react-global-state-hooks-example](https://johnny-quesada-developer.github.io/react-global-state-hooks-example/)
+
 # That's it for now!! hope you enjoy coding!!
