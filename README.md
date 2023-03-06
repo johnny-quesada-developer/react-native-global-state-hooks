@@ -4,6 +4,8 @@ This is a package to easily handling global-state across your react-native-compo
 
 This utility uses the **useState** hook within a subscription pattern and **HOFs** to create a more intuitive, atomic and easy way of sharing state between components... You can see the introduction video [here!](https://www.youtube.com/watch?v=WfoMhO1zZ04&t=8s)
 
+For seen a running example of the hooks, you can check the following link: [react-global-state-hooks-example](https://johnny-quesada-developer.github.io/react-global-state-hooks-example/)
+
 ...
 
 ...
@@ -883,7 +885,5 @@ The setMetadata is part of the store tools, so it can be used in the actions, bu
 ...
 
 ...
-
-For seen a running example of the hooks, you can check the following link: [react-global-state-hooks-example](https://johnny-quesada-developer.github.io/react-global-state-hooks-example/)
 
 # That's it for now!! hope you enjoy coding!!
