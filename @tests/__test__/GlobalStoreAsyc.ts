@@ -22,7 +22,10 @@ export class GlobalStore<
   TState,
   // this restriction is needed to avoid the consumers to set the isAsyncStorageReady property from outside the store,
   // ... even when the value will be ignored is better to avoid it to avoid confusion
-  TMetadata extends { readonly isAsyncStorageReady: never },
+  TMetadata extends { readonly isAsyncStorageReady?: never } & Record<
+    string,
+    unknown
+  > = {},
   TStateSetter extends StorageSetter<TState, TMetadata> = StateSetter<TState>
 > extends GlobalStoreBase<TState, StorageMetadata<TMetadata>, TStateSetter> {
   /**
@@ -32,7 +35,7 @@ export class GlobalStore<
    * @template {TMetadata} TMetadata - The metadata of the store
    * @template {TStateSetter} TStateSetter - The storeActionsConfig of the store
    **/
-  protected config: StorageConfig<TState, TMetadata, TStateSetter>;
+  protected config: StorageConfig<TState, TMetadata, TStateSetter> = {};
 
   /**
    * Creates a new instance of the GlobalStore
@@ -51,20 +54,21 @@ export class GlobalStore<
     config: StorageConfig<TState, TMetadata, TStateSetter> | null = null,
     setterConfig: TStateSetter | null = null
   ) {
-    const { onInit, asyncStorageKey, ...configParameters } = config ?? {};
+    const { onInit, asyncStorageKey, ...configParameters } =
+      config ?? ({} as StorageConfig<TState, TMetadata, TStateSetter>);
 
     super(state, configParameters, setterConfig as TStateSetter);
 
     // if there is not async storage key this is not a persistent store
-    const isAsyncStorageReady = asyncStorageKey ? false : null;
+    const isAsyncStorageReady: boolean | null = asyncStorageKey ? false : null;
 
     this.config = {
       ...config,
       metadata: {
-        ...configParameters.metadata,
+        ...((configParameters.metadata ?? {}) as TMetadata),
         isAsyncStorageReady,
       },
-    } as StorageConfig<TState, TMetadata, TStateSetter>;
+    };
 
     const hasInitCallbacks = !!(asyncStorageKey || onInit);
     if (!hasInitCallbacks) return;
@@ -130,7 +134,7 @@ export class GlobalStore<
  * @template {TMetadata} TMetadata - The metadata type which also contains the isAsyncStorageReady property
  */
 type StorageMetadata<TMetadata> = Omit<TMetadata, 'isAsyncStorageReady'> & {
-  readonly isAsyncStorageReady: boolean | null;
+  readonly isAsyncStorageReady?: boolean | null;
 };
 
 /**
@@ -152,7 +156,7 @@ type StorageSetter<TState, TMetadata> =
  */
 type StorageConfig<
   TState,
-  TMetadata extends { readonly isAsyncStorageReady: never },
+  TMetadata extends { readonly isAsyncStorageReady?: never },
   TStateSetter extends
     | ActionCollectionConfig<TState, StorageMetadata<TMetadata>>
     | StateSetter<TState>

@@ -5,7 +5,7 @@
     "module": "commonjs",
     "declaration": true,
     "outDir": "./lib",
-    "strict": true,
+    "strict": false,
     "isolatedModules": true,
     "lib": ["dom", "dom.iterable", "es6"],
     "declarationMap": true,
