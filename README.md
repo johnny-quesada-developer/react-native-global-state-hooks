@@ -4,6 +4,8 @@ This is a package to easily handling global-state across your react-native-compo
 
 This utility uses the **useState** hook within a subscription pattern and **HOFs** to create a more intuitive, atomic and easy way of sharing state between components... You can see the introduction video [here!](https://www.youtube.com/watch?v=WfoMhO1zZ04&t=8s)
 
+To see TODO-LIST with the hooks and async storage take a look here: [todo-list-with-global-hooks](https://github.com/johnny-quesada-developer/todo-list-with-global-hooks.git)
+
 For seen a running example of the hooks, you can check the following link: [react-global-state-hooks-example](https://johnny-quesada-developer.github.io/react-global-state-hooks-example/)
 
 ...
@@ -140,6 +142,17 @@ Here is an example of how you could create your custom store that for example st
 You could just use this code right as it is by just adding also into your project **@react-native-async-storage** or whatever another async storage library.
 
 ```ts
+import { GlobalStore as GlobalStoreBase } from 'react-native-global-state-hooks';
+import { formatFromStore, formatToStore } from 'json-storage-formatter';
+import asyncStorage from '@react-native-async-storage/async-storage';
+
+import {
+  StateSetter,
+  StateConfigCallbackParam,
+  StateChangesParam,
+  ActionCollectionConfig,
+} from 'react-native-global-state-hooks/lib/GlobalStore.types';
+
 /**
  * GlobalStore is an store that could also persist the state in the async storage
  * @template {TState} TState - The state of the store
@@ -150,7 +163,10 @@ export class GlobalStore<
   TState,
   // this restriction is needed to avoid the consumers to set the isAsyncStorageReady property from outside the store,
   // ... even when the value will be ignored is better to avoid it to avoid confusion
-  TMetadata extends { readonly isAsyncStorageReady: never },
+  TMetadata extends { readonly isAsyncStorageReady?: never } & Record<
+    string,
+    unknown
+  > = {},
   TStateSetter extends StorageSetter<TState, TMetadata> = StateSetter<TState>
 > extends GlobalStoreBase<TState, StorageMetadata<TMetadata>, TStateSetter> {
   /**
@@ -160,7 +176,7 @@ export class GlobalStore<
    * @template {TMetadata} TMetadata - The metadata of the store
    * @template {TStateSetter} TStateSetter - The storeActionsConfig of the store
    **/
-  protected config: StorageConfig<TState, TMetadata, TStateSetter>;
+  protected config: StorageConfig<TState, TMetadata, TStateSetter> = {};
 
   /**
    * Creates a new instance of the GlobalStore
@@ -179,20 +195,21 @@ export class GlobalStore<
     config: StorageConfig<TState, TMetadata, TStateSetter> | null = null,
     setterConfig: TStateSetter | null = null
   ) {
-    const { onInit, asyncStorageKey, ...configParameters } = config ?? {};
+    const { onInit, asyncStorageKey, ...configParameters } =
+      config ?? ({} as StorageConfig<TState, TMetadata, TStateSetter>);
 
     super(state, configParameters, setterConfig as TStateSetter);
 
     // if there is not async storage key this is not a persistent store
-    const isAsyncStorageReady = asyncStorageKey ? false : null;
+    const isAsyncStorageReady: boolean | null = asyncStorageKey ? false : null;
 
     this.config = {
       ...config,
       metadata: {
-        ...configParameters.metadata,
+        ...((configParameters.metadata ?? {}) as TMetadata),
         isAsyncStorageReady,
       },
-    } as StorageConfig<TState, TMetadata, TStateSetter>;
+    };
 
     const hasInitCallbacks = !!(asyncStorageKey || onInit);
     if (!hasInitCallbacks) return;
@@ -258,7 +275,7 @@ export class GlobalStore<
  * @template {TMetadata} TMetadata - The metadata type which also contains the isAsyncStorageReady property
  */
 type StorageMetadata<TMetadata> = Omit<TMetadata, 'isAsyncStorageReady'> & {
-  readonly isAsyncStorageReady: boolean | null;
+  readonly isAsyncStorageReady?: boolean | null;
 };
 
 /**
@@ -280,7 +297,7 @@ type StorageSetter<TState, TMetadata> =
  */
 type StorageConfig<
   TState,
-  TMetadata extends { readonly isAsyncStorageReady: never },
+  TMetadata extends { readonly isAsyncStorageReady?: never },
   TStateSetter extends
     | ActionCollectionConfig<TState, StorageMetadata<TMetadata>>
     | StateSetter<TState>
