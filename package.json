@@ -1,8 +1,9 @@
 {
   "name": "react-native-global-state-hooks",
-  "version": "2.1.19",
+  "version": "3.0.0",
   "description": "This is a package to easily handling global-state across your react-native-components No-redux",
-  "main": "lib/GlobalStore.js",
+  "main": "lib/bundle.js",
+  "types": "lib/index.d.ts",
   "files": [
     "lib"
   ],
@@ -10,7 +11,7 @@
     "test:debug": "node --inspect-brk node_modules/.bin/jest --watch --runInBand",
     "test:quick": "jest --maxWorkers=4 -c --no-watchman -u",
     "test:coverage": "jest --maxWorkers=4 -c --colors --no-watchman --verbose --coverage",
-    "build": "tsc",
+    "build": "webpack --config webpack.config.js",
     "prepare": "npm run build",
     "version": "npm run format && git add -A src",
     "postversion": "git push && git push --tags",
@@ -40,6 +41,11 @@
   },
   "homepage": "https://github.com/johnny-quesada-developer/react-native-global-state-hooks#readme",
   "devDependencies": {
+    "@babel/core": "^7.21.3",
+    "@babel/plugin-transform-modules-commonjs": "^7.21.2",
+    "@babel/preset-env": "^7.20.2",
+    "@babel/preset-react": "^7.18.6",
+    "@babel/preset-typescript": "^7.21.0",
     "@types/jest": "^26.0.17",
     "@types/lodash": "^4.14.165",
     "@types/react": "^17.0.0",
@@ -47,6 +53,7 @@
     "@types/react-test-renderer": "^17.0.0",
     "@typescript-eslint/eslint-plugin": "^4.9.1",
     "@typescript-eslint/parser": "^4.9.1",
+    "babel-loader": "^9.1.2",
     "cancelable-promise-jq": "^1.0.4",
     "eslint": "^7.15.0",
     "eslint-config-airbnb": "^18.2.1",
@@ -59,12 +66,16 @@
     "react": ">=17.0.0",
     "react-test-renderer": "^17.0.1",
     "ts-jest": "^26.4.4",
+    "ts-loader": "^9.4.2",
     "tslib": "^2.5.0",
-    "typescript": "^4.9.5"
+    "typescript": "^4.9.5",
+    "webpack": "^5.76.3",
+    "webpack-cli": "^5.0.1"
   },
   "peerDependencies": {
-    "json-storage-formatter": ">=1.0.5",
     "react": ">=17.0.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "json-storage-formatter": ">=1.0.5"
+  }
 }
