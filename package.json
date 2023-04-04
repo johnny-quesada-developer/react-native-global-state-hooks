@@ -74,6 +74,11 @@
   "peerDependencies": {
     "react": ">=17.0.0"
   },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": false
+    }
+  },
   "dependencies": {
     "json-storage-formatter": "^1.0.7"
   }
