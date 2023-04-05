@@ -142,16 +142,19 @@ Here is an example of how you could create your custom store that for example st
 You could just use this code right as it is by just adding also into your project **@react-native-async-storage** or whatever another async storage library.
 
 ```ts
-import { GlobalStore as GlobalStoreBase } from 'react-native-global-state-hooks';
-import { formatFromStore, formatToStore } from 'json-storage-formatter';
 import asyncStorage from '@react-native-async-storage/async-storage';
 
 import {
-  StateSetter,
-  StateConfigCallbackParam,
-  StateChangesParam,
   ActionCollectionConfig,
-} from 'react-native-global-state-hooks/lib/GlobalStore.types';
+  formatFromStore,
+  formatToStore,
+  GlobalStore as GlobalStoreBase,
+  StateChangesParam,
+  StateConfigCallbackParam,
+  StateSetter,
+  isPrimitive,
+  isDate,
+} from 'react-native-global-state-hooks';
 
 /**
  * GlobalStore is an store that could also persist the state in the async storage
@@ -236,14 +239,19 @@ export class GlobalStore<
     const { asyncStorageKey } = this.config;
     if (!asyncStorageKey) return;
 
-    const storedItem: string = await asyncStorage.getItem(asyncStorageKey);
+    const storedItem = (await asyncStorage.getItem(asyncStorageKey)) as string;
 
     setMetadata({
       ...getMetadata(),
       isAsyncStorageReady: true,
     });
 
-    if (storedItem === null) return;
+    if (storedItem === null) {
+      const isPrimitiveState = isPrimitive(this.state) && !isDate(this.state);
+
+      // this forces the react to re-render the component when the state is an object
+      return setState(isPrimitiveState ? this.state : { ...this.state });
+    }
 
     const jsonParsed = JSON.parse(storedItem);
     const items = formatFromStore<TState>(jsonParsed);

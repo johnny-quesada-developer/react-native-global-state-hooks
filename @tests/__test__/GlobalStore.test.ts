@@ -98,6 +98,17 @@ describe('GlobalStore Basic', () => {
     expect((store as unknown as { state: unknown }).state).toBe('test2');
   });
 
+  it('should be able to set the state with a function', () => {
+    const stateValue = 'test';
+    const store = new GlobalStore(stateValue);
+
+    const [, setState] = store.getHookDecoupled();
+
+    setState((state) => `${state}2`);
+
+    expect((store as unknown as { state: unknown }).state).toBe('test2');
+  });
+
   it('should notifiy initialize all subscribers of the store', () => {
     const stateValue = 'test';
     const stateValue2 = 'test2';

@@ -7,7 +7,12 @@ import {
   StateSetter,
 } from '../../src/GlobalStore.types';
 
-import { formatFromStore, formatToStore } from 'json-storage-formatter';
+import {
+  formatFromStore,
+  formatToStore,
+  isDate,
+  isPrimitive,
+} from 'json-storage-formatter';
 import { getFakeAsyncStorage } from './getFakeAsyncStorage';
 
 export const { fakeAsyncStorage: asyncStorage } = getFakeAsyncStorage();
@@ -81,7 +86,7 @@ export class GlobalStore<
 
   /**
    * This method will be called once the store is created after the constructor,
-   * this method is different from the onInit of the confg property and it won't be overriden
+   * this method is different from the onInit of the config property and it won't be overridden
    */
   protected onInit = async ({
     setState,
@@ -102,7 +107,12 @@ export class GlobalStore<
       isAsyncStorageReady: true,
     });
 
-    if (storedItem === null) return;
+    if (storedItem === null) {
+      const isPrimitiveState = isPrimitive(this.state) && !isDate(this.state);
+
+      // this forces the react to re-render the component when the state is an object
+      return setState(isPrimitiveState ? this.state : { ...this.state });
+    }
 
     const jsonParsed = JSON.parse(storedItem);
     const items = formatFromStore<TState>(jsonParsed);
