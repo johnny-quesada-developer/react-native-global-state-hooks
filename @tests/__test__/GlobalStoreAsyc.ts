@@ -7,12 +7,7 @@ import {
   StateSetter,
 } from '../../src/GlobalStore.types';
 
-import {
-  formatFromStore,
-  formatToStore,
-  isDate,
-  isPrimitive,
-} from 'json-storage-formatter';
+import { clone, formatFromStore, formatToStore } from 'json-storage-formatter';
 import { getFakeAsyncStorage } from './getFakeAsyncStorage';
 
 export const { fakeAsyncStorage: asyncStorage } = getFakeAsyncStorage();
@@ -100,7 +95,7 @@ export class GlobalStore<
     const { asyncStorageKey } = this.config;
     if (!asyncStorageKey) return;
 
-    const storedItem: string = await asyncStorage.getItem(asyncStorageKey);
+    const storedItem = (await asyncStorage.getItem(asyncStorageKey)) as string;
 
     setMetadata({
       ...getMetadata(),
@@ -108,10 +103,10 @@ export class GlobalStore<
     });
 
     if (storedItem === null) {
-      const isPrimitiveState = isPrimitive(this.state) && !isDate(this.state);
+      const state = clone(this.state);
 
       // this forces the react to re-render the component when the state is an object
-      return setState(isPrimitiveState ? this.state : { ...this.state });
+      return setState(state);
     }
 
     const jsonParsed = JSON.parse(storedItem);

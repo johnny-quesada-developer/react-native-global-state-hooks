@@ -143,17 +143,14 @@ You could just use this code right as it is by just adding also into your projec
 
 ```ts
 import asyncStorage from '@react-native-async-storage/async-storage';
+import { clone, formatFromStore, formatToStore } from 'json-storage-formatter';
 
 import {
-  ActionCollectionConfig,
-  formatFromStore,
-  formatToStore,
   GlobalStore as GlobalStoreBase,
+  ActionCollectionConfig,
   StateChangesParam,
   StateConfigCallbackParam,
   StateSetter,
-  isPrimitive,
-  isDate,
 } from 'react-native-global-state-hooks';
 
 /**
@@ -225,7 +222,7 @@ export class GlobalStore<
 
   /**
    * This method will be called once the store is created after the constructor,
-   * this method is different from the onInit of the confg property and it won't be overriden
+   * this method is different from the onInit of the config property and it won't be overridden
    */
   protected onInit = async ({
     setState,
@@ -247,10 +244,10 @@ export class GlobalStore<
     });
 
     if (storedItem === null) {
-      const isPrimitiveState = isPrimitive(this.state) && !isDate(this.state);
+      const state = clone(this.state);
 
       // this forces the react to re-render the component when the state is an object
-      return setState(isPrimitiveState ? this.state : { ...this.state });
+      return setState(state);
     }
 
     const jsonParsed = JSON.parse(storedItem);
