@@ -77,6 +77,8 @@ export type TCustomGlobalParams<TInheritMetadata = null> = {
   }: StateChangesParam<any, TInheritMetadata>) => void;
 };
 
+type CombinedTypes<TypeA, TypeB> = TypeA & Omit<TypeB, keyof TypeA>;
+
 /**
  * @description
  * Use this function to create a custom global store.
@@ -94,12 +96,31 @@ export const createCustomGlobalHooks = <TInheritMetadata = null>({
       | StateSetter<TState> = StateSetter<TState>
   >(
     state: TState,
-    {
-      setterConfig = null,
-      ...config
-    }: {
+    config: {
       setterConfig?: TStateSetter | null;
-    } & GlobalStoreConfig<TState, TMetadata, TStateSetter> = {}
+
+      metadata?: TMetadata;
+
+      onInit?: GlobalStoreConfig<TState, TMetadata, TStateSetter>['onInit'];
+
+      onStateChanged?: GlobalStoreConfig<
+        TState,
+        TMetadata,
+        TStateSetter
+      >['onStateChanged'];
+
+      onSubscribed?: GlobalStoreConfig<
+        TState,
+        TMetadata,
+        TStateSetter
+      >['onSubscribed'];
+
+      computePreventStateChange?: GlobalStoreConfig<
+        TState,
+        TMetadata,
+        TStateSetter
+      >['computePreventStateChange'];
+    }
   ) => {
     const { onInit, onStateChanged, ...$config } = config ?? {};
 
@@ -127,10 +148,7 @@ export const createCustomGlobalHooks = <TInheritMetadata = null>({
       onStateChanged: onStateChangeWrapper,
     });
 
-    return createGlobalHooks<TState, TMetadata, TStateSetter>(state, {
-      ...$config,
-      setterConfig,
-    });
+    return createGlobalHooks<TState, TMetadata, TStateSetter>(state, $config);
   };
 };
 
@@ -144,30 +162,54 @@ export const createCustomGlobalHook = <TInheritMetadata = null>({
   onInitialize,
   onChange,
 }: TCustomGlobalParams<TInheritMetadata>) => {
-  const customBuilder = createCustomGlobalHooks({
+  const customBuilder = createCustomGlobalHooks<TInheritMetadata>({
     onInitialize,
     onChange,
   });
 
   return <
     TState,
-    TMetadata extends TInheritMetadata = TInheritMetadata,
+    TMetadata = null,
     TStateSetter extends
-      | ActionCollectionConfig<TState, TMetadata>
+      | ActionCollectionConfig<TState, TMetadata & TInheritMetadata>
       | StateSetter<TState> = StateSetter<TState>
   >(
     state: TState,
-    {
-      setterConfig = null,
-      ...config
-    }: {
+    config: {
       setterConfig?: TStateSetter | null;
-    } & GlobalStoreConfig<TState, TMetadata, TStateSetter> = {}
+
+      metadata?: TMetadata;
+
+      onInit?: GlobalStoreConfig<
+        TState,
+        TMetadata & TInheritMetadata,
+        TStateSetter
+      >['onInit'];
+
+      onStateChanged?: GlobalStoreConfig<
+        TState,
+        TMetadata & TInheritMetadata,
+        TStateSetter
+      >['onStateChanged'];
+
+      onSubscribed?: GlobalStoreConfig<
+        TState,
+        TMetadata & TInheritMetadata,
+        TStateSetter
+      >['onSubscribed'];
+
+      computePreventStateChange?: GlobalStoreConfig<
+        TState,
+        TMetadata & TInheritMetadata,
+        TStateSetter
+      >['computePreventStateChange'];
+    }
   ) => {
-    const [useHook] = customBuilder<TState, TMetadata, TStateSetter>(state, {
-      ...config,
-      setterConfig,
-    });
+    const [useHook] = customBuilder<
+      TState,
+      TMetadata & TInheritMetadata,
+      TStateSetter
+    >(state, config as unknown);
 
     return useHook;
   };
