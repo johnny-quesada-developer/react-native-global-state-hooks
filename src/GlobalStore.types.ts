@@ -175,3 +175,5 @@ export type GlobalStoreConfig<
     parameters: StateChangesParam<TState, TMetadata, TStateSetter>
   ) => boolean;
 } | null;
+
+export type CombinedTypes<TypeA, TypeB> = TypeA & Omit<TypeB, keyof TypeA>;

@@ -87,7 +87,7 @@ export class GlobalStore<
 
 export const createGlobalPersistedHook = createCustomGlobalHook<{
   asyncStorageKey?: string;
-  isAsyncStorageReady: boolean;
+  isAsyncStorageReady?: boolean;
 }>({
   onInitialize: ({ setState, setMetadata, getMetadata, getState }) => {
     const metadata = getMetadata();
@@ -148,3 +148,5 @@ export const useCount = createGlobalPersistedHook(0, {
     },
   } as const,
 });
+
+export const [a, b, c] = useCount();

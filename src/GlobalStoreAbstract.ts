@@ -5,6 +5,7 @@ import {
   ActionCollectionConfig,
   GlobalStoreConfig,
   ActionCollectionResult,
+  CombinedTypes,
 } from 'GlobalStore.types';
 
 import { createGlobalHooks, GlobalStore } from './GlobalStore';
@@ -77,8 +78,6 @@ export type TCustomGlobalParams<TInheritMetadata = null> = {
   }: StateChangesParam<any, TInheritMetadata>) => void;
 };
 
-type CombinedTypes<TypeA, TypeB> = TypeA & Omit<TypeB, keyof TypeA>;
-
 /**
  * @description
  * Use this function to create a custom global store.
@@ -90,7 +89,7 @@ export const createCustomGlobalHooks = <TInheritMetadata = null>({
 }: TCustomGlobalParams<TInheritMetadata>) => {
   return <
     TState,
-    TMetadata extends TInheritMetadata,
+    TMetadata = null,
     TStateSetter extends
       | ActionCollectionConfig<TState, TMetadata>
       | StateSetter<TState> = StateSetter<TState>
@@ -171,7 +170,10 @@ export const createCustomGlobalHook = <TInheritMetadata = null>({
     TState,
     TMetadata = null,
     TStateSetter extends
-      | ActionCollectionConfig<TState, TMetadata & TInheritMetadata>
+      | ActionCollectionConfig<
+          TState,
+          CombinedTypes<TInheritMetadata, TMetadata>
+        >
       | StateSetter<TState> = StateSetter<TState>
   >(
     state: TState,
@@ -182,32 +184,32 @@ export const createCustomGlobalHook = <TInheritMetadata = null>({
 
       onInit?: GlobalStoreConfig<
         TState,
-        TMetadata & TInheritMetadata,
+        CombinedTypes<TInheritMetadata, TMetadata>,
         TStateSetter
       >['onInit'];
 
       onStateChanged?: GlobalStoreConfig<
         TState,
-        TMetadata & TInheritMetadata,
+        CombinedTypes<TInheritMetadata, TMetadata>,
         TStateSetter
       >['onStateChanged'];
 
       onSubscribed?: GlobalStoreConfig<
         TState,
-        TMetadata & TInheritMetadata,
+        CombinedTypes<TInheritMetadata, TMetadata>,
         TStateSetter
       >['onSubscribed'];
 
       computePreventStateChange?: GlobalStoreConfig<
         TState,
-        TMetadata & TInheritMetadata,
+        CombinedTypes<TInheritMetadata, TMetadata>,
         TStateSetter
       >['computePreventStateChange'];
     }
   ) => {
     const [useHook] = customBuilder<
       TState,
-      TMetadata & TInheritMetadata,
+      CombinedTypes<TInheritMetadata, TMetadata>,
       TStateSetter
     >(state, config as unknown);
 
