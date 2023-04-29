@@ -3,7 +3,20 @@
  * @returns {void} result - void
  */
 export type StateSetter<TState> = (
-  setter: TState | ((state: TState) => TState)
+  setter: TState | ((state: TState) => TState),
+  /**
+   * This parameter indicate whether we should force the re-render of the subscribers even if the state is the same,
+   * Do
+   */
+  {
+    forceUpdate,
+  }?: {
+    /**
+     * @deprecated forceUpdate normally should not be used inside components
+     * Use this flag just in custom implementations of the global store
+     */
+    forceUpdate?: boolean;
+  }
 ) => void;
 
 /**
@@ -17,19 +30,21 @@ export type StateChanges<TState> = {
 };
 
 /**
- * Callbacks to be passed to the configurating function of the store
+ * Callbacks to be passed to the configurations function of the store
  * @template {TState} TState - The state type
  * @template {TMetadata} TMetadata - The metadata type
  * @property {StateSetter<TState>} setMetadata - Set the metadata
  * @property {StateSetter<TState>} setState - Set the state
  * @property {() => TState} getState - Get the state
  * @property {() => TMetadata} getMetadata - Get the metadata
+ * @property {ActionCollectionResult<TState, TMetadata>} actions - The actions collection if any
  **/
 export type StoreTools<TState, TMetadata = null> = {
   setMetadata: StateSetter<TMetadata>;
   setState: StateSetter<TState>;
   getState: () => TState;
   getMetadata: () => TMetadata;
+  actions: ActionCollectionResult<TState, TMetadata>;
 };
 
 /**

@@ -1,131 +1,82 @@
-import { GlobalStore as GlobalStoreBase } from '../../src/GlobalStore';
+import {
+  createCustomGlobalHook,
+  GlobalStoreAbstract,
+} from '../../src/GlobalStoreAbstract';
 
 import {
   ActionCollectionConfig,
+  GlobalStoreConfig,
   StateChangesParam,
   StateConfigCallbackParam,
   StateSetter,
 } from '../../src/GlobalStore.types';
 
-import { clone, formatFromStore, formatToStore } from 'json-storage-formatter';
+import { formatFromStore, formatToStore } from 'json-storage-formatter';
 import { getFakeAsyncStorage } from './getFakeAsyncStorage';
 
 export const { fakeAsyncStorage: asyncStorage } = getFakeAsyncStorage();
 
-/**
- * GlobalStore is an store that could also persist the state in the async storage
- * @template {TState} TState - The state of the store
- * @template {TMetadata} TMetadata - The metadata of the store, it must contain a readonly property called isAsyncStorageReady which cannot be set from outside the store
- * @template {TStateSetter} TStateSetter - The storeActionsConfig of the store
- */
 export class GlobalStore<
   TState,
-  // this restriction is needed to avoid the consumers to set the isAsyncStorageReady property from outside the store,
-  // ... even when the value will be ignored is better to avoid it to avoid confusion
-  TMetadata extends { readonly isAsyncStorageReady?: never } & Record<
-    string,
-    unknown
-  > = {},
-  TStateSetter extends StorageSetter<TState, TMetadata> = StateSetter<TState>
-> extends GlobalStoreBase<TState, StorageMetadata<TMetadata>, TStateSetter> {
-  /**
-   * Config for the async storage
-   * includes the asyncStorageKey and the metadata which will be used to determine if the async storage is ready or not
-   * @template {TState} TState - The state of the store
-   * @template {TMetadata} TMetadata - The metadata of the store
-   * @template {TStateSetter} TStateSetter - The storeActionsConfig of the store
-   **/
-  protected config: StorageConfig<TState, TMetadata, TStateSetter> = {};
-
-  /**
-   * Creates a new instance of the GlobalStore
-   * @param {TState} state - The initial state of the store
-   * @param {GlobalStoreConfig<TState, TMetadata, ActionCollectionConfig<TState, TMetadata> | StateSetter<TState>> & { asyncStorageKey: string; }} config - The config of the store
-   * @param  {GlobalStoreConfig<TState, TMetadata, ActionCollectionConfig<TState, TMetadata> | StateSetter<TState>> & { asyncStorageKey: string; }} config.metadata - The metadata of the store which will be used to determine if the async storage is ready or not, also it could store no reactive data
-   * @param  {GlobalStoreConfig<TState, TMetadata, ActionCollectionConfig<TState, TMetadata> | StateSetter<TState>> & { asyncStorageKey: string; }} config.asyncStorageKey - The key of the async storage
-   * @param  {GlobalStoreConfig<TState, TMetadata, ActionCollectionConfig<TState, TMetadata> | StateSetter<TState>> & { asyncStorageKey: string; }} config.onInit - The callback that will be called once the store is created
-   * @param  {GlobalStoreConfig<TState, TMetadata, ActionCollectionConfig<TState, TMetadata> | StateSetter<TState>> & { asyncStorageKey: string; }} config.onStateChange - The callback that will be called once the state is changed
-   * @param  {GlobalStoreConfig<TState, TMetadata, ActionCollectionConfig<TState, TMetadata> | StateSetter<TState>> & { asyncStorageKey: string; }} config.onSubscribed - The callback that will be called every time a new component is subscribed to the store
-   * @param  {GlobalStoreConfig<TState, TMetadata, ActionCollectionConfig<TState, TMetadata> | StateSetter<TState>> & { asyncStorageKey: string; }} config.computePreventStateChange - The callback that will be called before the state is changed, if it returns true the state will not be changed
-   * @param {TStateSetter} setterConfig - The actions configuration object (optional) (default: null) if not null the store manipulation will be done through the actions
-   */
+  TMetadata extends {
+    asyncStorageKey?: string;
+    isAsyncStorageReady?: boolean;
+  } | null = null,
+  TStateSetter extends
+    | ActionCollectionConfig<TState, TMetadata>
+    | StateSetter<TState> = StateSetter<TState>
+> extends GlobalStoreAbstract<TState, TMetadata, TStateSetter> {
   constructor(
     state: TState,
-    config: StorageConfig<TState, TMetadata, TStateSetter> | null = null,
+    config: GlobalStoreConfig<TState, TMetadata, TStateSetter> = {},
     setterConfig: TStateSetter | null = null
   ) {
-    const { onInit, asyncStorageKey, ...configParameters } =
-      config ?? ({} as StorageConfig<TState, TMetadata, TStateSetter>);
+    super(state, config, setterConfig);
 
-    super(state, configParameters, setterConfig as TStateSetter);
-
-    // if there is not async storage key this is not a persistent store
-    const isAsyncStorageReady: boolean | null = asyncStorageKey ? false : null;
-
-    this.config = {
-      ...config,
-      metadata: {
-        ...((configParameters.metadata ?? {}) as TMetadata),
-        isAsyncStorageReady,
-      },
-    };
-
-    const hasInitCallbacks = !!(asyncStorageKey || onInit);
-    if (!hasInitCallbacks) return;
-
-    const parameters = this.getConfigCallbackParam({});
-
-    this.onInit(parameters);
-    onInit?.(parameters);
+    this.initialize();
   }
 
-  /**
-   * This method will be called once the store is created after the constructor,
-   * this method is different from the onInit of the config property and it won't be overridden
-   */
-  protected onInit = async ({
+  protected onInitialize = async ({
     setState,
     setMetadata,
     getMetadata,
-  }: StateConfigCallbackParam<
-    TState,
-    StorageMetadata<TMetadata>,
-    NonNullable<TStateSetter>
-  >) => {
-    const { asyncStorageKey } = this.config;
+    getState,
+  }: StateConfigCallbackParam<TState, TMetadata, TStateSetter>) => {
+    const metadata = getMetadata();
+    const asyncStorageKey = metadata?.asyncStorageKey;
+
     if (!asyncStorageKey) return;
 
     const storedItem = (await asyncStorage.getItem(asyncStorageKey)) as string;
-
     setMetadata({
-      ...getMetadata(),
+      ...metadata,
       isAsyncStorageReady: true,
     });
 
     if (storedItem === null) {
-      const state = clone(this.state);
+      const state = getState();
 
-      // this forces the react to re-render the component when the state is an object
-      return setState(state);
+      // force the re-render of the subscribed components even if the state is the same
+      return setState(state, { forceUpdate: true });
     }
 
-    const jsonParsed = JSON.parse(storedItem);
-    const items = formatFromStore<TState>(jsonParsed);
+    const items = formatFromStore<TState>(storedItem, {
+      jsonParse: true,
+    });
 
-    setState(items);
+    setState(items, { forceUpdate: true });
   };
 
-  protected onStateChanged = ({
+  protected onChange = ({
+    getMetadata,
     getState,
-  }: StateChangesParam<
-    TState,
-    StorageMetadata<TMetadata>,
-    NonNullable<TStateSetter>
-  >) => {
-    const { asyncStorageKey } = this.config;
+  }: StateChangesParam<TState, TMetadata, NonNullable<TStateSetter>>) => {
+    const asyncStorageKey = getMetadata()?.asyncStorageKey;
+
     if (!asyncStorageKey) return;
 
     const state = getState();
+
     const formattedObject = formatToStore(state, {
       stringify: true,
     });
@@ -134,72 +85,66 @@ export class GlobalStore<
   };
 }
 
-/**
- * Metadata of the store
- * @template {TMetadata} TMetadata - The metadata type which also contains the isAsyncStorageReady property
- */
-type StorageMetadata<TMetadata> = Omit<TMetadata, 'isAsyncStorageReady'> & {
-  readonly isAsyncStorageReady?: boolean | null;
-};
-
-/**
- * The setter of the store
- * @template {TState} TState - The state of the store
- * @template {TMetadata} TMetadata - The metadata of the store, it must contain a readonly property called isAsyncStorageReady which cannot be set from outside the store
- * */
-type StorageSetter<TState, TMetadata> =
-  | ActionCollectionConfig<TState, StorageMetadata<TMetadata>>
-  | StateSetter<TState>
-  | null;
-
-/**
- * Config for the async storage
- * includes the asyncStorageKey
- * @template {TState} TState - The state of the store
- * @template {TMetadata} TMetadata - The metadata of the store, it must contain a readonly property called isAsyncStorageReady which cannot be set from outside the store
- * @template {TStateSetter} TStateSetter - The storeActionsConfig of the store
- */
-type StorageConfig<
-  TState,
-  TMetadata extends { readonly isAsyncStorageReady?: never },
-  TStateSetter extends
-    | ActionCollectionConfig<TState, StorageMetadata<TMetadata>>
-    | StateSetter<TState>
-    | null = StateSetter<TState>
-> = {
+export const createGlobalPersistedHook = createCustomGlobalHook<{
   asyncStorageKey?: string;
+  isAsyncStorageReady: boolean;
+}>({
+  onInitialize: ({ setState, setMetadata, getMetadata, getState }) => {
+    const metadata = getMetadata();
+    const asyncStorageKey = metadata?.asyncStorageKey;
 
-  metadata?: TMetadata;
+    if (!asyncStorageKey) return;
 
-  onInit?: (
-    parameters: StateConfigCallbackParam<
-      TState,
-      StorageMetadata<TMetadata>,
-      NonNullable<TStateSetter>
-    >
-  ) => void;
+    const storedItem = asyncStorage.getItem(
+      asyncStorageKey
+    ) as unknown as string;
 
-  onStateChanged?: (
-    parameters: StateChangesParam<
-      TState,
-      StorageMetadata<TMetadata>,
-      NonNullable<TStateSetter>
-    >
-  ) => void;
+    setMetadata({
+      ...metadata,
+      isAsyncStorageReady: true,
+    });
 
-  onSubscribed?: (
-    parameters: StateConfigCallbackParam<
-      TState,
-      StorageMetadata<TMetadata>,
-      NonNullable<TStateSetter>
-    >
-  ) => void;
+    if (storedItem === null) {
+      const state = getState();
 
-  computePreventStateChange?: (
-    parameters: StateChangesParam<
-      TState,
-      StorageMetadata<TMetadata>,
-      NonNullable<TStateSetter>
-    >
-  ) => boolean;
-};
+      // force the re-render of the subscribed components even if the state is the same
+      return setState(state, { forceUpdate: true });
+    }
+
+    const items = formatFromStore(storedItem, {
+      jsonParse: true,
+    });
+
+    setState(items, { forceUpdate: true });
+  },
+
+  onChange: ({ getMetadata, getState }) => {
+    const asyncStorageKey = getMetadata()?.asyncStorageKey;
+
+    if (!asyncStorageKey) return;
+
+    const state = getState();
+
+    const formattedObject = formatToStore(state, {
+      stringify: true,
+    });
+
+    asyncStorage.setItem(asyncStorageKey, formattedObject);
+  },
+});
+
+export const useCount = createGlobalPersistedHook(0, {
+  metadata: {
+    asyncStorageKey: 'count',
+    test: 2,
+  },
+  setterConfig: {
+    increase(increase: number) {
+      return ({ setState, getState }): number => {
+        setState((state) => state + increase);
+
+        return getState();
+      };
+    },
+  } as const,
+});

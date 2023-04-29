@@ -27,6 +27,8 @@ const createCountStoreWithActions = (spy?: jest.Mock) => {
       return ({ setState, getState }: StoreTools<number>) => {
         setState((state) => state + increase);
 
+        // this also work, the only trouble is that typescript will not recognize the action types
+        // and log will be an "any" type
         this.log('increase');
 
         return getState();
@@ -46,7 +48,9 @@ const createCountStoreWithActions = (spy?: jest.Mock) => {
 
   return countStore as typeof countStore &
     ({
-      state: number;
+      stateWrapper: {
+        state: number;
+      };
       setterConfig: ActionCollectionConfig<number, unknown>;
       getMetadataClone: () => null;
       getStateClone: () => number;
@@ -66,7 +70,10 @@ describe('GlobalStore Basic', () => {
     const store = new GlobalStore(stateValue);
 
     expect(store).toBeInstanceOf(GlobalStore);
-    expect((store as unknown as { state: unknown }).state).toBe(stateValue);
+    expect(
+      (store as unknown as { stateWrapper: { state: unknown } }).stateWrapper
+        .state
+    ).toBe(stateValue);
   });
 
   it('state setter should be a function', () => {
@@ -95,7 +102,10 @@ describe('GlobalStore Basic', () => {
 
     setState('test2');
 
-    expect((store as unknown as { state: unknown }).state).toBe('test2');
+    expect(
+      (store as unknown as { stateWrapper: { state: unknown } }).stateWrapper
+        .state
+    ).toBe('test2');
   });
 
   it('should be able to set the state with a function', () => {
@@ -106,7 +116,10 @@ describe('GlobalStore Basic', () => {
 
     setState((state) => `${state}2`);
 
-    expect((store as unknown as { state: unknown }).state).toBe('test2');
+    expect(
+      (store as unknown as { stateWrapper: { state: unknown } }).stateWrapper
+        .state
+    ).toBe('test2');
   });
 
   it('should notifiy initialize all subscribers of the store', () => {
@@ -139,7 +152,7 @@ describe('GlobalStore with actions', () => {
     const store = createCountStoreWithActions();
 
     expect(store).toBeInstanceOf(GlobalStore);
-    expect(store.state).toBe(countStoreInitialState);
+    expect(store.stateWrapper.state).toBe(countStoreInitialState);
     expect(store.setterConfig).toBeDefined();
 
     const actions = store.getStoreActionsMap({});
@@ -583,7 +596,7 @@ describe('Custome store by using config parameter', () => {
       createDecoupledPromise();
 
     setTimeout(async () => {
-      let store!: GlobalStore<any, any, null>;
+      let store!: GlobalStore<any, any>;
 
       let getMetadataClone!: () => {
         isAsyncStorageReady: boolean;

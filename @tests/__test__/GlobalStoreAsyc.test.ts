@@ -13,7 +13,10 @@ describe('GlobalStoreAsync Basics', () => {
         createDecoupledPromise();
 
       const storage = new GlobalStore(0, {
-        asyncStorageKey: 'counter',
+        metadata: {
+          asyncStorageKey: 'counter',
+          isAsyncStorageReady: false,
+        },
       });
 
       const [getState, _, getMetadata] = storage.getHookDecoupled();
@@ -24,6 +27,8 @@ describe('GlobalStoreAsync Basics', () => {
       jest
         .spyOn(storage, 'onStateChanged' as any)
         .mockImplementation((...parameters) => {
+          debugger;
+
           onStateChanged(...parameters);
 
           onStateChangedResolve();

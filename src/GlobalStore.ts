@@ -1,4 +1,3 @@
-import { clone } from 'json-storage-formatter';
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 
 import {
@@ -29,14 +28,13 @@ export class GlobalStore<
   TMetadata = null,
   TStateSetter extends
     | ActionCollectionConfig<TState, TMetadata>
-    | StateSetter<TState>
-    | null = StateSetter<TState>
+    | StateSetter<TState> = StateSetter<TState>
 > {
   /**
    * list of all the subscribers setState functions
    * @template {TState} TState - The type of the state object
    * */
-  public subscribers: Set<StateSetter<TState>> = new Set();
+  public subscribers: Set<StateSetter<{ state: TState }>> = new Set();
 
   /**
    * additional configuration for the store
@@ -123,6 +121,20 @@ export class GlobalStore<
   >['computePreventStateChange'] = null;
 
   /**
+   * We use a wrapper in order to be able to force the state update when necessary even with primitive types
+   */
+  protected stateWrapper: {
+    state: TState;
+  };
+
+  /**
+   * @deprecated direct modifications of the state could end up in unexpected behaviors
+   */
+  protected get state(): TState {
+    return this.stateWrapper.state;
+  }
+
+  /**
    * Create a simple global store
    * @param {TState} state - The initial state
    * */
@@ -172,19 +184,26 @@ export class GlobalStore<
    * @param {GlobalStoreConfig<TState, TMetadata>} config.computePreventStateChange - The callback to execute everytime a state change is triggered and before the state is updated, it allows to prevent the state change by returning true (optional) (default: null)   * @param {TStateSetter} setterConfig - The actions configuration object (optional) (default: null) if not null the store manipulation will be done through the actions
    * */
   constructor(
-    protected state: TState,
+    state: TState,
     config: GlobalStoreConfig<TState, TMetadata, TStateSetter> = {},
     protected setterConfig: TStateSetter | null = null
   ) {
+    this.stateWrapper = {
+      state,
+    };
+
     this.config = {
       metadata: null,
       ...(config ?? {}),
     };
 
-    this.onInitializeStore();
+    const isExtensionClass = this.constructor !== GlobalStore;
+    if (isExtensionClass) return;
+
+    this.initialize();
   }
 
-  protected onInitializeStore = () => {
+  protected initialize = () => {
     const { onInit } = this;
     const { onInit: onInitFromConfig } = this.config;
 
@@ -197,19 +216,6 @@ export class GlobalStore<
   };
 
   /**
-   * gets a clone of the state
-   * @returns {TState} - The state clone
-   * */
-  protected getStateClone = (): TState => clone(this.state);
-
-  /**
-   * gets a clone of the metadata
-   * @returns {TMetadata} - The metadata clone
-   * */
-  protected getMetadataClone = (): TMetadata =>
-    clone(this.config?.metadata ?? null) as TMetadata;
-
-  /**
    * set the state and update all the subscribers
    * @param {StateSetter<TState>} setter - The setter function or the value to set
    * @param {React.Dispatch<React.SetStateAction<TState>>} invokerSetState - The setState function of the component that invoked the state change (optional) (default: null) this is used to updated first the component that invoked the state change
@@ -219,19 +225,21 @@ export class GlobalStore<
     state,
   }: {
     state: TState;
-    invokerSetState?: React.Dispatch<React.SetStateAction<TState>>;
+    invokerSetState?: React.Dispatch<React.SetStateAction<{ state: TState }>>;
   }) => {
     // update the state
-    this.state = state;
+    this.stateWrapper = {
+      state,
+    };
 
     // execute first the callback of the component that invoked the state change
-    invokerSetState?.(state);
+    invokerSetState?.({ state });
 
     // update all the subscribers
     this.subscribers.forEach((setState) => {
       if (setState === invokerSetState) return;
 
-      setState(state);
+      setState({ state });
     });
   };
 
@@ -243,7 +251,9 @@ export class GlobalStore<
     const isSetterFunction = typeof setter === 'function';
 
     const metadata = isSetterFunction
-      ? (setter as (state: TMetadata) => TMetadata)(this.getMetadataClone())
+      ? (setter as (state: TMetadata) => TMetadata)(
+          this.config.metadata ?? null
+        )
       : setter;
 
     this.config = {
@@ -262,29 +272,21 @@ export class GlobalStore<
   protected getConfigCallbackParam = ({
     invokerSetState,
   }: {
-    invokerSetState?: React.Dispatch<React.SetStateAction<TState>>;
+    invokerSetState?: React.Dispatch<React.SetStateAction<{ state: TState }>>;
   }): StateConfigCallbackParam<TState, TMetadata, TStateSetter> => {
-    const {
-      setMetadata,
-      getMetadataClone: getMetadata,
-      getStateClone: getState,
-    } = this;
+    const { setMetadata } = this;
 
     const setState = this.getSetStateWrapper({ invokerSetState });
 
-    const actions = this.getStoreActionsMap(
-      {}
-    ) as TStateSetter extends ActionCollectionConfig<TState, TMetadata>
-      ? ActionCollectionResult<TState, TMetadata, TStateSetter>
-      : null;
+    const actions = this.getStoreActionsMap();
 
     return {
       setMetadata,
-      getMetadata,
-      getState,
+      getMetadata: () => this.config.metadata,
+      getState: () => this.stateWrapper.state,
       setState,
       actions,
-    };
+    } as StateConfigCallbackParam<TState, TMetadata, TStateSetter>;
   };
 
   /**
@@ -292,7 +294,9 @@ export class GlobalStore<
    * @returns {[TState, TStateSetter, TMetadata]} - The state, the state setter or the actions map, the metadata
    * */
   public getHook = () => () => {
-    const [value, invokerSetState] = useState(() => this.state);
+    const [stateWrapper, invokerSetState] = useState<{ state: TState }>(
+      () => this.stateWrapper
+    );
 
     useEffect(() => {
       this.subscribers.add(invokerSetState);
@@ -314,7 +318,7 @@ export class GlobalStore<
 
     const stateOrchestrator = this.getStateOrchestrator(invokerSetState);
 
-    return [value, stateOrchestrator, this.getMetadataClone()] as [
+    return [stateWrapper.state, stateOrchestrator, this.config.metadata] as [
       TState,
       TStateSetter extends StateSetter<TState> | null
         ? StateSetter<TState>
@@ -328,9 +332,9 @@ export class GlobalStore<
    * @returns {[() => TState, TStateSetter, () => TMetadata]} - The state getter, the state setter or the actions map, the metadata getter
    * */
   public getHookDecoupled = () => {
-    const { getStateClone: getState, getMetadataClone: getMetadata } = this;
-
     const stateOrchestrator = this.getStateOrchestrator();
+    const getState = () => this.stateWrapper.state;
+    const getMetadata = () => this.config.metadata;
 
     return [getState, stateOrchestrator, getMetadata] as [
       () => TState,
@@ -349,11 +353,11 @@ export class GlobalStore<
   protected getSetStateWrapper = ({
     invokerSetState,
   }: {
-    invokerSetState?: React.Dispatch<React.SetStateAction<TState>>;
+    invokerSetState?: React.Dispatch<React.SetStateAction<{ state: TState }>>;
   } = {}): StateSetter<TState> => {
-    const setState = (setter) => {
-      this.computeSetState({ invokerSetState, setter });
-    };
+    const setState = ((setter: StateSetter<TState>, { forceUpdate } = {}) => {
+      this.computeSetState({ invokerSetState, setter, forceUpdate });
+    }) as StateSetter<TState>;
 
     return setState;
   };
@@ -364,7 +368,7 @@ export class GlobalStore<
    * @returns {TStateSetter} - The state setter or the actions map
    * */
   protected getStateOrchestrator(
-    invokerSetState?: React.Dispatch<React.SetStateAction<TState>>
+    invokerSetState?: React.Dispatch<React.SetStateAction<{ state: TState }>>
   ) {
     const stateHasCustomActions = this.setterConfig;
 
@@ -407,16 +411,21 @@ export class GlobalStore<
   protected computeSetState = ({
     setter,
     invokerSetState,
+    forceUpdate,
   }: {
     setter: StateSetter<TState>;
-    invokerSetState?: React.Dispatch<React.SetStateAction<TState>>;
+    invokerSetState?: React.Dispatch<React.SetStateAction<{ state: TState }>>;
+    forceUpdate: boolean;
   }) => {
     const isSetterFunction = typeof setter === 'function';
-    const previousState = this.getStateClone();
+    const previousState = this.stateWrapper.state;
 
     const newState = isSetterFunction
       ? (setter as (state: TState) => TState)(previousState)
       : setter;
+
+    // if the state didn't change, we don't need to do anything
+    if (!forceUpdate && Object.is(this.stateWrapper.state, newState)) return;
 
     const itHasStateCallbacks = this.hasStateCallbacks();
 
@@ -424,17 +433,13 @@ export class GlobalStore<
     const setState =
       itHasStateCallbacks && this.getSetStateWrapper({ invokerSetState });
 
-    const {
-      setMetadata,
-      getMetadataClone: getMetadata,
-      getStateClone: getState,
-    } = this;
+    const { setMetadata } = this;
 
     const callbackParameter = {
       setMetadata,
-      getMetadata,
+      getMetadata: () => this.config.metadata,
       setState,
-      getState,
+      getState: () => this.stateWrapper.state,
       actions,
       previousState,
       state: newState,
@@ -475,8 +480,8 @@ export class GlobalStore<
   protected getStoreActionsMap = ({
     invokerSetState,
   }: {
-    invokerSetState?: React.Dispatch<React.SetStateAction<TState>>;
-  }): ActionCollectionResult<TState, TMetadata, TStateSetter> => {
+    invokerSetState?: React.Dispatch<React.SetStateAction<{ state: TState }>>;
+  } = {}): ActionCollectionResult<TState, TMetadata, TStateSetter> => {
     if (!this.setterConfig) return null;
 
     const { setterConfig, setMetadata } = this;
@@ -490,8 +495,8 @@ export class GlobalStore<
       invokerSetState,
     });
 
-    // we expose a copy of the state and metadata to the actions to prevent them from modifying the state directly
-    const { getStateClone: getState, getMetadataClone: getMetadata } = this;
+    const getState = () => this.stateWrapper.state;
+    const getMetadata = () => this.config.metadata;
 
     // we bind the functions to the actions object to allow reusing actions in the same api config by using the -this- keyword
     const actions: ActionCollectionResult<TState, TMetadata, TStateSetter> =
@@ -514,6 +519,7 @@ export class GlobalStore<
               getState,
               setMetadata,
               getMetadata,
+              actions: actions as ActionCollectionResult<TState, TMetadata>,
             });
 
             // we return the result of the actions to the invoker
@@ -526,3 +532,74 @@ export class GlobalStore<
     return actions;
   };
 }
+
+/**
+ * Creates a global hook that can be used to access the state and actions across the application
+ * @param {TState} state - The initial state
+ * @param {{ config?: GlobalStoreConfig<TState, TMetadata, TStateSetter>; setterConfig?: TStateSetter | null }} parameters - The configuration object (optional) (default: null)
+ * @param {GlobalStoreConfig<TState, TMetadata, TStateSetter>} parameters.config - The configuration object
+ * @param {TStateSetter | null} parameters.setterConfig - The setter configuration object (optional) (default: null)
+ * @returns {[useHook: () => [TState, TStateSetter extends StateSetter<TState> | null ? StateSetter<TState> : ActionCollectionResult<TState, TMetadata, TStateSetter>, TMetadata], getState: () => TState, setter: TStateSetter extends StateSetter<TState> ? StateSetter<TState> : ActionCollectionResult<TState, TMetadata, TStateSetter>]} - The hook, the decoupled getter and the decoupled setter
+ */
+export const createGlobalHooks = <
+  TState,
+  TMetadata = null,
+  TStateSetter extends
+    | ActionCollectionConfig<TState, TMetadata>
+    | StateSetter<TState> = StateSetter<TState>
+>(
+  state: TState,
+  {
+    setterConfig = null,
+    ...config
+  }: {
+    setterConfig?: TStateSetter | null;
+  } & GlobalStoreConfig<TState, TMetadata, TStateSetter> = {}
+): [
+  useHook: () => [
+    TState,
+    TStateSetter extends StateSetter<TState> | null
+      ? StateSetter<TState>
+      : ActionCollectionResult<TState, TMetadata, TStateSetter>,
+    TMetadata
+  ],
+  getState: () => TState,
+  setter: TStateSetter extends StateSetter<TState>
+    ? StateSetter<TState>
+    : ActionCollectionResult<TState, TMetadata, TStateSetter>
+] => {
+  const store = new GlobalStore<TState, TMetadata, TStateSetter>(
+    state,
+    config,
+    setterConfig as TStateSetter
+  );
+
+  const [getState, setter] = store.getHookDecoupled();
+
+  return [store.getHook(), getState, setter];
+};
+
+/**
+ * Creates a global hook that can be used to access the state and actions across the application
+ * @param {TState} state - The initial state of the store
+ * @param {{ config?: GlobalStoreConfig<TState, TMetadata, TStateSetter>; setterConfig?: TStateSetter | null }} parameters - The configuration object of the store and the configuration object of the state setter (optional) (default: null)
+ * @param {GlobalStoreConfig<TState, TMetadata, TStateSetter>} parameters.config - The configuration object of the store
+ * @param {TStateSetter | null} parameters.setterConfig - The configuration object of the state setter (optional) (default: null)
+ * @returns {GlobalStoreHook<TState, TMetadata, TStateSetter>} - The hook that can be used to access the state and actions across the application
+ */
+export const createGlobalHook = <
+  TState,
+  TMetadata = null,
+  TStateSetter extends
+    | ActionCollectionConfig<TState, TMetadata>
+    | StateSetter<TState> = StateSetter<TState>
+>(
+  state: TState,
+  config: {
+    setterConfig?: TStateSetter | null;
+  } & GlobalStoreConfig<TState, TMetadata, TStateSetter> = {}
+) => {
+  const [useState] = createGlobalHooks(state, config);
+
+  return [useState];
+};

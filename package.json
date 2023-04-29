@@ -1,6 +1,6 @@
 {
   "name": "react-native-global-state-hooks",
-  "version": "3.0.5",
+  "version": "3.0.7",
   "description": "This is a package to easily handling global-state across your react-native-components No-redux",
   "main": "lib/bundle.js",
   "types": "lib/index.d.ts",
@@ -80,6 +80,6 @@
     }
   },
   "dependencies": {
-    "json-storage-formatter": "^1.0.7"
+    "json-storage-formatter": "^1.0.8"
   }
 }
