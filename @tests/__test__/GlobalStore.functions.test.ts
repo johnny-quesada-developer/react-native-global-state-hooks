@@ -477,8 +477,9 @@ describe('custom global hooks', () => {
 
     const logSpy = jest.fn();
 
-    const [useCount, getCount, actionsApi] =
-      createGlobalStateWithDecoupledFuncs(1, {
+    const [useCount, getCount, $actions] = createGlobalStateWithDecoupledFuncs(
+      1,
+      {
         metadata: {
           test: true,
         },
@@ -489,21 +490,22 @@ describe('custom global hooks', () => {
             };
           },
           increase: () => {
-            return ({ setState, actions }) => {
+            return ({ setState }) => {
               setState((state) => state + 1);
 
-              actions.log('increase');
+              $actions.log('increase');
             };
           },
           decrease: () => {
-            return ({ setState, actions }) => {
+            return ({ setState }) => {
               setState((state) => state - 1);
 
-              actions.log('decrease');
+              $actions.log('decrease');
             };
           },
         },
-      });
+      }
+    );
 
     let [state, actions] = useCount();
 
@@ -522,7 +524,7 @@ describe('custom global hooks', () => {
     expect(logSpy).toBeCalledTimes(2);
     expect(logSpy).toBeCalledWith('decrease');
 
-    actionsApi.increase();
+    $actions.increase();
 
     expect(getCount()).toEqual(2);
   });

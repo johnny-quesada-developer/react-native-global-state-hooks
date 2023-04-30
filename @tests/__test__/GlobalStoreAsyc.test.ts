@@ -85,7 +85,7 @@ describe('createGlobalState', () => {
 
       let [data, setData, metadata] = useData();
 
-      expect(!!metadata.isAsyncStorageReady).toBe(false);
+      expect(metadata.isAsyncStorageReady).toBe(null);
 
       await onStateChangedPromise;
 
