@@ -21,13 +21,25 @@ beforeEach(() => {
     return [value, setState];
   }) as any);
 
-  const mockUseEffect = jest.fn((callback) => {
+  let index = 0;
+  const map = new Map();
+
+  const mockMemo = jest.fn((callback) => {
+    index += 1;
+
+    const previous = map.get(index);
+    if (previous) return previous;
+
     const value = callback();
+
+    map.set(index, value);
 
     return value;
   });
 
-  spyOn(React, 'useEffect').and.callFake(mockUseEffect);
+  spyOn(React, 'useEffect').and.callFake(mockMemo);
+
+  spyOn(React, 'useMemo').and.callFake(mockMemo);
 });
 
 afterEach(() => {

@@ -16,14 +16,18 @@ import { getFakeAsyncStorage } from './getFakeAsyncStorage';
 describe('basic', () => {
   it('should be able to create a new instance with state', () => {
     const stateValue = 'test';
-    const useValue = createGlobalState(stateValue);
+    const useValue = createGlobalState(stateValue, {
+      metadata: {
+        test: true,
+      },
+    });
 
     let [state, setState, metadata] = useValue();
 
     expect(useValue).toBeInstanceOf(Function);
     expect(state).toBe(stateValue);
     expect(setState).toBeInstanceOf(Function);
-    expect(metadata).toBe(null);
+    expect(metadata.test).toBe(true);
 
     setState('test2');
 
@@ -51,7 +55,7 @@ describe('with actions', () => {
       metadata: {
         modificationsCounter: 0,
       },
-      actionsConfig: {
+      actions: {
         logModification() {
           return ({ setMetadata }: StoreTools<number, Metadata>) => {
             setMetadata(({ modificationsCounter, ...metadata }) => ({
@@ -472,7 +476,10 @@ describe('custom global hooks', () => {
 
     const [useCount, getCount, actionsApi] =
       createGlobalStateWithDecoupledFuncs(1, {
-        actionsConfig: {
+        metadata: {
+          test: true,
+        },
+        actions: {
           log: (message: string) => {
             return () => {
               logSpy(message);
@@ -517,77 +524,65 @@ describe('custom global hooks', () => {
     expect(getCount()).toEqual(2);
   });
 
-  it.only('should be able to create a custom global hook builder', () => {
-    const { fakeAsyncStorage: asyncStorage } = getFakeAsyncStorage();
+  it('should be able to create a custom global hook builder', () => {
+    let config;
 
-    const onInitSpy = jest.fn();
+    const onInitSpy = jest.fn((_, _config) => {
+      config = _config;
+    });
+
     const onChangeSpy = jest.fn();
 
-    const { promise: mainPromise, ...tools } = createDecoupledPromise();
-
     const createGlobal = createCustomGlobalStateWithDecoupledFuncs({
-      onInitialize: async ({
-        setState,
-        getState,
-        setMetadata,
-        getMetadata,
-      }) => {
-        onInitSpy();
-
-        const metadata = getMetadata();
-        const asyncStorageKey = metadata?.asyncStorageKey;
-
-        if (!asyncStorageKey) return;
-
-        const storedItem = (await asyncStorage.getItem(
-          asyncStorageKey
-        )) as unknown as string;
-
-        setMetadata({
-          ...metadata,
-          isAsyncStorageReady: true,
-        });
-
-        if (storedItem === null) {
-          const state = getState();
-
-          // force the re-render of the subscribed components even if the state is the same
-          return setState(state, { forceUpdate: true });
-        }
-
-        const items = formatFromStore(storedItem, {
-          jsonParse: true,
-        });
-
-        setState(items, { forceUpdate: true });
-      },
-      onChange: ({ setState, getMetadata, getState }) => {
-        onChangeSpy();
-
-        const asyncStorageKey = getMetadata()?.asyncStorageKey;
-
-        if (!asyncStorageKey) return;
-
-        const state = getState();
-
-        const formattedObject = formatToStore(state, {
-          stringify: true,
-        });
-
-        asyncStorage.setItem(asyncStorageKey, formattedObject);
-      },
+      onInitialize: onInitSpy,
+      onChange: onChangeSpy,
     });
 
     expect(createGlobal).toBeInstanceOf(Function);
     expect(onInitSpy).toBeCalledTimes(0);
     expect(onChangeSpy).toBeCalledTimes(0);
 
-    const useCount = createGlobal(1, {
-      metadata: {
-        asyncStorageKey: 'count',
+    const initialState = {
+      count: 1,
+    };
+
+    const [useCount, getCount, setCount] = createGlobal(initialState, {
+      config: {
+        someExtraInfo: 'someExtraInfo',
       },
     });
 
-    // return mainPromise;
+    expect(onInitSpy).toBeCalledTimes(1);
+    expect(onChangeSpy).toBeCalledTimes(0);
+    expect(config).toEqual({
+      someExtraInfo: 'someExtraInfo',
+    });
+
+    let [state, setState, metadata] = useCount();
+
+    expect(state).toEqual(initialState);
+    expect(setState).toBeInstanceOf(Function);
+    expect(metadata).toEqual(null);
+
+    expect(onInitSpy).toBeCalledTimes(1);
+    expect(onChangeSpy).toBeCalledTimes(0);
+
+    expect(getCount()).toEqual(initialState);
+
+    setCount(2);
+
+    expect(getCount()).toEqual(2);
+
+    expect(onInitSpy).toBeCalledTimes(1);
+    expect(onChangeSpy).toBeCalledTimes(1);
+
+    [state, setState, metadata] = useCount();
+
+    expect(state).toEqual(2);
+    expect(setState).toBeInstanceOf(Function);
+    expect(metadata).toEqual(null);
+
+    expect(onInitSpy).toBeCalledTimes(1);
+    expect(onChangeSpy).toBeCalledTimes(1);
   });
 });

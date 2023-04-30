@@ -4,6 +4,8 @@ import {
   StateChangesParam,
   ActionCollectionConfig,
   GlobalStoreConfig,
+  AvoidNever,
+  StoreTools,
 } from 'GlobalStore.types';
 
 import {
@@ -61,30 +63,39 @@ export abstract class GlobalStoreAbstract<
   }: StateChangesParam<TState, TMetadata, TStateSetter>) => void;
 }
 
-export type CustomGlobalHookParams<TInheritMetadata = null> = {
+export type CustomGlobalHookParams<
+  TInheritMetadata = null,
+  TCustomConfig = {}
+> = {
   /**
    * @description
    * This function is called when the state is initialized.
    */
-  onInitialize: ({
-    setState,
-    setMetadata,
-    getMetadata,
-    getState,
-    actions,
-  }: StateConfigCallbackParam<any, TInheritMetadata>) => void;
+  onInitialize: (
+    {
+      setState,
+      setMetadata,
+      getMetadata,
+      getState,
+      actions,
+    }: StateConfigCallbackParam<any, TInheritMetadata>,
+    config: TCustomConfig
+  ) => void;
 
   /**
    * @description
    * This function is called when the state is changed.
    */
-  onChange: ({
-    setState,
-    setMetadata,
-    getMetadata,
-    getState,
-    actions,
-  }: StateChangesParam<any, TInheritMetadata>) => void;
+  onChange: (
+    {
+      setState,
+      setMetadata,
+      getMetadata,
+      getState,
+      actions,
+    }: StateChangesParam<any, TInheritMetadata>,
+    config: TCustomConfig
+  ) => void;
 };
 
 /**
@@ -93,11 +104,12 @@ export type CustomGlobalHookParams<TInheritMetadata = null> = {
  * You can use this function to create a store with async storage.
  */
 export const createCustomGlobalStateWithDecoupledFuncs = <
-  TInheritMetadata = null
+  TInheritMetadata = null,
+  TCustomConfig = {}
 >({
   onInitialize,
   onChange,
-}: CustomGlobalHookParams<TInheritMetadata>) => {
+}: CustomGlobalHookParams<TInheritMetadata, TCustomConfig>) => {
   /**
    * @description
    * Use this function to create a custom global store.
@@ -110,76 +122,107 @@ export const createCustomGlobalStateWithDecoupledFuncs = <
     TState,
     TMetadata = null,
     TStateSetter extends
-      | ActionCollectionConfig<TState, TMetadata & TInheritMetadata>
+      | ActionCollectionConfig<
+          TState,
+          AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>
+        >
       | StateSetter<TState> = StateSetter<TState>
   >(
     state: TState,
-    config: {
-      actionsConfig?: TStateSetter | null;
+    {
+      config: customConfig,
+      actions,
+      metadata,
+      onInit,
+      onStateChanged,
+      onSubscribed,
+      computePreventStateChange,
+    }: {
+      config?: TCustomConfig;
+
+      actions?: TStateSetter | null;
 
       metadata?: TMetadata;
 
       onInit?: GlobalStoreConfig<
         TState,
-        TMetadata & TInheritMetadata,
+        AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
         TStateSetter
       >['onInit'];
 
       onStateChanged?: GlobalStoreConfig<
         TState,
-        TMetadata & TInheritMetadata,
+        AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
         TStateSetter
       >['onStateChanged'];
 
       onSubscribed?: GlobalStoreConfig<
         TState,
-        TMetadata & TInheritMetadata,
+        AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
         TStateSetter
       >['onSubscribed'];
 
       computePreventStateChange?: GlobalStoreConfig<
         TState,
-        TMetadata & TInheritMetadata,
+        AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
         TStateSetter
       >['computePreventStateChange'];
-    } = {}
+    } = {
+      config: {} as TCustomConfig,
+    }
   ) => {
-    const { onInit, onStateChanged, ...$config } = config ?? {};
-
-    const onInitWrapper = ((parameters) => {
+    const onInitWrapper = ((callBackParameters) => {
       onInitialize(
-        parameters as unknown as StateConfigCallbackParam<
+        callBackParameters as unknown as StateConfigCallbackParam<
           unknown,
           TInheritMetadata
-        >
+        >,
+        customConfig
       );
 
-      onInit?.(parameters);
+      onInit?.(callBackParameters);
     }) as typeof onInit;
 
     const onStateChangeWrapper = (
-      parameters: StateChangesParam<
+      callBackParameters: StateChangesParam<
         TState,
-        TMetadata & TInheritMetadata,
+        AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
         TStateSetter
       >
     ) => {
       onChange(
-        parameters as unknown as StateChangesParam<unknown, TInheritMetadata>
+        callBackParameters as unknown as StateChangesParam<
+          unknown,
+          TInheritMetadata
+        >,
+        customConfig
       );
-      onStateChanged?.(parameters);
+
+      onStateChanged?.(callBackParameters);
     };
 
-    Object.assign($config, {
+    const config = {
+      actionsConfig: actions,
+      metadata,
       onInit: onInitWrapper,
       onStateChanged: onStateChangeWrapper,
-    });
+      onSubscribed,
+      computePreventStateChange,
+    };
 
     return createGlobalStateWithDecoupledFuncs<
       TState,
-      TMetadata & TInheritMetadata,
+      AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
       TStateSetter
-    >(state, $config as unknown);
+    >(state, config as unknown) as unknown as [
+      useHook: () => [
+        TState,
+        TStateSetter,
+        AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>
+      ],
+      getState: () => TState,
+      setter: TStateSetter
+    ];
   };
 };
 
@@ -192,15 +235,24 @@ export const createCustomGlobalStateWithDecoupledFuncs = <
  * @param config The configuration of the store.
  * @returns {[TState, TStateSetter, TMetadata]} The state, the state setter and the metadata of the store.
  */
-export const createCustomGlobalState = <TInheritMetadata = null>({
+export const createCustomGlobalState = <
+  TInheritMetadata = null,
+  TCustomConfig = {}
+>({
   onInitialize,
   onChange,
-}: CustomGlobalHookParams<TInheritMetadata>) => {
-  const customBuilder =
-    createCustomGlobalStateWithDecoupledFuncs<TInheritMetadata>({
-      onInitialize,
-      onChange,
-    });
+}: CustomGlobalHookParams<TInheritMetadata, TCustomConfig>) => {
+  const customBuilder = createCustomGlobalStateWithDecoupledFuncs<
+    TInheritMetadata,
+    TCustomConfig
+  >({
+    onInitialize,
+    onChange,
+  });
+
+  type InheritMetadata = TInheritMetadata extends null | undefined | never
+    ? {}
+    : TInheritMetadata;
 
   /**
    * @description
@@ -214,46 +266,109 @@ export const createCustomGlobalState = <TInheritMetadata = null>({
     TState,
     TMetadata = null,
     TStateSetter extends
-      | ActionCollectionConfig<TState, TMetadata & TInheritMetadata>
+      | ActionCollectionConfig<
+          TState,
+          AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>
+        >
       | StateSetter<TState> = StateSetter<TState>
   >(
     state: TState,
-    config: {
-      actionsConfig?: TStateSetter | null;
+    {
+      config: customConfig,
+      actions,
+      metadata,
+      onInit,
+      onStateChanged,
+      onSubscribed,
+      computePreventStateChange,
+    }: {
+      /**
+       * Configuration of the custom global store
+       */
+      config?: TCustomConfig;
 
+      /**
+       * @description
+       * The type of the actionsConfig object (optional) (default: null) if a configuration is passed, the hook will return an object with the actions then all the store manipulation will be done through the actions
+       */
+      actions?: {
+        [key: string]: (
+          ...parameters: any[]
+        ) => (storeTools: StoreTools<TState, TMetadata>) => unknown | void;
+      } | null;
+
+      /**
+       * @param {StateConfigCallbackParam<TState, TMetadata> => void} metadata - the initial value of the metadata
+       * */
       metadata?: TMetadata;
 
-      onInit?: GlobalStoreConfig<
-        TState,
-        TMetadata & TInheritMetadata,
-        TStateSetter
-      >['onInit'];
+      /**
+       * @param {StateConfigCallbackParam<TState, TMetadata> => void} onInit - callback function called when the store is initialized
+       * @returns {void} result - void
+       * */
+      onInit?: (
+        parameters: StateConfigCallbackParam<
+          TState,
+          AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
+          TStateSetter
+        >
+      ) => void;
 
-      onStateChanged?: GlobalStoreConfig<
-        TState,
-        TMetadata & TInheritMetadata,
-        TStateSetter
-      >['onStateChanged'];
+      /**
+       * @param {StateChangesParam<TState, TMetadata> => void} onStateChanged - callback function called every time the state is changed
+       * @returns {void} result - void
+       */
+      onStateChanged?: (
+        parameters: StateChangesParam<
+          TState,
+          AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
+          TStateSetter
+        >
+      ) => void;
 
-      onSubscribed?: GlobalStoreConfig<
-        TState,
-        TMetadata & TInheritMetadata,
-        TStateSetter
-      >['onSubscribed'];
+      /**
+       * @param {StateConfigCallbackParam<TState, TMetadata> => void} onSubscribed - callback function called every time a component is subscribed to the store
+       * @returns {void} result - void
+       */
+      onSubscribed?: (
+        parameters: StateConfigCallbackParam<
+          TState,
+          AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
+          TStateSetter
+        >
+      ) => void;
 
-      computePreventStateChange?: GlobalStoreConfig<
-        TState,
-        TMetadata & TInheritMetadata,
-        TStateSetter
-      >['computePreventStateChange'];
-    } = {}
+      /**
+       * @param {StateChangesParam<TState, TMetadata> => boolean} computePreventStateChange - callback function called every time the state is about to change and it allows you to prevent the state change
+       * @returns {boolean} result - true if you want to prevent the state change, false otherwise
+       */
+      computePreventStateChange?: (
+        parameters: StateChangesParam<
+          TState,
+          AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
+          TStateSetter
+        >
+      ) => boolean;
+    } = {
+      config: {} as TCustomConfig,
+    }
   ) => {
-    const [useHook] = customBuilder<
-      TState,
-      TMetadata & TInheritMetadata,
-      TStateSetter
-    >(state, config as unknown);
+    const [useHook] = customBuilder(state, {
+      config: customConfig,
+      actions: actions as TStateSetter,
+      metadata,
+      onInit,
+      onStateChanged,
+      onSubscribed,
+      computePreventStateChange,
+    });
 
-    return useHook;
+    type Metadata = TMetadata extends null | undefined | never ? {} : TMetadata;
+
+    return useHook as unknown as () => [
+      TState,
+      TStateSetter,
+      InheritMetadata & Metadata
+    ];
   };
 };

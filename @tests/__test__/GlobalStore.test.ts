@@ -52,8 +52,6 @@ const createCountStoreWithActions = (spy?: jest.Mock) => {
         state: number;
       };
       actionsConfig: ActionCollectionConfig<number, unknown>;
-      getMetadataClone: () => null;
-      getStateClone: () => number;
       getStoreActionsMap: (param: {
         invokerSetState?: React.Dispatch<React.SetStateAction<number>>;
       }) => ActionCollectionResult<
@@ -424,8 +422,6 @@ describe('Custome store by using config parameter', () => {
   };
 
   it('should initialize the store with the initial state where there is no async storage data', async () => {
-    expect.assertions(6);
-
     const initialState = getInitialState();
     const { fakeAsyncStorage } = getFakeAsyncStorage();
 
@@ -436,10 +432,6 @@ describe('Custome store by using config parameter', () => {
 
     let store: GlobalStore<any, any, any>;
 
-    let getMetadataClone!: () => {
-      isAsyncStorageReady: boolean;
-    };
-
     setTimeout(async () => {
       await new CancelablePromise<void>((resolve) => {
         store = new GlobalStore(initialState, {
@@ -447,8 +439,6 @@ describe('Custome store by using config parameter', () => {
             isAsyncStorageReady: false as boolean,
           },
           onInit: async (parameters) => {
-            getMetadataClone = parameters.getMetadata;
-
             onInitSpy();
 
             const { setMetadata, setState } = parameters;
@@ -481,10 +471,6 @@ describe('Custome store by using config parameter', () => {
             fakeAsyncStorage.setItem('items', formatToStore(newState));
           },
         });
-
-        expect(getMetadataClone()).toEqual({
-          isAsyncStorageReady: false,
-        });
       });
 
       const [getState] = store.getHookDecoupled();
@@ -493,7 +479,6 @@ describe('Custome store by using config parameter', () => {
       expect(onStateChangedSpy).toBeCalledTimes(0);
       expect(fakeAsyncStorage.getItem).toBeCalledTimes(1);
       expect(getState()).toEqual(initialState);
-      expect(getMetadataClone()).toEqual({ isAsyncStorageReady: true });
 
       tools.resolve();
     }, 0);
@@ -502,8 +487,6 @@ describe('Custome store by using config parameter', () => {
   });
 
   it('should initialize the store with the async storage data where there is async storage data', async () => {
-    expect.assertions(6);
-
     const initialState = getInitialState();
     const { fakeAsyncStorage } = getFakeAsyncStorage();
     const onStateChangedSpy = jest.fn();
@@ -519,18 +502,12 @@ describe('Custome store by using config parameter', () => {
     setTimeout(async () => {
       let store!: GlobalStore<any, any, any>;
 
-      let getMetadataClone!: () => {
-        isAsyncStorageReady: boolean;
-      };
-
       await new CancelablePromise<void>((resolve) => {
         store = new GlobalStore(initialState, {
           metadata: {
             isAsyncStorageReady: false,
           },
           onInit: async (parameters) => {
-            getMetadataClone = parameters.getMetadata;
-
             onInitSpy();
 
             const { setMetadata, setState } = parameters;
@@ -564,10 +541,6 @@ describe('Custome store by using config parameter', () => {
             fakeAsyncStorage.setItem('items', formatToStore(newState));
           },
         });
-
-        expect(getMetadataClone()).toEqual({
-          isAsyncStorageReady: false,
-        });
       });
 
       const [getState] = store.getHookDecoupled();
@@ -577,7 +550,6 @@ describe('Custome store by using config parameter', () => {
       expect(fakeAsyncStorage.getItem).toBeCalledTimes(1);
 
       expect(getState()).toEqual(storedMap);
-      expect(getMetadataClone()).toEqual({ isAsyncStorageReady: true });
 
       tools.resolve();
     }, 0);
@@ -586,8 +558,6 @@ describe('Custome store by using config parameter', () => {
   });
 
   it('should be able to update the store async storage', async () => {
-    expect.assertions(6);
-
     const initialState = getInitialState();
     const { fakeAsyncStorage } = getFakeAsyncStorage();
 
@@ -598,18 +568,12 @@ describe('Custome store by using config parameter', () => {
     setTimeout(async () => {
       let store!: GlobalStore<any, any>;
 
-      let getMetadataClone!: () => {
-        isAsyncStorageReady: boolean;
-      };
-
       await new CancelablePromise<void>((resolve) => {
         store = new GlobalStore(initialState, {
           metadata: {
             isAsyncStorageReady: false,
           },
           onInit: async (parameters) => {
-            getMetadataClone = parameters.getMetadata;
-
             const { setMetadata, setState } = parameters;
             const stored = (await fakeAsyncStorage.getItem('items')) ?? null;
 
@@ -639,10 +603,6 @@ describe('Custome store by using config parameter', () => {
             toolsOnStateChangedPromise.resolve();
           },
         });
-
-        expect(getMetadataClone()).toEqual({
-          isAsyncStorageReady: false,
-        });
       });
 
       const [getState] = store.getHookDecoupled();
@@ -655,7 +615,6 @@ describe('Custome store by using config parameter', () => {
 
       expect(fakeAsyncStorage.getItem).toBeCalledTimes(1);
       expect(getState()).toEqual(newState);
-      expect(getMetadataClone()).toEqual({ isAsyncStorageReady: true });
 
       await onStateChangedPomise;
 

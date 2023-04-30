@@ -26,6 +26,31 @@ export type StateSetter<TState> = (
 ) => void;
 
 /**
+ * @description
+ * The hook that can be used to access the state and the setter of the state
+ * @returns {[TState, TStateSetter, TMetadata]} The state, the state setter and the metadata of the store.
+ */
+export type StateHook<
+  TState,
+  TMetadata,
+  TStateSetter extends
+    | ActionCollectionConfig<TState, TMetadata>
+    | StateSetter<TState> = StateSetter<TState>
+> = () => [
+  TState,
+  TStateSetter extends StateSetter<TState> | null | never
+    ? StateSetter<TState>
+    : ActionCollectionResult<TState, TMetadata, TStateSetter>,
+  TMetadata
+];
+
+/**
+ * @description
+ * Type that prevent ts issues with merging never with other types
+ */
+export type AvoidNever<T> = T extends never | null | undefined ? {} : T;
+
+/**
  * @param {TMetadata} setter - set the metadata
  * @returns {void} result - void
  */

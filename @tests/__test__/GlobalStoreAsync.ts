@@ -85,43 +85,47 @@ export class GlobalStore<
   };
 }
 
-export const createGlobalHook = createCustomGlobalState<{
-  asyncStorageKey?: string;
+type BaseMetadata = {
   isAsyncStorageReady?: boolean;
-}>({
-  onInitialize: async ({ setState, setMetadata, getMetadata, getState }) => {
-    const metadata = getMetadata();
-    const asyncStorageKey = metadata?.asyncStorageKey;
+};
 
+type HookConfig = {
+  asyncStorageKey?: string;
+};
+
+export const createGlobalState = createCustomGlobalState<
+  BaseMetadata,
+  HookConfig
+>({
+  onInitialize: async ({ setState, setMetadata }, config) => {
+    setMetadata((metadata) => ({
+      ...(metadata ?? {}),
+      isAsyncStorageReady: null,
+    }));
+
+    const asyncStorageKey = config.asyncStorageKey;
     if (!asyncStorageKey) return;
 
-    const storedItem = (await asyncStorage.getItem(
-      asyncStorageKey
-    )) as unknown as string;
+    const storedItem = (await asyncStorage.getItem(asyncStorageKey)) as string;
 
-    setMetadata({
+    setMetadata((metadata) => ({
       ...metadata,
       isAsyncStorageReady: true,
-    });
+    }));
 
     if (storedItem === null) {
-      const state = getState();
-
-      // force the re-render of the subscribed components even if the state is the same
-      return setState(state, { forceUpdate: true });
+      return setState((state) => state, { forceUpdate: true });
     }
 
-    const items = formatFromStore(storedItem, {
+    const parsed = formatFromStore(storedItem, {
       jsonParse: true,
     });
 
-    setState(items, { forceUpdate: true });
+    setState(parsed, { forceUpdate: true });
   },
 
-  onChange: ({ getMetadata, getState }) => {
-    const asyncStorageKey = getMetadata()?.asyncStorageKey;
-
-    if (!asyncStorageKey) return;
+  onChange: ({ getState }, config) => {
+    if (!config.asyncStorageKey) return;
 
     const state = getState();
 
@@ -129,6 +133,6 @@ export const createGlobalHook = createCustomGlobalState<{
       stringify: true,
     });
 
-    asyncStorage.setItem(asyncStorageKey, formattedObject);
+    asyncStorage.setItem(config.asyncStorageKey, formattedObject);
   },
 });
