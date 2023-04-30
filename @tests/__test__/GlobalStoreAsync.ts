@@ -1,5 +1,5 @@
 import {
-  createCustomGlobalHook,
+  createCustomGlobalState,
   GlobalStoreAbstract,
 } from '../../src/GlobalStoreAbstract';
 
@@ -29,9 +29,9 @@ export class GlobalStore<
   constructor(
     state: TState,
     config: GlobalStoreConfig<TState, TMetadata, TStateSetter> = {},
-    setterConfig: TStateSetter | null = null
+    actionsConfig: TStateSetter | null = null
   ) {
-    super(state, config, setterConfig);
+    super(state, config, actionsConfig);
 
     this.initialize();
   }
@@ -85,19 +85,19 @@ export class GlobalStore<
   };
 }
 
-export const createGlobalPersistedHook = createCustomGlobalHook<{
+export const createGlobalHook = createCustomGlobalState<{
   asyncStorageKey?: string;
   isAsyncStorageReady?: boolean;
 }>({
-  onInitialize: ({ setState, setMetadata, getMetadata, getState }) => {
+  onInitialize: async ({ setState, setMetadata, getMetadata, getState }) => {
     const metadata = getMetadata();
     const asyncStorageKey = metadata?.asyncStorageKey;
 
     if (!asyncStorageKey) return;
 
-    const storedItem = asyncStorage.getItem(
+    const storedItem = (await asyncStorage.getItem(
       asyncStorageKey
-    ) as unknown as string;
+    )) as unknown as string;
 
     setMetadata({
       ...metadata,
@@ -132,21 +132,3 @@ export const createGlobalPersistedHook = createCustomGlobalHook<{
     asyncStorage.setItem(asyncStorageKey, formattedObject);
   },
 });
-
-export const useCount = createGlobalPersistedHook(0, {
-  metadata: {
-    asyncStorageKey: 'count',
-    test: 2,
-  },
-  setterConfig: {
-    increase(increase: number) {
-      return ({ setState, getState }): number => {
-        setState((state) => state + increase);
-
-        return getState();
-      };
-    },
-  } as const,
-});
-
-export const [a, b, c] = useCount();

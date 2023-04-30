@@ -1,6 +1,5 @@
 import { createDecoupledPromise } from 'cancelable-promise-jq';
-
-import { GlobalStore, asyncStorage } from './GlobalStoreAsyc';
+import { GlobalStore, asyncStorage } from './GlobalStoreAsync';
 
 describe('GlobalStoreAsync Basics', () => {
   it('should create a store with async storage', async () => {
@@ -27,8 +26,6 @@ describe('GlobalStoreAsync Basics', () => {
       jest
         .spyOn(storage, 'onStateChanged' as any)
         .mockImplementation((...parameters) => {
-          debugger;
-
           onStateChanged(...parameters);
 
           onStateChangedResolve();

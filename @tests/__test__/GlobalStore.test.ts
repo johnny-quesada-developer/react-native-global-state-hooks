@@ -51,7 +51,7 @@ const createCountStoreWithActions = (spy?: jest.Mock) => {
       stateWrapper: {
         state: number;
       };
-      setterConfig: ActionCollectionConfig<number, unknown>;
+      actionsConfig: ActionCollectionConfig<number, unknown>;
       getMetadataClone: () => null;
       getStateClone: () => number;
       getStoreActionsMap: (param: {
@@ -153,7 +153,7 @@ describe('GlobalStore with actions', () => {
 
     expect(store).toBeInstanceOf(GlobalStore);
     expect(store.stateWrapper.state).toBe(countStoreInitialState);
-    expect(store.setterConfig).toBeDefined();
+    expect(store.actionsConfig).toBeDefined();
 
     const actions = store.getStoreActionsMap({});
 

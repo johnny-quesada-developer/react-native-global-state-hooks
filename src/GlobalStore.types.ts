@@ -1,8 +1,14 @@
 /**
- * @param {StateSetter<TState>} setter - add a new state to an existing state
+ * @param {StateSetter<TState>} setter - set the state
  * @returns {void} result - void
  */
 export type StateSetter<TState> = (
+  /**
+   * @param {StateSetter<TState>} setter - set the state
+   * @param {{ forceUpdate?: boolean }} options - Options to be passed to the setter
+   * @param {{ forceUpdate?: boolean }} options.forceUpdate - Force the re-render of the subscribers even if the state is the same
+   * @returns {void} result - void
+   * */
   setter: TState | ((state: TState) => TState),
   /**
    * This parameter indicate whether we should force the re-render of the subscribers even if the state is the same,
@@ -20,12 +26,31 @@ export type StateSetter<TState> = (
 ) => void;
 
 /**
+ * @param {TMetadata} setter - set the metadata
+ * @returns {void} result - void
+ */
+export type MetadataSetter<TMetadata> = (
+  /**
+   * @param {TMetadata} setter - set the metadata
+   * @returns {void} result - void
+   * */
+  setter: TMetadata | ((metadata: TMetadata) => TMetadata)
+) => void;
+
+/**
  * Parameters of the onStateChanged callback function
  * @param {TState} state - the new state
  * @param {TState} previousState - the previous state
  **/
 export type StateChanges<TState> = {
+  /**
+   * The new state
+   * */
   state: TState;
+
+  /**
+   * The previous state
+   * */
   previousState?: TState;
 };
 
@@ -39,12 +64,38 @@ export type StateChanges<TState> = {
  * @property {() => TMetadata} getMetadata - Get the metadata
  * @property {ActionCollectionResult<TState, TMetadata>} actions - The actions collection if any
  **/
-export type StoreTools<TState, TMetadata = null> = {
-  setMetadata: StateSetter<TMetadata>;
+export type StoreTools<TState = any, TMetadata = any, TActions = any> = {
+  /**
+   * Set the metadata
+   * @param {TMetadata} setter - The metadata or a function that will receive the metadata and return the new metadata
+   * @returns {void} result - void
+   * */
+  setMetadata: MetadataSetter<TMetadata>;
+
+  /**
+   * Set the state
+   * @param {TState} setter - The state or a function that will receive the state and return the new state
+   * @param {{ forceUpdate?: boolean }} options - Options
+   * @returns {void} result - void
+   * */
   setState: StateSetter<TState>;
+
+  /**
+   * Get the state
+   * @returns {TState} result - The state
+   * */
   getState: () => TState;
+
+  /**
+   * Get the metadata
+   * @returns {TMetadata} result - The metadata
+   * */
   getMetadata: () => TMetadata;
-  actions: ActionCollectionResult<TState, TMetadata>;
+
+  /**
+   * Actions of the hook
+   */
+  actions: TActions;
 };
 
 /**
@@ -52,7 +103,7 @@ export type StoreTools<TState, TMetadata = null> = {
  * @template {TState} TState - The state type
  * @template {TMetadata} TMetadata - The metadata type
  * @property {string} key - The action name
- * @property {(...parameters: unknown[]) => (storeTools: { setMetadata: StateSetter<TMetadata>; setState: StateSetter<TState>; getState: () => TState; getMetadata: () => TMetadata; }) => unknown | void} value - The action function
+ * @property {(...parameters: unknown[]) => (storeTools: { setMetadata: MetadataSetter<TMetadata>; setState: StateSetter<TState>; getState: () => TState; getMetadata: () => TMetadata; }) => unknown | void} value - The action function
  * @returns {ActionCollectionConfig<TState, TMetadata>} result - The action collection configuration
  */
 export interface ActionCollectionConfig<TState, TMetadata> {
@@ -105,7 +156,7 @@ export type ActionCollectionResult<
  * Common parameters of the store configuration callback functions
  * @param {StateSetter<TState>} setState - add a new value to the state
  * @param {() => TState} getState - get the current state
- * @param {StateSetter<TMetadata>} setMetadata - add a new value to the metadata
+ * @param {MetadataSetter<TMetadata>} setMetadata - add a new value to the metadata
  * @param {() => TMetadata} getMetadata - get the current metadata
  * @param {ActionCollectionResult<TState, ActionCollectionConfig<TState, TMetadata>> | null} actions - the actions object returned by the hook when you pass an storeActionsConfig configuration otherwise null
  * @template {TState} TState - The state type
@@ -157,23 +208,40 @@ export type GlobalStoreConfig<
     | ActionCollectionConfig<TState, TMetadata>
     | StateSetter<TState> = StateSetter<TState>
 > = {
+  /**
+   * @param {StateConfigCallbackParam<TState, TMetadata> => void} metadata - the initial value of the metadata
+   * */
   metadata?: TMetadata;
 
+  /**
+   * @param {StateConfigCallbackParam<TState, TMetadata> => void} onInit - callback function called when the store is initialized
+   * @returns {void} result - void
+   * */
   onInit?: (
     parameters: StateConfigCallbackParam<TState, TMetadata, TStateSetter>
   ) => void;
 
+  /**
+   * @param {StateChangesParam<TState, TMetadata> => void} onStateChanged - callback function called every time the state is changed
+   * @returns {void} result - void
+   */
   onStateChanged?: (
     parameters: StateChangesParam<TState, TMetadata, TStateSetter>
   ) => void;
 
+  /**
+   * @param {StateConfigCallbackParam<TState, TMetadata> => void} onSubscribed - callback function called every time a component is subscribed to the store
+   * @returns {void} result - void
+   */
   onSubscribed?: (
     parameters: StateConfigCallbackParam<TState, TMetadata, TStateSetter>
   ) => void;
 
+  /**
+   * @param {StateChangesParam<TState, TMetadata> => boolean} computePreventStateChange - callback function called every time the state is about to change and it allows you to prevent the state change
+   * @returns {boolean} result - true if you want to prevent the state change, false otherwise
+   */
   computePreventStateChange?: (
     parameters: StateChangesParam<TState, TMetadata, TStateSetter>
   ) => boolean;
 } | null;
-
-export type CombinedTypes<TypeA, TypeB> = TypeA & Omit<TypeB, keyof TypeA>;
