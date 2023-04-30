@@ -183,7 +183,7 @@ export const createGlobalState = createCustomGlobalState<
       isAsyncStorageReady: null,
     }));
 
-    const asyncStorageKey = config.asyncStorageKey;
+    const asyncStorageKey = config?.asyncStorageKey;
     if (!asyncStorageKey) return;
 
     const storedItem = (await asyncStorage.getItem(asyncStorageKey)) as string;
@@ -206,7 +206,7 @@ export const createGlobalState = createCustomGlobalState<
   },
 
   onChange: ({ getState }, config) => {
-    if (!config.asyncStorageKey) return;
+    if (!config?.asyncStorageKey) return;
 
     const state = getState();
 
