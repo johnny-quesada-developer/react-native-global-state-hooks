@@ -8,8 +8,6 @@ import {
   StateConfigCallbackParam,
   StateChangesParam,
   MetadataSetter,
-  StoreTools,
-  StateHook,
 } from './GlobalStore.types';
 
 const throwWrongKeyOnActionCollectionConfig = (action_key: string) => {
@@ -556,9 +554,7 @@ export class GlobalStore<
 export const createGlobalStateWithDecoupledFuncs = <
   TState,
   TMetadata = null,
-  TStateSetter extends
-    | ActionCollectionConfig<TState, TMetadata>
-    | StateSetter<TState> = StateSetter<TState>
+  TActions extends ActionCollectionConfig<TState, TMetadata> | null = null
 >(
   state: TState,
   {
@@ -573,7 +569,7 @@ export const createGlobalStateWithDecoupledFuncs = <
      * @description
      * The type of the actionsConfig object (optional) (default: null) if a configuration is passed, the hook will return an object with the actions then all the store manipulation will be done through the actions
      */
-    actions?: TStateSetter;
+    actions?: TActions;
 
     /**
      * @param {StateConfigCallbackParam<TState, TMetadata> => void} metadata - the initial value of the metadata
@@ -585,7 +581,7 @@ export const createGlobalStateWithDecoupledFuncs = <
      * @returns {void} result - void
      * */
     onInit?: (
-      parameters: StateConfigCallbackParam<TState, TMetadata, TStateSetter>
+      parameters: StateConfigCallbackParam<TState, TMetadata, TActions>
     ) => void;
 
     /**
@@ -593,7 +589,7 @@ export const createGlobalStateWithDecoupledFuncs = <
      * @returns {void} result - void
      */
     onStateChanged?: (
-      parameters: StateChangesParam<TState, TMetadata, TStateSetter>
+      parameters: StateChangesParam<TState, TMetadata, TActions>
     ) => void;
 
     /**
@@ -601,7 +597,7 @@ export const createGlobalStateWithDecoupledFuncs = <
      * @returns {void} result - void
      */
     onSubscribed?: (
-      parameters: StateConfigCallbackParam<TState, TMetadata, TStateSetter>
+      parameters: StateConfigCallbackParam<TState, TMetadata, TActions>
     ) => void;
 
     /**
@@ -609,22 +605,10 @@ export const createGlobalStateWithDecoupledFuncs = <
      * @returns {boolean} result - true if you want to prevent the state change, false otherwise
      */
     computePreventStateChange?: (
-      parameters: StateChangesParam<TState, TMetadata, TStateSetter>
+      parameters: StateChangesParam<TState, TMetadata, TActions>
     ) => boolean;
   } = {}
-): [
-  useHook: () => [
-    TState,
-    TStateSetter extends StateSetter<TState> | null
-      ? StateSetter<TState>
-      : ActionCollectionResult<TState, TMetadata, TStateSetter>,
-    TMetadata
-  ],
-  getState: () => TState,
-  setter: TStateSetter extends StateSetter<TState>
-    ? StateSetter<TState>
-    : ActionCollectionResult<TState, TMetadata, TStateSetter>
-] => {
+) => {
   const config = {
     metadata,
     onInit,
@@ -633,15 +617,27 @@ export const createGlobalStateWithDecoupledFuncs = <
     computePreventStateChange,
   };
 
-  const store = new GlobalStore<TState, TMetadata, TStateSetter>(
+  const store = new GlobalStore<TState, TMetadata, TActions>(
     state,
     config,
-    actions as TStateSetter
+    actions
   );
 
   const [getState, setter] = store.getHookDecoupled();
 
-  return [store.getHook(), getState, setter];
+  return [store.getHook(), getState, setter] as unknown as [
+    useHook: () => [
+      TState,
+      TActions extends null
+        ? StateSetter<TState>
+        : ActionCollectionResult<TState, TMetadata, TActions>,
+      TMetadata
+    ],
+    getState: () => TState,
+    setter: TActions extends null
+      ? StateSetter<TState>
+      : ActionCollectionResult<TState, TMetadata, TActions>
+  ];
 };
 
 /**
@@ -655,9 +651,7 @@ export const createGlobalStateWithDecoupledFuncs = <
 export const createGlobalState = <
   TState,
   TMetadata = null,
-  TStateSetter extends
-    | ActionCollectionConfig<TState, TMetadata>
-    | StateSetter<TState> = StateSetter<TState>
+  TActions extends ActionCollectionConfig<TState, TMetadata> | null = null
 >(
   state: TState,
   config: {
@@ -665,7 +659,7 @@ export const createGlobalState = <
      * @description
      * The type of the actionsConfig object (optional) (default: null) if a configuration is passed, the hook will return an object with the actions then all the store manipulation will be done through the actions
      */
-    actions?: TStateSetter;
+    actions?: TActions;
 
     /**
      * @param {StateConfigCallbackParam<TState, TMetadata> => void} metadata - the initial value of the metadata
@@ -677,7 +671,7 @@ export const createGlobalState = <
      * @returns {void} result - void
      * */
     onInit?: (
-      parameters: StateConfigCallbackParam<TState, TMetadata, TStateSetter>
+      parameters: StateConfigCallbackParam<TState, TMetadata, TActions>
     ) => void;
 
     /**
@@ -685,7 +679,7 @@ export const createGlobalState = <
      * @returns {void} result - void
      */
     onStateChanged?: (
-      parameters: StateChangesParam<TState, TMetadata, TStateSetter>
+      parameters: StateChangesParam<TState, TMetadata, TActions>
     ) => void;
 
     /**
@@ -693,7 +687,7 @@ export const createGlobalState = <
      * @returns {void} result - void
      */
     onSubscribed?: (
-      parameters: StateConfigCallbackParam<TState, TMetadata, TStateSetter>
+      parameters: StateConfigCallbackParam<TState, TMetadata, TActions>
     ) => void;
 
     /**
@@ -701,7 +695,7 @@ export const createGlobalState = <
      * @returns {boolean} result - true if you want to prevent the state change, false otherwise
      */
     computePreventStateChange?: (
-      parameters: StateChangesParam<TState, TMetadata, TStateSetter>
+      parameters: StateChangesParam<TState, TMetadata, TActions>
     ) => boolean;
   } = {}
 ) => {
@@ -712,9 +706,9 @@ export const createGlobalState = <
 
   return useState as () => [
     TState,
-    TStateSetter extends StateSetter<TState> | null
+    TActions extends null
       ? StateSetter<TState>
-      : ActionCollectionResult<TState, TMetadata, TStateSetter>,
+      : ActionCollectionResult<TState, TMetadata, TActions>,
     TMetadata
   ];
 };

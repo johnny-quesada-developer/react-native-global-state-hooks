@@ -5,7 +5,7 @@ import {
   ActionCollectionConfig,
   GlobalStoreConfig,
   AvoidNever,
-  StoreTools,
+  ActionCollectionResult,
 } from 'GlobalStore.types';
 
 import {
@@ -105,7 +105,7 @@ export type CustomGlobalHookParams<
  */
 export const createCustomGlobalStateWithDecoupledFuncs = <
   TInheritMetadata = null,
-  TCustomConfig = {}
+  TCustomConfig = null
 >({
   onInitialize,
   onChange,
@@ -121,12 +121,10 @@ export const createCustomGlobalStateWithDecoupledFuncs = <
   return <
     TState,
     TMetadata = null,
-    TStateSetter extends
-      | ActionCollectionConfig<
-          TState,
-          AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>
-        >
-      | StateSetter<TState> = StateSetter<TState>
+    TActions extends ActionCollectionConfig<
+      TState,
+      AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>
+    > | null = null
   >(
     state: TState,
     {
@@ -140,35 +138,35 @@ export const createCustomGlobalStateWithDecoupledFuncs = <
     }: {
       config?: TCustomConfig;
 
-      actions?: TStateSetter | null;
+      actions?: TActions;
 
       metadata?: TMetadata;
 
       onInit?: GlobalStoreConfig<
         TState,
         AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
-        TStateSetter
+        TActions
       >['onInit'];
 
       onStateChanged?: GlobalStoreConfig<
         TState,
         AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
-        TStateSetter
+        TActions
       >['onStateChanged'];
 
       onSubscribed?: GlobalStoreConfig<
         TState,
         AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
-        TStateSetter
+        TActions
       >['onSubscribed'];
 
       computePreventStateChange?: GlobalStoreConfig<
         TState,
         AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
-        TStateSetter
+        TActions
       >['computePreventStateChange'];
     } = {
-      config: {} as TCustomConfig,
+      config: null,
     }
   ) => {
     const onInitWrapper = ((callBackParameters) => {
@@ -187,7 +185,7 @@ export const createCustomGlobalStateWithDecoupledFuncs = <
       callBackParameters: StateChangesParam<
         TState,
         AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
-        TStateSetter
+        TActions
       >
     ) => {
       onChange(
@@ -204,7 +202,7 @@ export const createCustomGlobalStateWithDecoupledFuncs = <
     return createGlobalStateWithDecoupledFuncs<
       TState,
       AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
-      TStateSetter
+      TActions
     >(state, {
       actions,
       metadata: metadata as AvoidNever<TInheritMetadata> &
@@ -216,11 +214,23 @@ export const createCustomGlobalStateWithDecoupledFuncs = <
     }) as unknown as [
       useHook: () => [
         TState,
-        TStateSetter,
+        TActions extends null | undefined | never
+          ? StateSetter<TState>
+          : ActionCollectionResult<
+              TState,
+              AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
+              TActions
+            >,
         AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>
       ],
       getState: () => TState,
-      setter: TStateSetter
+      setter: TActions extends null | undefined | never
+        ? StateSetter<TState>
+        : ActionCollectionResult<
+            TState,
+            AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
+            TActions
+          >
     ];
   };
 };
@@ -264,12 +274,10 @@ export const createCustomGlobalState = <
   return <
     TState,
     TMetadata = null,
-    TStateSetter extends
-      | ActionCollectionConfig<
-          TState,
-          AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>
-        >
-      | StateSetter<TState> = StateSetter<TState>
+    TActions extends ActionCollectionConfig<
+      TState,
+      AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>
+    > | null = null
   >(
     state: TState,
     {
@@ -290,11 +298,7 @@ export const createCustomGlobalState = <
        * @description
        * (optional) (default: null) if a configuration is passed, the hook will return an object with the actions then all the store manipulation will be done through the actions
        */
-      actions?: {
-        [key: string]: (
-          ...parameters: any[]
-        ) => (storeTools: StoreTools<TState, TMetadata>) => unknown | void;
-      } | null;
+      actions?: TActions | null;
 
       /**
        * @param {StateConfigCallbackParam<TState, TMetadata> => void} metadata - the initial value of the metadata
@@ -309,7 +313,7 @@ export const createCustomGlobalState = <
         parameters: StateConfigCallbackParam<
           TState,
           AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
-          TStateSetter
+          TActions
         >
       ) => void;
 
@@ -321,7 +325,7 @@ export const createCustomGlobalState = <
         parameters: StateChangesParam<
           TState,
           AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
-          TStateSetter
+          TActions
         >
       ) => void;
 
@@ -333,7 +337,7 @@ export const createCustomGlobalState = <
         parameters: StateConfigCallbackParam<
           TState,
           AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
-          TStateSetter
+          TActions
         >
       ) => void;
 
@@ -345,7 +349,7 @@ export const createCustomGlobalState = <
         parameters: StateChangesParam<
           TState,
           AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
-          TStateSetter
+          TActions
         >
       ) => boolean;
     } = {
@@ -354,7 +358,7 @@ export const createCustomGlobalState = <
   ) => {
     const [useHook] = customBuilder(state, {
       config: customConfig,
-      actions: actions as TStateSetter,
+      actions,
       metadata,
       onInit,
       onStateChanged,
@@ -366,7 +370,13 @@ export const createCustomGlobalState = <
 
     return useHook as unknown as () => [
       TState,
-      TStateSetter,
+      TActions extends null
+        ? StateSetter<TState>
+        : ActionCollectionResult<
+            TState,
+            AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
+            TActions
+          >,
       InheritMetadata & Metadata
     ];
   };

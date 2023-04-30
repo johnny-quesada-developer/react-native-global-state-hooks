@@ -110,6 +110,7 @@ describe('with actions', () => {
     let [state, actions, metadata] = useCount();
 
     expect(useCount).toBeInstanceOf(Function);
+    expect(metadata.modificationsCounter).toBe(0);
 
     expect(actions).toBeInstanceOf(Object);
     expect(actions.decrease).toBeInstanceOf(Function);
@@ -169,7 +170,9 @@ describe('with configuration callbacks', () => {
     const onSubscribedSpy = jest.fn();
 
     const useCount = createGlobalState(
-      {},
+      {
+        test: new Date(),
+      },
       {
         onSubscribed: onSubscribedSpy,
       }
@@ -192,7 +195,7 @@ describe('with configuration callbacks', () => {
     const onStateChangedSpy = jest.fn();
 
     const useCount = createGlobalState(
-      {},
+      { a: true },
       {
         onStateChanged: onStateChangedSpy,
       }
@@ -202,11 +205,11 @@ describe('with configuration callbacks', () => {
 
     const [, setState] = useCount();
 
-    setState({ test: true });
+    setState({ a: true });
 
     expect(onStateChangedSpy).toBeCalledTimes(1);
 
-    setState({ test: false });
+    setState({ a: false });
 
     expect(onStateChangedSpy).toBeCalledTimes(2);
   });
@@ -306,7 +309,7 @@ describe('custom global hooks', () => {
       return;
     });
 
-    const initialState = new Map();
+    const initialState = new Map<number, string>();
 
     const useCount = createGlobalState(initialState, {
       onStateChanged: onStateChangedSpy,
@@ -499,7 +502,7 @@ describe('custom global hooks', () => {
               actions.log('decrease');
             };
           },
-        } as const,
+        },
       });
 
     let [state, actions] = useCount();
@@ -569,16 +572,22 @@ describe('custom global hooks', () => {
 
     expect(getCount()).toEqual(initialState);
 
-    setCount(2);
+    setCount({
+      count: 2,
+    });
 
-    expect(getCount()).toEqual(2);
+    expect(getCount()).toEqual({
+      count: 2,
+    });
 
     expect(onInitSpy).toBeCalledTimes(1);
     expect(onChangeSpy).toBeCalledTimes(1);
 
     [state, setState, metadata] = useCount();
 
-    expect(state).toEqual(2);
+    expect(state).toEqual({
+      count: 2,
+    });
     expect(setState).toBeInstanceOf(Function);
     expect(metadata).toEqual(null);
 

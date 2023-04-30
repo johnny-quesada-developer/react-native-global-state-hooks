@@ -131,7 +131,7 @@ export type StoreTools<TState = any, TMetadata = any, TActions = any> = {
  * @property {(...parameters: unknown[]) => (storeTools: { setMetadata: MetadataSetter<TMetadata>; setState: StateSetter<TState>; getState: () => TState; getMetadata: () => TMetadata; }) => unknown | void} value - The action function
  * @returns {ActionCollectionConfig<TState, TMetadata>} result - The action collection configuration
  */
-export interface ActionCollectionConfig<TState, TMetadata> {
+export interface ActionCollectionConfig<TState, TMetadata = null> {
   [key: string]: (
     ...parameters: any[]
   ) => (storeTools: StoreTools<TState, TMetadata>) => unknown | void;
