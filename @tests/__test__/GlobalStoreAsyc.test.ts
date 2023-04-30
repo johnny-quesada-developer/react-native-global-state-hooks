@@ -67,7 +67,7 @@ describe('GlobalStoreAsync Basics', () => {
 });
 
 describe('createGlobalState', () => {
-  it.only('should create a store with async storage', async () => {
+  it('should create a store with async storage', async () => {
     asyncStorage.setItem('data', formatToStore(new Map([['prop', 0]])));
 
     const { promise, resolve } = createDecoupledPromise();
@@ -76,7 +76,7 @@ describe('createGlobalState', () => {
       const { promise: onStateChangedPromise, resolve: onStateChangedResolve } =
         createDecoupledPromise();
 
-      const useData = createGlobalState(new Map(), {
+      const useData = createGlobalState(new Map<string, number>(), {
         config: {
           asyncStorageKey: 'data',
         },
@@ -93,6 +93,16 @@ describe('createGlobalState', () => {
 
       expect(!!metadata.isAsyncStorageReady).toBe(true);
       expect(data).toEqual(new Map([['prop', 0]]));
+
+      setData((data) => {
+        data.set('prop', 1);
+
+        return data;
+      });
+
+      const [data2] = useData();
+
+      expect(data).toBe(data2);
 
       resolve();
     }, 0);

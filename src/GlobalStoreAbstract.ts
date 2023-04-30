@@ -201,20 +201,19 @@ export const createCustomGlobalStateWithDecoupledFuncs = <
       onStateChanged?.(callBackParameters);
     };
 
-    const config = {
-      actionsConfig: actions,
-      metadata,
-      onInit: onInitWrapper,
-      onStateChanged: onStateChangeWrapper,
-      onSubscribed,
-      computePreventStateChange,
-    };
-
     return createGlobalStateWithDecoupledFuncs<
       TState,
       AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
       TStateSetter
-    >(state, config as unknown) as unknown as [
+    >(state, {
+      actions,
+      metadata: metadata as AvoidNever<TInheritMetadata> &
+        AvoidNever<TMetadata>,
+      onInit: onInitWrapper,
+      onStateChanged: onStateChangeWrapper,
+      onSubscribed,
+      computePreventStateChange,
+    }) as unknown as [
       useHook: () => [
         TState,
         TStateSetter,
@@ -289,7 +288,7 @@ export const createCustomGlobalState = <
 
       /**
        * @description
-       * The type of the actionsConfig object (optional) (default: null) if a configuration is passed, the hook will return an object with the actions then all the store manipulation will be done through the actions
+       * (optional) (default: null) if a configuration is passed, the hook will return an object with the actions then all the store manipulation will be done through the actions
        */
       actions?: {
         [key: string]: (
