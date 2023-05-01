@@ -1,68 +1,182 @@
 import {
-  StateSetter,
+  ActionCollectionConfig,
   StateConfigCallbackParam,
   StateChangesParam,
-  ActionCollectionConfig,
-  GlobalStoreConfig,
-  AvoidNever,
+  StateSetter,
   ActionCollectionResult,
   UseHookConfig,
+  AvoidNever,
+  GlobalStoreConfig,
 } from "GlobalStore.types";
-
-import {
-  createGlobalStateWithDecoupledFuncs,
-  GlobalStore,
-} from "./GlobalStore";
+import { GlobalStore } from "./GlobalStore";
 
 /**
- * @description
- * Use this class to extends the capabilities of the GlobalStore.
- * by implementing the abstract methods onInitialize and onChange.
- * You can use this class to create a store with async storage.
+ * Creates a global hook that can be used to access the state and actions across the application
+ * @param {TState} state - The initial state
+ * @param {{ config?: GlobalStoreConfig<TState, TMetadata, TStateSetter>; actionsConfig?: TStateSetter | null }} parameters - The configuration object (optional) (default: null)
+ * @param {GlobalStoreConfig<TState, TMetadata, TStateSetter>} parameters.config - The configuration object
+ * @param {TStateSetter | null} parameters.actionsConfig - The setter configuration object (optional) (default: null)
+ * @returns {} [HOOK, DECOUPLED_GETTER, DECOUPLED_SETTER] this is an array with the hook, the decoupled getState function and the decoupled setter of the state
  */
-export abstract class GlobalStoreAbstract<
+export const createGlobalStateWithDecoupledFuncs = <
   TState,
   TMetadata = null,
-  TStateSetter extends
-    | ActionCollectionConfig<TState, TMetadata>
-    | StateSetter<TState> = StateSetter<TState>
-> extends GlobalStore<TState, TMetadata, TStateSetter> {
-  constructor(
-    state: TState,
-    config: GlobalStoreConfig<TState, TMetadata, TStateSetter> = {},
-    actionsConfig: TStateSetter | null = null
-  ) {
-    super(state, config, actionsConfig);
-  }
-
-  protected onInit = (
-    parameters: StateConfigCallbackParam<TState, TMetadata, TStateSetter>
-  ) => {
-    this.onInitialize(parameters);
-  };
-
-  protected onStateChanged = (
-    parameters: StateChangesParam<TState, TMetadata, TStateSetter>
-  ) => {
-    this.onChange(parameters);
-  };
-
-  protected abstract onInitialize: ({
-    setState,
-    setMetadata,
-    getMetadata,
-    getState,
+  TActions extends ActionCollectionConfig<TState, TMetadata> | null = null
+>(
+  state: TState,
+  {
     actions,
-  }: StateConfigCallbackParam<TState, TMetadata, TStateSetter>) => void;
+    ...config
+  }: {
+    /**
+     * @description
+     * The type of the actionsConfig object (optional) (default: null) if a configuration is passed, the hook will return an object with the actions then all the store manipulation will be done through the actions
+     */
+    actions?: TActions;
 
-  protected abstract onChange: ({
-    setState,
-    setMetadata,
-    getMetadata,
-    getState,
-    actions,
-  }: StateChangesParam<TState, TMetadata, TStateSetter>) => void;
-}
+    /**
+     * @param {StateConfigCallbackParam<TState, TMetadata> => void} metadata - the initial value of the metadata
+     * */
+    metadata?: TMetadata;
+
+    /**
+     * @param {StateConfigCallbackParam<TState, TMetadata> => void} onInit - callback function called when the store is initialized
+     * @returns {void} result - void
+     * */
+    onInit?: (
+      parameters: StateConfigCallbackParam<TState, TMetadata, TActions>
+    ) => void;
+
+    /**
+     * @param {StateChangesParam<TState, TMetadata> => void} onStateChanged - callback function called every time the state is changed
+     * @returns {void} result - void
+     */
+    onStateChanged?: (
+      parameters: StateChangesParam<TState, TMetadata, TActions>
+    ) => void;
+
+    /**
+     * @param {StateConfigCallbackParam<TState, TMetadata> => void} onSubscribed - callback function called every time a component is subscribed to the store
+     * @returns {void} result - void
+     */
+    onSubscribed?: (
+      parameters: StateConfigCallbackParam<TState, TMetadata, TActions>
+    ) => void;
+
+    /**
+     * @param {StateChangesParam<TState, TMetadata> => boolean} computePreventStateChange - callback function called every time the state is about to change and it allows you to prevent the state change
+     * @returns {boolean} result - true if you want to prevent the state change, false otherwise
+     */
+    computePreventStateChange?: (
+      parameters: StateChangesParam<TState, TMetadata, TActions>
+    ) => boolean;
+  } = {}
+) => {
+  const store = new GlobalStore<TState, TMetadata, TActions>(
+    state,
+    config,
+    actions
+  );
+
+  const [getState, setter] = store.getHookDecoupled();
+
+  type Setter = TActions extends StateSetter<TState> | null | never
+    ? StateSetter<TState>
+    : ActionCollectionResult<TState, TMetadata, TActions>;
+
+  return [store.getHook(), getState, setter] as unknown as [
+    useState: <TDerivate = never>(
+      selector?: (state: TState) => TDerivate,
+      config?: UseHookConfig<TState, TDerivate>
+    ) => [
+      TDerivate extends null | never | undefined ? TState : TDerivate,
+      Setter,
+      TMetadata
+    ],
+    getState: () => TState,
+    setter: TActions extends null
+      ? StateSetter<TState>
+      : ActionCollectionResult<TState, TMetadata, TActions>
+  ];
+};
+
+/**
+ * Creates a global hook that can be used to access the state and actions across the application
+ * @param {TState} state - The initial state of the store
+ * @param {{ config?: GlobalStoreConfig<TState, TMetadata, TStateSetter>; actionsConfig?: TStateSetter | null }} parameters - The configuration object of the store and the configuration object of the state setter (optional) (default: null)
+ * @param {GlobalStoreConfig<TState, TMetadata, TStateSetter>} parameters.config - The configuration object of the store
+ * @param {TStateSetter | null} parameters.actionsConfig - The configuration object of the state setter (optional) (default: null)
+ * @returns {} - () => [TState, Setter, TMetadata] the hook that can be used to access the state and the setter of the state
+ */
+export const createGlobalState = <
+  TState,
+  TMetadata = null,
+  TActions extends ActionCollectionConfig<TState, TMetadata> | null = null
+>(
+  state: TState,
+  config: {
+    /**
+     * @description
+     * The type of the actionsConfig object (optional) (default: null) if a configuration is passed, the hook will return an object with the actions then all the store manipulation will be done through the actions
+     */
+    actions?: TActions;
+
+    /**
+     * @param {StateConfigCallbackParam<TState, TMetadata> => void} metadata - the initial value of the metadata
+     * */
+    metadata?: TMetadata;
+
+    /**
+     * @param {StateConfigCallbackParam<TState, TMetadata> => void} onInit - callback function called when the store is initialized
+     * @returns {void} result - void
+     * */
+    onInit?: (
+      parameters: StateConfigCallbackParam<TState, TMetadata, TActions>
+    ) => void;
+
+    /**
+     * @param {StateChangesParam<TState, TMetadata> => void} onStateChanged - callback function called every time the state is changed
+     * @returns {void} result - void
+     */
+    onStateChanged?: (
+      parameters: StateChangesParam<TState, TMetadata, TActions>
+    ) => void;
+
+    /**
+     * @param {StateConfigCallbackParam<TState, TMetadata> => void} onSubscribed - callback function called every time a component is subscribed to the store
+     * @returns {void} result - void
+     */
+    onSubscribed?: (
+      parameters: StateConfigCallbackParam<TState, TMetadata, TActions>
+    ) => void;
+
+    /**
+     * @param {StateChangesParam<TState, TMetadata> => boolean} computePreventStateChange - callback function called every time the state is about to change and it allows you to prevent the state change
+     * @returns {boolean} result - true if you want to prevent the state change, false otherwise
+     */
+    computePreventStateChange?: (
+      parameters: StateChangesParam<TState, TMetadata, TActions>
+    ) => boolean;
+  } = {}
+) => {
+  const [useState] = createGlobalStateWithDecoupledFuncs(
+    state,
+    config as unknown
+  );
+
+  type Setter = TActions extends null
+    ? StateSetter<TState>
+    : ActionCollectionResult<TState, TMetadata, TActions>;
+
+  return useState as <TDerivate = never>(
+    selector?: (state: TState) => TDerivate,
+    config?: UseHookConfig<TState, TDerivate>
+  ) => [
+    state: TDerivate extends null | never | undefined ? TState : TDerivate,
+    setter: Setter,
+    metadata: TMetadata
+  ];
+};
 
 export type CustomGlobalHookParams<
   TInheritMetadata = null,

@@ -34,7 +34,7 @@
     "react-native",
     "async-storage"
   ],
-  "author": "johnny quesada",
+  "author": "Johnny Quesada",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/johnny-quesada-developer/react-native-global-state-hooks/issues"

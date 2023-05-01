@@ -1,18 +1,18 @@
+import { formatFromStore, formatToStore } from "json-storage-formatter";
+import {
+  ActionCollectionConfig,
+  StateSetter,
+  GlobalStoreConfig,
+  StateConfigCallbackParam,
+  StateChangesParam,
+} from "../../src/GlobalStore.types";
+
 import {
   createCustomGlobalState,
   GlobalStoreAbstract,
-} from '../../src/GlobalStoreAbstract';
+} from "../../src/GlobalStoreAbstract";
 
-import {
-  ActionCollectionConfig,
-  GlobalStoreConfig,
-  StateChangesParam,
-  StateConfigCallbackParam,
-  StateSetter,
-} from '../../src/GlobalStore.types';
-
-import { formatFromStore, formatToStore } from 'json-storage-formatter';
-import { getFakeAsyncStorage } from './getFakeAsyncStorage';
+import { getFakeAsyncStorage } from "./getFakeAsyncStorage";
 
 export const { fakeAsyncStorage: asyncStorage } = getFakeAsyncStorage();
 

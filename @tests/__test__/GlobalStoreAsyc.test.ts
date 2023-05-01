@@ -43,10 +43,10 @@ describe('GlobalStoreAsync Basics', () => {
       // add a subscriber to the store
       storage.getHook()();
 
-      const [setter] = storage.subscribers;
+      const [[setter]] = storage.subscribers;
       const setState = jest.fn(setter);
 
-      storage.subscribers = new Set([setState]);
+      storage.subscribers = new Map([[setState, {}]]);
 
       await onStateChangedPromise;
 
