@@ -85,11 +85,11 @@ export const createGlobalStateWithDecoupledFuncs = <
     : ActionCollectionResult<TState, TMetadata, TActions>;
 
   return [store.getHook(), getState, setter] as unknown as [
-    useState: <TDerivate = never>(
-      selector?: (state: TState) => TDerivate,
-      config?: UseHookConfig<TState, TDerivate>
+    useState: <State = TState>(
+      selector?: (state: TState) => State,
+      config?: UseHookConfig<TState, State>
     ) => [
-      TDerivate extends null | never | undefined ? TState : TDerivate,
+      State extends null | never | undefined ? TState : State,
       Setter,
       TMetadata
     ],
@@ -168,11 +168,11 @@ export const createGlobalState = <
     ? StateSetter<TState>
     : ActionCollectionResult<TState, TMetadata, TActions>;
 
-  return useState as <TDerivate = never>(
-    selector?: (state: TState) => TDerivate,
-    config?: UseHookConfig<TState, TDerivate>
+  return useState as <State = TState>(
+    selector?: (state: TState) => State,
+    config?: UseHookConfig<TState, State>
   ) => [
-    state: TDerivate extends null | never | undefined ? TState : TDerivate,
+    state: State extends null | never | undefined ? TState : State,
     setter: Setter,
     metadata: TMetadata
   ];
@@ -335,11 +335,11 @@ export const createCustomGlobalStateWithDecoupledFuncs = <
       onSubscribed,
       computePreventStateChange,
     }) as unknown as [
-      useState: <TDerivate = never>(
-        selector?: (state: TState) => TDerivate,
-        config?: UseHookConfig<TState, TDerivate>
+      useState: <State = TState>(
+        selector?: (state: TState) => State,
+        config?: UseHookConfig<TState, State>
       ) => [
-        TDerivate extends null | never | undefined ? TState : TDerivate,
+        State extends null | never | undefined ? TState : State,
         Setter,
         AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>
       ],
@@ -496,11 +496,11 @@ export const createCustomGlobalState = <
           TActions
         >;
 
-    return useHook as unknown as <TDerivate = never>(
-      selector?: (state: TState) => TDerivate,
-      config?: UseHookConfig<TState, TDerivate>
+    return useHook as unknown as <State = TState>(
+      selector?: (state: TState) => State,
+      config?: UseHookConfig<TState, State>
     ) => [
-      state: TDerivate extends null | never | undefined ? TState : TDerivate,
+      state: State extends null | never | undefined ? TState : State,
       setter: Setter,
       metadata: InheritMetadata & Metadata
     ];

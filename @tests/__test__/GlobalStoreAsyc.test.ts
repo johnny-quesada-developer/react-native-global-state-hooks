@@ -1,14 +1,14 @@
-import { createDecoupledPromise } from 'cancelable-promise-jq';
-import { formatToStore } from 'json-storage-formatter';
+import { createDecoupledPromise } from "cancelable-promise-jq";
+import { formatToStore } from "json-storage-formatter";
 import {
   GlobalStore,
   asyncStorage,
   createGlobalState,
-} from './GlobalStoreAsync';
+} from "./GlobalStoreAsync";
 
-describe('GlobalStoreAsync Basics', () => {
-  it('should create a store with async storage', async () => {
-    asyncStorage.setItem('counter', 0);
+describe("GlobalStoreAsync Basics", () => {
+  it("should create a store with async storage", async () => {
+    asyncStorage.setItem("counter", 0);
 
     const { promise, resolve } = createDecoupledPromise();
 
@@ -18,7 +18,7 @@ describe('GlobalStoreAsync Basics', () => {
 
       const storage = new GlobalStore(0, {
         metadata: {
-          asyncStorageKey: 'counter',
+          asyncStorageKey: "counter",
           isAsyncStorageReady: false,
         },
       });
@@ -29,7 +29,7 @@ describe('GlobalStoreAsync Basics', () => {
       onStateChanged.bind(storage);
 
       jest
-        .spyOn(storage, 'onStateChanged' as any)
+        .spyOn(storage, "onStateChanged" as any)
         .mockImplementation((...parameters) => {
           onStateChanged(...parameters);
 
@@ -55,7 +55,7 @@ describe('GlobalStoreAsync Basics', () => {
 
       expect(getState()).toBe(0);
 
-      const storedValue = await asyncStorage.getItem('counter');
+      const storedValue = await asyncStorage.getItem("counter");
 
       expect(storedValue).toBe('"0"');
 
@@ -66,9 +66,9 @@ describe('GlobalStoreAsync Basics', () => {
   });
 });
 
-describe('createGlobalState', () => {
-  it('should create a store with async storage', async () => {
-    asyncStorage.setItem('data', formatToStore(new Map([['prop', 0]])));
+describe("createGlobalState", () => {
+  it("should create a store with async storage", async () => {
+    asyncStorage.setItem("data", formatToStore(new Map([["prop", 0]])));
 
     const { promise, resolve } = createDecoupledPromise();
 
@@ -78,7 +78,7 @@ describe('createGlobalState', () => {
 
       const useData = createGlobalState(new Map<string, number>(), {
         config: {
-          asyncStorageKey: 'data',
+          asyncStorageKey: "data",
         },
         onStateChanged: onStateChangedResolve,
       });
@@ -92,10 +92,10 @@ describe('createGlobalState', () => {
       [data, setData, metadata] = useData();
 
       expect(!!metadata.isAsyncStorageReady).toBe(true);
-      expect(data).toEqual(new Map([['prop', 0]]));
+      expect(data).toEqual(new Map([["prop", 0]]));
 
       setData((data) => {
-        data.set('prop', 1);
+        data.set("prop", 1);
 
         return data;
       });

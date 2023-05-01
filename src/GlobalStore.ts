@@ -1,3 +1,4 @@
+import { shallowCompare } from "./GlobalStore.utils";
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
 
 import {
@@ -45,6 +46,7 @@ export class GlobalStore<
     {
       selector?: (state: TState) => unknown;
       config?: UseHookConfig<TState, any>;
+      currentState?: unknown;
     }
   > = new Map();
 
@@ -235,19 +237,25 @@ export class GlobalStore<
   protected setState = ({
     invokerSetState,
     state,
+    forceUpdate,
   }: {
     state: TState;
     invokerSetState?: React.Dispatch<React.SetStateAction<{ state: unknown }>>;
+    forceUpdate: boolean;
   }) => {
-    // update the state
+    // update the main state
     this.stateWrapper = {
       state,
     };
 
     if (invokerSetState) {
-      const { selector } = this.subscribers.get(invokerSetState);
+      const { selector, config, currentState } =
+        this.subscribers.get(invokerSetState);
 
       const newState = selector ? selector(state) : state;
+      const compareCallback = config?.isEqual ?? shallowCompare;
+
+      if (!forceUpdate && compareCallback(currentState, newState)) return;
 
       // execute first the callback of the component that invoked the state change
       invokerSetState?.({ state: newState });
@@ -320,9 +328,9 @@ export class GlobalStore<
    * */
   public getHook =
     () =>
-    <TDerivate = never>(
-      selector?: (state: TState) => TDerivate,
-      config?: UseHookConfig<TState, TDerivate>
+    <State = TState>(
+      selector?: (state: TState) => State,
+      config: UseHookConfig<TState, State> = {}
     ) => {
       const [stateWrapper, invokerSetState] = useState<{
         state: unknown;
@@ -356,14 +364,15 @@ export class GlobalStore<
         };
       }, []);
 
+      // we need to have access to the reference of the invokerSetState
+      this.subscribers.get(invokerSetState).currentState = stateWrapper.state;
+
       const stateOrchestrator = useMemo(
         () => this.getStateOrchestrator(invokerSetState),
         []
       );
 
-      type State = TDerivate extends never | undefined | null
-        ? TState
-        : TDerivate;
+      type State_ = State extends never | undefined | null ? TState : State;
 
       type Setter = TStateSetter extends StateSetter<TState> | null | never
         ? StateSetter<TState>
@@ -373,7 +382,7 @@ export class GlobalStore<
         stateWrapper.state,
         stateOrchestrator,
         this.config.metadata ?? null,
-      ] as [state: State, setter: Setter, metadata: TMetadata];
+      ] as [state: State_, setter: Setter, metadata: TMetadata];
     };
 
   /**
@@ -509,6 +518,7 @@ export class GlobalStore<
     }
 
     this.setState({
+      forceUpdate,
       invokerSetState,
       state: newState,
     });

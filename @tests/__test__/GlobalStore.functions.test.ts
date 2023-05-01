@@ -409,7 +409,7 @@ describe("custom global hooks", () => {
     });
   });
 
-  it.only("should be able to update the store async storage", () => {
+  it("should be able to update the store async storage", () => {
     const initialState = getInitialState();
     const { fakeAsyncStorage } = getFakeAsyncStorage();
 
@@ -620,5 +620,63 @@ describe("custom global hooks", () => {
     [derivate, setState] = useCount(selector);
 
     expect(derivate).toEqual(4);
+  });
+
+  it("should avoid derivate to re-render due to shallow equal", () => {
+    const useData = createGlobalState({
+      a: 1,
+      b: 2,
+      c: [1, 2, { a: 1 }],
+    });
+
+    const selector = jest.fn(({ a, c }: { a: number; c: any[] }) => ({
+      a,
+      c,
+    }));
+
+    let [derivate, setState] = useData(selector);
+
+    expect(useState).toHaveBeenCalledTimes(1);
+    expect(derivate).toEqual({
+      a: 1,
+      c: [1, 2, { a: 1 }],
+    });
+
+    setState((state) => ({
+      ...state,
+      b: 3,
+    }));
+
+    [derivate, setState] = useData(selector);
+
+    // there should be just two calls to useState since the derivate didn't change
+    expect(useState).toHaveBeenCalledTimes(2);
+    expect(derivate).toEqual({
+      a: 1,
+      c: [1, 2, { a: 1 }],
+    });
+
+    let [data] = useData();
+
+    expect(data).toEqual({
+      a: 1,
+      b: 3,
+      c: [1, 2, { a: 1 }],
+    });
+
+    setState((state) => ({
+      ...state,
+      b: 4,
+    }));
+
+    [data] = useData();
+
+    expect(data).toEqual({
+      a: 1,
+      b: 4,
+      c: [1, 2, { a: 1 }],
+    });
+
+    expect(useState).toHaveBeenCalledTimes(4);
   });
 });

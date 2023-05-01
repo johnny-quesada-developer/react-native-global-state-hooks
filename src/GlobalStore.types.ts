@@ -261,11 +261,8 @@ export type UseHookConfig<TState, TDerivate = never> = {
    * The callback to execute when the state is changed to check if the same really changed
    * If the function is not provided the derived state will perform a shallow comparison
    */
-  isEqual?: ({
-    current,
-    next,
-  }: {
-    current: TDerivate extends never | undefined | null ? TState : TDerivate;
-    next: TDerivate extends never | undefined | null ? TState : TDerivate;
-  }) => boolean;
+  isEqual?: (
+    current: TDerivate extends never | undefined | null ? TState : TDerivate,
+    next: TDerivate extends never | undefined | null ? TState : TDerivate
+  ) => boolean;
 };

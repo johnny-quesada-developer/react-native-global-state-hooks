@@ -15,7 +15,7 @@ You can also see an introduction video [here!](https://www.youtube.com/watch?v=W
 We are gonna create a global state hook **useCount** with one line of code.
 
 ```ts
-import { createGlobalState } from 'react-native-global-state-hooks';
+import { createGlobalState } from "react-native-global-state-hooks";
 
 export const useCount = createGlobalState(0);
 ```
@@ -32,16 +32,90 @@ return <Button onClick={() => setCount((count) => count + 1)}>{count}</Button>;
 
 Isn't it cool? It works just like a regular **useState**. Notice the only difference is that now you don't need to provide the initial value since this is a global hook, and the initial value has already been provided.
 
+# Selectors
+
+What if you already have a global state that you want to subscribe to, but you don't want your component to listen to all the changes of the state, only a small portion of it? Let's create a more complex **state**
+
+```ts
+import { createGlobalState } from "react-native-global-state-hooks";
+
+export const useContacts = createGlobalState({
+  isLoading: true,
+  filter: "",
+  items: [] as Contact[],
+});
+```
+
+Now, let's say I want to have a filter bar for the contacts that will only have access to the filter.
+
+**FilterBar.tsx**
+
+```ts
+const [{ filter }, setState] = useContacts(({ filter }) => ({ filter }));
+
+return (
+  <TextInput onChangeText={() => setState((state) => ({ ...state, filter }))} />
+);
+```
+
+# State actions
+
+Is common and often necessary to restrict the manipulation of state to a specific set of actions or operations. To achieve this, we can simplify the process by adding a custom API to the configuration of our **useContacts**.
+
+By defining a custom API for the **useContacts**, we can encapsulate and expose only the necessary actions or operations that are allowed to modify the state. This provides a controlled interface for interacting with the state, ensuring that modifications adhere to the desired restrictions.
+
+```ts
+import { createGlobalState } from "react-native-global-state-hooks";
+
+export const useContacts = createGlobalState(
+  {
+    isLoading: true,
+    filter: "",
+    items: [] as Contact[],
+  },
+  {
+    // this are the actions available for this state
+    actions: {
+      setFilter(filter: string) {
+        return ({ setState }: StoreTools<number>) => {
+          setState((state) => ({
+            ...state,
+            filter,
+          }));
+        };
+      },
+    } as const,
+    onInit: async ({ setState }: StoreTools) => {
+      // fetch contacts
+    },
+  }
+);
+```
+
+That's it! In this updated version, the **useContacts** hook will no longer return [**state**, **stateSetter**] but instead will return [**state**, **actions**]. This change will provide a more intuitive and convenient way to access and interact with the state and its associated actions.
+
+Let's see how that will look now into our **FilterBar.tsx**
+
+```tsx
+const [{ filter }, { setFilter }] = useContacts(({ filter }) => ({ filter }));
+
+return <TextInput onChangeText={setFilter} />;
+```
+
+It can't get any simpler, right? Plus, these hooks are strongly typed, so if you're working with TypeScript, you'll love it.
+
+Let's continue exploring which other features we can discover with global state hooks!!
+
 # Decoupled state access
 
-If you need to access the global state outside of a component or a hook without subscribing to state changes, you can use the **createGlobalStateWithDecoupledFuncs**.
+If you need to access the global state outside of a component or a hook without subscribing to state changes, or even inside a **ClassComponent**, you can use the **createGlobalStateWithDecoupledFuncs**.
 
-Decoupled state access is particularly useful when you want to create components that have editing access to a specific store but don't necessarily need to reactively respond to state changes. For example, consider a search component that only needs to retrieve the current state whenever it performs a data search. It doesn't require continuous subscription to changes in the collection it filters.
+Decoupled state access is particularly useful when you want to create components that have editing access to a specific store but don't necessarily need to reactively respond to state changes.
 
 Using decoupled state access allows you to retrieve the state when needed without establishing a reactive relationship with the state changes. This approach provides more flexibility and control over when and how components interact with the global state. Let's see and example:
 
 ```ts
-import { createGlobalStateWithDecoupledFuncs } from 'react-native-global-state-hooks';
+import { createGlobalStateWithDecoupledFuncs } from "react-native-global-state-hooks";
 
 export const [useCount, getCount, setCount] =
   createGlobalStateWithDecoupledFuncs(0);
@@ -55,45 +129,12 @@ Similarly, the **setCount** method enables you to modify the state stored in **u
 
 These additional methods provide a more flexible and granular way to interact with the state managed by **useCount**. You can retrieve and modify the state as needed, without establishing a subscription relationship or reactivity with the state changes.
 
-# State actions
-
-Is common and often necessary to restrict the manipulation of state to a specific set of actions or operations. To achieve this, we can simplify the process by adding a custom API to the configuration of our **global state**.
-
-By defining a custom API for the **useCount**, we can encapsulate and expose only the necessary actions or operations that are allowed to modify the state. This provides a controlled interface for interacting with the state, ensuring that modifications adhere to the desired restrictions.
-
-Let's see and example (you can use **createGlobalStateWithDecoupledFuncs** or **createGlobalState**, but methods work the the same)
-
-```ts
-import { createGlobalState } from 'react-native-global-state-hooks';
-
-export const useCount = createGlobalState(0, {
-  actions: {
-    increase(value: number = 1) {
-      return ({ getState }: StoreTools<number>) => {
-        setState((count) => count + value);
-      };
-    },
-  } as const,
-});
-```
-
-That's great! In this updated version, the **useCount** hook will no longer return [**state**, **stateSetter**] but instead will return [**state**, **actions**]. This change will provide a more intuitive and convenient way to access and interact with the state and its associated actions.
-
-Let's see how that will look into a react component:
-
-```ts
-const [count, actions] = useCount();
-
-// Every time we click, the counter will increase by 2
-return <Button onClick={() => actions.increase(2)}>{count}</Button>;
-```
-
 Let's add more actions to the state and explore how to use one action from inside another.
 
 Here's an example of adding multiple actions to the state and utilizing one action within another:
 
 ```ts
-import { createGlobalState } from 'react-native-global-state-hooks';
+import { createGlobalState } from "react-native-global-state-hooks";
 
 export const useCount = createGlobalState(0, {
   actions: {
@@ -127,7 +168,7 @@ Notice that the **StoreTools** will contain a reference to the generated actions
 If you don't want to create an extra type please use **createGlobalStateWithDecoupledFuncs** in that way you'll be able to use the decoupled **actions** which will have the correct typing. Let's take a quick look into that:
 
 ```ts
-import { createGlobalStateWithDecoupledFuncs } from 'react-native-global-state-hooks';
+import { createGlobalStateWithDecoupledFuncs } from "react-native-global-state-hooks";
 
 export const [useCount, getCount, $actions] =
   createGlobalStateWithDecoupledFuncs(0, {
@@ -230,7 +271,7 @@ Let's see how to create a global state using our new builder:
 ```ts
 const useTodos = createGlobalState(new Map<string, number>(), {
   config: {
-    asyncStorageKey: 'todos',
+    asyncStorageKey: "todos",
   },
 });
 ```
@@ -313,7 +354,7 @@ const useData = createGlobalState(
   { value: 1 },
   {
     metadata: {
-      someExtraInformation: 'someExtraInformation',
+      someExtraInformation: "someExtraInformation",
     },
     // onSubscribed: (StateConfigCallbackParam) => {},
     // onInit // etc
@@ -411,7 +452,7 @@ Then, from an instance of the global store, you will be able to access the hooks
 ```ts
 const storage = new GlobalStore(0, {
   metadata: {
-    asyncStorageKey: 'counter',
+    asyncStorageKey: "counter",
     isAsyncStorageReady: false,
   },
 });
