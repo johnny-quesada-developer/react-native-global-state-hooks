@@ -322,6 +322,49 @@ export class GlobalStore<
     } as StateConfigCallbackParam<TState, TMetadata, TStateSetter>;
   };
 
+  protected updateSubscription = <State = TState>({
+    selector,
+    config = {},
+    stateWrapper: { state },
+    invokerSetState,
+  }: {
+    selector?: (state: TState) => State;
+    config: UseHookConfig<TState, State>;
+    stateWrapper: {
+      state: unknown;
+    };
+    invokerSetState: Dispatch<
+      SetStateAction<{
+        state: unknown;
+      }>
+    >;
+  }) => {
+    const subscriber = this.subscribers.get(invokerSetState);
+
+    if (subscriber) {
+      // every time the hook is called we update the reference of the state
+      subscriber.currentState = state;
+
+      return;
+    }
+
+    const { onSubscribed } = this;
+    const { onSubscribed: onSubscribedFromConfig } = this.config;
+
+    if (onSubscribed || onSubscribedFromConfig) {
+      const parameters = this.getConfigCallbackParam({ invokerSetState });
+
+      onSubscribed?.(parameters);
+      onSubscribedFromConfig?.(parameters);
+    }
+
+    this.subscribers.set(invokerSetState, {
+      selector,
+      config,
+      currentState: state,
+    });
+  };
+
   /**
    * Returns a custom hook that allows to handle a global state
    * @returns {[TState, TStateSetter, TMetadata]} - The state, the state setter or the actions map, the metadata
@@ -346,26 +389,18 @@ export class GlobalStore<
         return this.stateWrapper;
       });
 
+      this.updateSubscription({
+        invokerSetState,
+        stateWrapper,
+        selector,
+        config,
+      });
+
       useEffect(() => {
-        this.subscribers.set(invokerSetState, { selector, config });
-
-        const { onSubscribed } = this;
-        const { onSubscribed: onSubscribedFromConfig } = this.config;
-
-        if (onSubscribed || onSubscribedFromConfig) {
-          const parameters = this.getConfigCallbackParam({ invokerSetState });
-
-          onSubscribed?.(parameters);
-          onSubscribedFromConfig?.(parameters);
-        }
-
         return () => {
           this.subscribers.delete(invokerSetState);
         };
       }, []);
-
-      // we need to have access to the reference of the invokerSetState
-      this.subscribers.get(invokerSetState).currentState = stateWrapper.state;
 
       const stateOrchestrator = useMemo(
         () => this.getStateOrchestrator(invokerSetState),
