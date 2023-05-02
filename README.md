@@ -136,7 +136,7 @@ const value = contactsGetter();
 // the type of value will be { isLoading: boolean; filter: string; items: Contact[] }
 ```
 
-Additionally, to subscribe to state changes, you can pass a callback function as a parameter to the setter. This approach enables you to create a subscription group, allowing you to subscribe to either the entire state or a specific portion of it. When a callback function is provided to the setter, it will return a cleanup function instead of the state. This cleanup function can be used to unsubscribe or clean up the subscription when it is no longer needed.
+Additionally, to subscribe to state changes, you can pass a callback function as a parameter to the **getter**. This approach enables you to create a subscription group, allowing you to subscribe to either the entire state or a specific portion of it. When a callback function is provided to the **getter**, it will return a cleanup function instead of the state. This cleanup function can be used to unsubscribe or clean up the subscription when it is no longer needed.
 
 ```ts
 /**
