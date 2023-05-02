@@ -117,17 +117,55 @@ Using decoupled state access allows you to retrieve the state when needed withou
 ```ts
 import { createGlobalStateWithDecoupledFuncs } from "react-native-global-state-hooks";
 
-export const [useCount, getCount, setCount] =
-  createGlobalStateWithDecoupledFuncs(0);
+export const [useContacts, contactsGetter, contactsSetter] =
+  createGlobalStateWithDecoupledFuncs({
+    isLoading: true,
+    filter: "",
+    items: [] as Contact[],
+  });
 ```
 
-That's great! With the addition of the **getCount** and **setCount** methods, you now have the ability to access and modify the state without the need for subscription to the hook.
+That's great! With the addition of the **contactsGetter** and **contactsSetter** methods, you now have the ability to access and modify the state without the need for subscription to the hook.
 
-By using the **getCount** method, you can retrieve the current value of the state stored in **useCount**. This allows you to access the state whenever necessary, without being reactive to its changes.
+While **useContacts** will allow your components to subscribe to the custom hook, using the **contactsGetter** method you will be able retrieve the current value of the state. This allows you to access the state whenever necessary, without being reactive to its changes. Let' see how:
 
-Similarly, the **setCount** method enables you to modify the state stored in **useCount**. You can use this method to update the state with a new value or perform any necessary state mutations.
+```ts
+// To synchronously get the value of the state
+const value = contactsGetter();
 
-These additional methods provide a more flexible and granular way to interact with the state managed by **useCount**. You can retrieve and modify the state as needed, without establishing a subscription relationship or reactivity with the state changes.
+// the type of value will be { isLoading: boolean; filter: string; items: Contact[] }
+```
+
+Additionally, to subscribe to state changes, you can pass a callback function as a parameter to the setter. This approach enables you to create a subscription group, allowing you to subscribe to either the entire state or a specific portion of it. When a callback function is provided to the setter, it will return a cleanup function instead of the state. This cleanup function can be used to unsubscribe or clean up the subscription when it is no longer needed.
+
+```ts
+/**
+ * This not only allows you to retrieve the current value of the state...
+ * but also enables you to subscribe to any changes in the state or a portion of it
+ */
+const removeSubscriptionGroup = contactsGetter(
+  ({ subscribe, subscribeSelector }) => {
+    subscribe((state) => {
+      console.log("state changed: ", state);
+    });
+
+    subscribeSelector(
+      (state) => state.isLoading,
+      (isLoading) => {
+        console.log("is loading changed", isLoading);
+      }
+    );
+  }
+);
+```
+
+That's great, isn't it? And everything stays synchronized with the original state!!
+
+...
+
+Similarly, the **contactsSetter** method enables you to modify the state stored in **useContacts**. You can use this method to update the state with a new value or perform any necessary state mutations.
+
+These additional methods provide a more flexible and granular way to interact with the state managed by **useContacts**. You can retrieve and modify the state as needed, without establishing a subscription relationship or reactivity with the state changes.
 
 Let's add more actions to the state and explore how to use one action from inside another.
 
