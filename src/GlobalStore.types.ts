@@ -90,7 +90,7 @@ export type StoreTools<TState = any, TMetadata = any, TActions = any> = {
    * Get the state
    * @returns {TState} result - The state
    * */
-  getState: () => TState;
+  getState: StateGetter<TState>;
 
   /**
    * Get the metadata
@@ -256,13 +256,134 @@ export type GlobalStoreConfig<
   ) => boolean;
 } | null;
 
-export type UseHookConfig<TState, TDerivate = never> = {
+export type UseHookConfig<TState> = {
   /**
    * The callback to execute when the state is changed to check if the same really changed
    * If the function is not provided the derived state will perform a shallow comparison
    */
-  isEqual?: (
-    current: TDerivate extends never | undefined | null ? TState : TDerivate,
-    next: TDerivate extends never | undefined | null ? TState : TDerivate
-  ) => boolean;
+  isEqual?: (current: TState, next: TState) => boolean;
 };
+
+/**
+ * Callback function to unsubscribe from the store
+ */
+export type UnsubscribeCallback = () => void;
+
+/**
+ * Configuration of the subscribe callbacks
+ */
+export type SubscribeCallbackConfig<TState> = UseHookConfig<TState> & {
+  /**
+   * By default the callback is executed immediately after the subscription
+   */
+  skipFirst?: boolean;
+};
+
+/**
+ * Callback function to subscribe to the store changes
+ */
+export type SubscribeCallback<TState> = (state: TState) => void;
+
+/**
+ * Callback function to subscribe to a portion of the store changes
+ * @template {TState} TState - The state type
+ * @template {TDerivate} TDerivate - The derived state type
+ * @param {SubscribeSelectorCallback<TState, TDerivate>} selector - the selector function to derive the state
+ * @param {SubscribeCallback<TDerivate>} callback - the callback to execute when the derived state is changed
+ * @param {SubscribeCallbackConfig<TDerivate>} config - the configuration object
+ * @returns {void} result - void
+ */
+export type SubscribeSelectorCallback<TState, TDerivate> = (
+  /**
+   * The selector function to derive the state
+   * @param {TState} state - the current state of the store
+   * @returns {TDerivate} result - the derived state
+   * */
+  selector: (state: TState) => TDerivate,
+
+  /**
+   * The callback to execute when the derived state is changed
+   */
+  callback: SubscribeCallback<TDerivate>,
+
+  /**
+   * The configuration object
+   * In the configuration object you can specify a custom compare function to check if the state is changed
+   */
+  config?: SubscribeCallbackConfig<TDerivate>
+) => void;
+
+/**
+ * Use this function to subscribe to the store changes
+ */
+export type SubscribeMethod<TState> = (
+  /**
+   * This callback will be executed every time the state is changed
+   */
+  callback: SubscribeCallback<TState>,
+
+  /**
+   * The configuration object
+   * In the configuration object you can specify a custom compare function to check if the state is changed
+   */
+  config?: SubscribeCallbackConfig<TState>
+) => void;
+
+export type SubscribeSelectorMethod<TState> = <TDerivate>(
+  /**
+   * The selector function to derive the state
+   * @param {TState} state - the current state of the store
+   * @returns {TDerivate} result - the derived state
+   * */
+  selector: (state: TState) => TDerivate,
+
+  /**
+   * This callback will be executed every time the state is changed
+   */
+  callback: SubscribeCallback<TDerivate>,
+
+  /**
+   * The configuration object
+   * In the configuration object you can specify a custom compare function to check if the state is changed
+   */
+  config?: SubscribeCallbackConfig<TDerivate>
+) => void;
+
+export type SubscriberCallback<TState> = ({
+  subscribe,
+}: {
+  /**
+   * Current state of the store
+   */
+  state: TState;
+
+  /**
+   * Allow you to subscribe to the store changes
+   */
+  subscribe: SubscribeMethod<TState>;
+
+  /**
+   * Allow to select a derived state from the store
+   */
+  subscribeSelector: SubscribeSelectorMethod<TState>;
+}) => void;
+
+/**
+ * Callback function to get the current state of the store or to subscribe to the store changes
+ * @template TState - the type of the state
+ * @param {SubscriberCallback<TState> | null} callback - the callback function to subscribe to the store changes (optional)
+ * use the methods subscribe and subscribeSelect to subscribe to the store changes
+ * if you don't pass a callback function the hook will return the current state of the store
+ * @returns {UnsubscribeCallback | TState} result - the state or the unsubscribe callback if you pass a callback function
+ */
+export type StateGetter<TState> = <
+  TCallback extends SubscriberCallback<TState> | null = null
+>(
+  /**
+   * @param {SubscriberCallback<TState> | null} callback - the callback function to subscribe to the store changes (optional)
+   * use the methods subscribe and subscribeSelect to subscribe to the store changes
+   */
+  callback?: TCallback
+) => TCallback extends SubscriberCallback<TState>
+  ? UnsubscribeCallback
+  : TState;

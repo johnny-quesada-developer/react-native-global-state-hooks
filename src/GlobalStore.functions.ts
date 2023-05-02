@@ -87,13 +87,13 @@ export const createGlobalStateWithDecoupledFuncs = <
   return [store.getHook(), getState, setter] as unknown as [
     useState: <State = TState>(
       selector?: (state: TState) => State,
-      config?: UseHookConfig<TState, State>
+      config?: UseHookConfig<State>
     ) => [
       State extends null | never | undefined ? TState : State,
       Setter,
       TMetadata
     ],
-    getState: () => TState,
+    getter: () => TState,
     setter: TActions extends null
       ? StateSetter<TState>
       : ActionCollectionResult<TState, TMetadata, TActions>
@@ -170,7 +170,7 @@ export const createGlobalState = <
 
   return useState as <State = TState>(
     selector?: (state: TState) => State,
-    config?: UseHookConfig<TState, State>
+    config?: UseHookConfig<State>
   ) => [
     state: State extends null | never | undefined ? TState : State,
     setter: Setter,
@@ -337,13 +337,13 @@ export const createCustomGlobalStateWithDecoupledFuncs = <
     }) as unknown as [
       useState: <State = TState>(
         selector?: (state: TState) => State,
-        config?: UseHookConfig<TState, State>
+        config?: UseHookConfig<State>
       ) => [
         State extends null | never | undefined ? TState : State,
         Setter,
         AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>
       ],
-      getState: () => TState,
+      getter: () => TState,
       setter: TActions extends null | undefined | never
         ? StateSetter<TState>
         : ActionCollectionResult<
@@ -498,7 +498,7 @@ export const createCustomGlobalState = <
 
     return useHook as unknown as <State = TState>(
       selector?: (state: TState) => State,
-      config?: UseHookConfig<TState, State>
+      config?: UseHookConfig<State>
     ) => [
       state: State extends null | never | undefined ? TState : State,
       setter: Setter,

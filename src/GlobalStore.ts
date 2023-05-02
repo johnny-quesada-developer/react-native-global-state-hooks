@@ -1,5 +1,5 @@
 import { shallowCompare } from "./GlobalStore.utils";
-import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   ActionCollectionConfig,
@@ -10,6 +10,11 @@ import {
   StateChangesParam,
   MetadataSetter,
   UseHookConfig,
+  StateGetter,
+  SubscriberCallback,
+  SubscribeMethod,
+  SubscribeSelectorMethod,
+  SubscribeCallbackConfig,
 } from "./GlobalStore.types";
 
 const throwWrongKeyOnActionCollectionConfig = (action_key: string) => {
@@ -19,6 +24,16 @@ const throwWrongKeyOnActionCollectionConfig = (action_key: string) => {
     }\n
 }\n`);
 };
+
+type SubscriberParameters<TState> = {
+  selector?: (state: TState) => unknown;
+  config?: UseHookConfig<any> | SubscribeCallbackConfig<any>;
+  currentState?: unknown;
+};
+
+type SubscriptionCallback = (params: { state: unknown }) => void;
+
+type SetStateCallback = (parameters: { state: unknown }) => void;
 
 /**
  * The GlobalStore class is the main class of the library and it is used to create a GlobalStore instances
@@ -37,18 +52,8 @@ export class GlobalStore<
    * list of all the subscribers setState functions
    * @template {TState} TState - The type of the state object
    * */
-  public subscribers: Map<
-    Dispatch<
-      SetStateAction<{
-        state: unknown;
-      }>
-    >,
-    {
-      selector?: (state: TState) => unknown;
-      config?: UseHookConfig<TState, any>;
-      currentState?: unknown;
-    }
-  > = new Map();
+  public subscribers: Map<SubscriptionCallback, SubscriberParameters<TState>> =
+    new Map();
 
   /**
    * additional configuration for the store
@@ -232,7 +237,7 @@ export class GlobalStore<
   /**
    * set the state and update all the subscribers
    * @param {StateSetter<TState>} setter - The setter function or the value to set
-   * @param {React.Dispatch<React.SetStateAction<TState>>} invokerSetState - The setState function of the component that invoked the state change (optional) (default: null) this is used to updated first the component that invoked the state change
+   * @param {SetStateCallback} invokerSetState - The setState function of the component that invoked the state change (optional) (default: null) this is used to updated first the component that invoked the state change
    * */
   protected setState = ({
     invokerSetState,
@@ -240,7 +245,7 @@ export class GlobalStore<
     forceUpdate,
   }: {
     state: TState;
-    invokerSetState?: React.Dispatch<React.SetStateAction<{ state: unknown }>>;
+    invokerSetState?: SetStateCallback;
     forceUpdate: boolean;
   }) => {
     // update the main state
@@ -293,19 +298,142 @@ export class GlobalStore<
 
   protected getMetadata = () => this.config.metadata ?? null;
 
-  protected getState = () => this.stateWrapper.state;
+  protected createChangesSubscriber = <
+    TDerivate,
+    State = TDerivate extends never ? TState : TDerivate
+  >({
+    callback,
+    selector,
+    config,
+  }: {
+    selector?: (state: TState) => TDerivate;
+    callback: (state: State) => void;
+    config: SubscribeCallbackConfig<State>;
+  }) => {
+    const initialState = (
+      selector ? selector(this.stateWrapper.state) : this.stateWrapper
+    ) as State;
+
+    let stateWrapper: {
+      state: State;
+    } = {
+      state: initialState,
+    };
+
+    const subscription: SubscriptionCallback = ({
+      state,
+    }: {
+      state: unknown;
+    }) => {
+      stateWrapper.state = state as State;
+
+      callback(state as State);
+    };
+
+    if (!config?.skipFirst) {
+      callback(initialState);
+    }
+
+    return {
+      stateWrapper,
+      subscription,
+    };
+  };
+
+  /**
+   * Return current state of the store
+   * Optionally you can use this method to subscribe a callback to the store changes
+   * @param {UseHookConfig<TState, TDerivate>} config - The configuration object (optional) (default: { selector: null, subscriptionCallback: null, config: null })
+   * @param {TSelector} config.selector - The selector function to derive the state (optional) (default: null)
+   * @param {TSubscriptionCallback} config.subscriptionCallback - The callback to execute every time the state is changed
+   * @param {UseHookConfig<TState, TDerivate>} config.config - The configuration for the callback (optional) (default: null)
+   * @param {UseHookConfig<TState, TDerivate>} config.config.isEqual - The compare function to check if the state is changed (optional) (default: shallowCompare)
+   * @returns The state of the store, optionally if you provide a subscriptionCallback it this method will return the unsubscribe function
+   */
+  protected getState = (<
+    TCallback extends SubscriberCallback<TState> | null = null
+  >(
+    $callback?: TCallback
+  ) => {
+    // if there is no subscription callback return the state
+    if (!$callback) return this.stateWrapper.state;
+
+    const { state } = this.stateWrapper;
+
+    const changesSubscribers: Map<
+      SubscriptionCallback,
+      SubscriberParameters<TState>
+    > = new Map();
+
+    const subscribe = ((callback, config) => {
+      const { subscription, stateWrapper } = this.createChangesSubscriber({
+        selector: null,
+        callback,
+        config,
+      });
+
+      this.updateSubscription({
+        selector: null,
+        config,
+        stateWrapper,
+        invokerSetState: subscription,
+      });
+
+      changesSubscribers.set(subscription, { config });
+    }) as SubscribeMethod<TState>;
+
+    const subscribeSelector = ((selector, callback, config) => {
+      const { subscription, stateWrapper } = this.createChangesSubscriber({
+        selector,
+        callback,
+        config,
+      });
+
+      this.updateSubscription({
+        selector: null,
+        config,
+        stateWrapper,
+        invokerSetState: subscription,
+      });
+
+      changesSubscribers.set(subscription, { config, selector });
+    }) as SubscribeSelectorMethod<TState>;
+
+    $callback({ state, subscribe, subscribeSelector });
+
+    if (!changesSubscribers.size) {
+      throw new Error(
+        "No new subscribers were added, please make sure to add at least one subscriber with the subscribe/subscribeSelector methods"
+      );
+    }
+
+    // // this.subscribers.set(subscription, { selector, config });
+
+    // // const test = this.getState({
+    // //   subscriptionCallback: (state) => {},
+    // // });
+
+    // // test();
+
+    // // const stateV = this.getState();
+
+    return () => {
+      Array.from(changesSubscribers.keys()).forEach((subscriber) => {
+        this.subscribers.delete(subscriber);
+      });
+    };
+  }) as StateGetter<TState>;
 
   /**
    * get the parameters object to pass to the callback functions (onInit, onStateChanged, onSubscribed, computePreventStateChange)
    * this parameters object brings the following properties: setState, getState, setMetadata, getMetadata
    * this parameter object allows to update the state, get the state, update the metadata, get the metadata
-   * @param {{ invokerSetState?: React.Dispatch<React.SetStateAction<TState>> }} parameters - The setState function of the component that invoked the state change (optional) (default: null) this is used to updated first the component that invoked the state change
    * @returns {StateConfigCallbackParam<TState, TMetadata>} - The parameters object
    * */
   protected getConfigCallbackParam = ({
     invokerSetState,
   }: {
-    invokerSetState?: React.Dispatch<React.SetStateAction<{ state: unknown }>>;
+    invokerSetState?: SetStateCallback;
   }): StateConfigCallbackParam<TState, TMetadata, TStateSetter> => {
     const { setMetadata, getMetadata, getState } = this;
 
@@ -329,15 +457,11 @@ export class GlobalStore<
     invokerSetState,
   }: {
     selector?: (state: TState) => State;
-    config: UseHookConfig<TState, State>;
+    config: UseHookConfig<any>;
     stateWrapper: {
       state: unknown;
     };
-    invokerSetState: Dispatch<
-      SetStateAction<{
-        state: unknown;
-      }>
-    >;
+    invokerSetState: SetStateCallback;
   }) => {
     const subscriber = this.subscribers.get(invokerSetState);
 
@@ -373,7 +497,7 @@ export class GlobalStore<
     () =>
     <State = TState>(
       selector?: (state: TState) => State,
-      config: UseHookConfig<TState, State> = {}
+      config: UseHookConfig<State> = {}
     ) => {
       const [stateWrapper, invokerSetState] = useState<{
         state: unknown;
@@ -427,8 +551,7 @@ export class GlobalStore<
   public getHookDecoupled = () => {
     const stateOrchestrator = this.getStateOrchestrator();
 
-    const { getMetadata } = this;
-    const getState = () => this.stateWrapper.state;
+    const { getMetadata, getState } = this;
 
     return [getState, stateOrchestrator, getMetadata] as [
       () => TState,
@@ -441,13 +564,13 @@ export class GlobalStore<
 
   /**
    * returns a wrapper for the setState function that will update the state and all the subscribers
-   * @param {{ invokerSetState?: React.Dispatch<React.SetStateAction<TState>> }} parameters - The setState function of the component that invoked the state change (optional) (default: null) this is used to updated first the component that invoked the state change
+   * @param {{ invokerSetState?: SetStateCallback }} parameters - The setState function of the component that invoked the state change (optional) (default: null) this is used to updated first the component that invoked the state change
    * @returns {StateSetter<TState>} - The state setter
    * */
   protected getSetStateWrapper = ({
     invokerSetState,
   }: {
-    invokerSetState?: React.Dispatch<React.SetStateAction<{ state: unknown }>>;
+    invokerSetState?: SetStateCallback;
   } = {}): StateSetter<TState> => {
     const setState = ((setter: StateSetter<TState>, { forceUpdate } = {}) => {
       this.computeSetState({ invokerSetState, setter, forceUpdate });
@@ -458,12 +581,10 @@ export class GlobalStore<
 
   /**
    * Returns the state setter or the actions map
-   * @param {{ invokerSetState?: React.Dispatch<React.SetStateAction<TState>> }} parameters - The setState function of the component that invoked the state change (optional) (default: null) this is used to updated first the component that invoked the state change
+   * @param {{ invokerSetState?: SetStateCallback }} parameters - The setState function of the component that invoked the state change (optional) (default: null) this is used to updated first the component that invoked the state change
    * @returns {TStateSetter} - The state setter or the actions map
    * */
-  protected getStateOrchestrator(
-    invokerSetState?: React.Dispatch<React.SetStateAction<{ state: unknown }>>
-  ) {
+  protected getStateOrchestrator(invokerSetState?: SetStateCallback) {
     const stateHasCustomActions = this.actionsConfig;
 
     if (stateHasCustomActions) {
@@ -500,7 +621,7 @@ export class GlobalStore<
    * the function also execute the functions:
    * - onStateChanged (if defined) - this function is executed after the state change
    * - computePreventStateChange (if defined) - this function is executed before the state change and it should return a boolean value that will be used to determine if the state change should be prevented or not
-   * @param {{ setter: StateSetter<TState>; invokerSetState?: React.Dispatch<React.SetStateAction<TState>> }} parameters - The state setter and the setState function of the component that invoked the state change (optional) (default: null) this is used to updated first the component that invoked the state change
+   * @param {{ setter: StateSetter<TState>; invokerSetState?: SetStateCallback }} parameters - The state setter and the setState function of the component that invoked the state change (optional) (default: null) this is used to updated first the component that invoked the state change
    */
   protected computeSetState = ({
     setter,
@@ -508,7 +629,7 @@ export class GlobalStore<
     forceUpdate,
   }: {
     setter: StateSetter<TState>;
-    invokerSetState?: React.Dispatch<React.SetStateAction<{ state: unknown }>>;
+    invokerSetState?: SetStateCallback;
     forceUpdate: boolean;
   }) => {
     const isSetterFunction = typeof setter === "function";
@@ -569,13 +690,13 @@ export class GlobalStore<
 
   /**
    * This creates a map of actions that can be used to modify or interact with the state
-   * @param {{ invokerSetState?: React.Dispatch<React.SetStateAction<TState>> }} parameters - The setState function of the component that invoked the state change (optional) (default: null) this is used to updated first the component that invoked the state change
+   * @param {{ invokerSetState?: SetStateCallback }} parameters - The setState function of the component that invoked the state change (optional) (default: null) this is used to updated first the component that invoked the state change
    * @returns {ActionCollectionResult<TState, TMetadata, TStateSetter>} - The actions map result of the configuration object passed to the constructor
    * */
   protected getStoreActionsMap = ({
     invokerSetState,
   }: {
-    invokerSetState?: React.Dispatch<React.SetStateAction<{ state: unknown }>>;
+    invokerSetState?: SetStateCallback;
   } = {}): ActionCollectionResult<TState, TMetadata, TStateSetter> => {
     if (!this.actionsConfig) return null;
 
@@ -587,8 +708,7 @@ export class GlobalStore<
       invokerSetState,
     });
 
-    const getState = () => this.stateWrapper.state;
-    const getMetadata = () => this.config.metadata;
+    const { getState, getMetadata } = this;
 
     // we bind the functions to the actions object to allow reusing actions in the same api config by using the -this- keyword
     const actions: ActionCollectionResult<TState, TMetadata, TStateSetter> =
@@ -608,7 +728,7 @@ export class GlobalStore<
             // executes the actions bringing access to the state setter and a copy of the state
             const result = action.call(actions, {
               setState,
-              getState,
+              getState: getState as StateGetter<TState>,
               setMetadata,
               getMetadata,
               actions: actions as ActionCollectionResult<TState, TMetadata>,
