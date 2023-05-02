@@ -1,6 +1,6 @@
 import { createDecoupledPromise } from "cancelable-promise-jq";
 
-import { StoreTools } from "../../src/GlobalStore.types";
+import { StoreTools, SubscriberCallback } from "../../src/GlobalStore.types";
 
 import { useState } from "react";
 import { formatFromStore, formatToStore } from "json-storage-formatter";
@@ -678,5 +678,73 @@ describe("custom global hooks", () => {
     });
 
     expect(useState).toHaveBeenCalledTimes(4);
+  });
+});
+
+describe("getter subscriptions", () => {
+  it("should subscribe to changes from getter", () => {
+    const [_, getter, setter] = createGlobalStateWithDecoupledFuncs({
+      a: 3,
+      b: 2,
+    });
+
+    const state = getter();
+
+    // without a callback, it should return the current state
+    expect(state).toEqual({
+      a: 3,
+      b: 2,
+    });
+
+    const subscriptionSpy = jest.fn();
+    const subscriptionDerivateSpy = jest.fn();
+
+    const callback = jest.fn((({ subscribe, subscribeSelector }) => {
+      subscribe((state) => {
+        subscriptionSpy(state);
+      });
+
+      subscribeSelector(
+        (state) => {
+          return state.a;
+        },
+        (derivate) => {
+          subscriptionDerivateSpy(derivate);
+        }
+      );
+    }) as SubscriberCallback<typeof state>);
+
+    const removeSubscription = getter(callback);
+
+    expect(subscriptionSpy).toBeCalledTimes(1);
+    expect(subscriptionSpy).toBeCalledWith(state);
+
+    expect(subscriptionDerivateSpy).toBeCalledTimes(1);
+    expect(subscriptionDerivateSpy).toBeCalledWith(3);
+
+    setter((state) => ({
+      ...state,
+      b: 3,
+    }));
+
+    expect(subscriptionSpy).toBeCalledTimes(2);
+    expect(subscriptionSpy).toBeCalledWith({
+      a: 3,
+      b: 3,
+    });
+
+    // the derivate should not be called since it didn't change
+    expect(subscriptionDerivateSpy).toBeCalledTimes(1);
+
+    removeSubscription();
+
+    setter((state) => ({
+      ...state,
+      a: 4,
+    }));
+
+    // the subscription should not be called since it was removed
+    expect(subscriptionSpy).toBeCalledTimes(2);
+    expect(subscriptionDerivateSpy).toBeCalledTimes(1);
   });
 });

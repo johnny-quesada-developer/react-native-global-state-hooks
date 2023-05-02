@@ -384,6 +384,4 @@ export type StateGetter<TState> = <
    * use the methods subscribe and subscribeSelect to subscribe to the store changes
    */
   callback?: TCallback
-) => TCallback extends SubscriberCallback<TState>
-  ? UnsubscribeCallback
-  : TState;
+) => TCallback extends null | never | undefined ? TState : UnsubscribeCallback;

@@ -1,4 +1,4 @@
-import { isPrimitive, isDate, isNil } from "json-storage-formatter";
+import { isPrimitive, isDate } from "json-storage-formatter";
 
 /**
  * Shallow compare two values and return true if they are equal.

@@ -253,27 +253,41 @@ export class GlobalStore<
       state,
     };
 
-    if (invokerSetState) {
-      const { selector, config, currentState } =
-        this.subscribers.get(invokerSetState);
+    const executeSetState = (
+      setter: SubscriptionCallback,
+      parameters: SubscriberParameters<TState>
+    ) => {
+      const { selector, currentState, config } = parameters;
+
+      const compareCallback = (() => {
+        if (config?.isEqual || config?.isEqual === null) {
+          return config.isEqual;
+        }
+
+        if (!selector) return null;
+
+        // shallow compare is added by default to the selectors unless the isEqual property is set
+        return shallowCompare;
+      })();
 
       const newState = selector ? selector(state) : state;
-      const compareCallback = config?.isEqual ?? shallowCompare;
 
-      if (!forceUpdate && compareCallback(currentState, newState)) return;
+      if (!forceUpdate && compareCallback?.(currentState, newState)) return;
 
-      // execute first the callback of the component that invoked the state change
-      invokerSetState?.({ state: newState });
+      setter({ state: newState });
+    };
+
+    if (invokerSetState) {
+      const parameters = this.subscribers.get(invokerSetState);
+
+      executeSetState(invokerSetState, parameters);
     }
 
     // update all the subscribers
-    Array.from(this.subscribers.entries()).forEach(([setState, config]) => {
+    Array.from(this.subscribers.entries()).forEach(([setState, parameters]) => {
       if (setState === invokerSetState) return;
 
-      const { selector } = config;
-      const newState = selector ? selector(state) : state;
-
-      setState({ state: newState });
+      executeSetState(setState, parameters);
     });
   };
 
@@ -311,7 +325,7 @@ export class GlobalStore<
     config: SubscribeCallbackConfig<State>;
   }) => {
     const initialState = (
-      selector ? selector(this.stateWrapper.state) : this.stateWrapper
+      selector ? selector(this.stateWrapper.state) : this.stateWrapper.state
     ) as State;
 
     let stateWrapper: {
@@ -365,7 +379,7 @@ export class GlobalStore<
       SubscriberParameters<TState>
     > = new Map();
 
-    const subscribe = ((callback, config) => {
+    const subscribe = ((callback, config = {}) => {
       const { subscription, stateWrapper } = this.createChangesSubscriber({
         selector: null,
         callback,
@@ -382,7 +396,7 @@ export class GlobalStore<
       changesSubscribers.set(subscription, { config });
     }) as SubscribeMethod<TState>;
 
-    const subscribeSelector = ((selector, callback, config) => {
+    const subscribeSelector = ((selector, callback, config = {}) => {
       const { subscription, stateWrapper } = this.createChangesSubscriber({
         selector,
         callback,
@@ -390,8 +404,11 @@ export class GlobalStore<
       });
 
       this.updateSubscription({
-        selector: null,
-        config,
+        selector,
+        config: {
+          isEqual: shallowCompare,
+          ...config,
+        },
         stateWrapper,
         invokerSetState: subscription,
       });
@@ -653,7 +670,7 @@ export class GlobalStore<
     const callbackParameter = {
       setMetadata,
       getMetadata,
-      setState,
+      setState: setState || null,
       getState,
       actions,
       previousState,

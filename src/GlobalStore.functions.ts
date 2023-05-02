@@ -7,6 +7,9 @@ import {
   UseHookConfig,
   AvoidNever,
   GlobalStoreConfig,
+  StateGetter,
+  SubscriberCallback,
+  UnsubscribeCallback,
 } from "GlobalStore.types";
 import { GlobalStore } from "./GlobalStore";
 
@@ -93,7 +96,11 @@ export const createGlobalStateWithDecoupledFuncs = <
       Setter,
       TMetadata
     ],
-    getter: () => TState,
+    getter: <TCallback extends SubscriberCallback<TState> | null = null>(
+      callback?: TCallback
+    ) => TCallback extends null | never | undefined
+      ? TState
+      : UnsubscribeCallback,
     setter: TActions extends null
       ? StateSetter<TState>
       : ActionCollectionResult<TState, TMetadata, TActions>
@@ -343,7 +350,11 @@ export const createCustomGlobalStateWithDecoupledFuncs = <
         Setter,
         AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>
       ],
-      getter: () => TState,
+      getter: <TCallback extends SubscriberCallback<TState> | null = null>(
+        callback?: TCallback
+      ) => TCallback extends null | never | undefined
+        ? TState
+        : UnsubscribeCallback,
       setter: TActions extends null | undefined | never
         ? StateSetter<TState>
         : ActionCollectionResult<
