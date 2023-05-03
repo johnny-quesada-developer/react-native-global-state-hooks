@@ -293,6 +293,42 @@ export const combineAsyncGettersEmitter = <
 ) => {
   const getters = args as unknown as StateGetter<unknown>[];
 
+  const dictionary = new Map<number, unknown>(
+    getters.map((useHook, index) => [index, useHook()])
+  );
+
+  let parentState = parameters.selector(
+    Array.from(dictionary.values()) as TResults
+  );
+
+  const parentIsEqual =
+    parameters?.config?.isEqual !== undefined
+      ? parameters?.config?.isEqual
+      : shallowCompare;
+
+  const subscribers = new Set<() => void>();
+
+  const updateMainState = debounce(() => {
+    const newState = parameters.selector(
+      Array.from(dictionary.values()) as TResults
+    );
+
+    if (parentIsEqual?.(parentState, newState)) return;
+
+    // update the parent state so the subscribers can be notified
+    parentState = newState;
+
+    subscribers.forEach((childCallback) => childCallback());
+  }, parameters?.config?.delay);
+
+  const getterSubscriptions = getters.map((useHook, index) =>
+    useHook<Subscribe>((value) => {
+      dictionary.set(index, value);
+
+      updateMainState();
+    })
+  );
+
   const subscribe = <State = TDerivate>(
     /**
      * @description
@@ -330,62 +366,35 @@ export const combineAsyncGettersEmitter = <
     const $config = {
       delay: 0,
       isEqual: shallowCompare,
-      ...(parameters.config ?? {}),
       ...(config ?? {}),
     };
 
-    const selectorWrapper = (results: TResults): State => {
-      const parentFragment = parameters.selector(results);
-
-      const newState = (
-        selector ? selector(parentFragment) : parentFragment
-      ) as State;
-
-      return newState;
-    };
-
-    const compareCallback = ($config.isEqual ?? shallowCompare) as (
-      a: State,
-      b: State
-    ) => boolean;
-
-    let currentState = selectorWrapper(
-      getters.map((useHook) => useHook()) as TResults
-    );
-
-    const results = new Map<number, unknown>();
-    const subscribers: UnsubscribeCallback[] = [];
+    let childState = (selector?.(parentState) ?? parentState) as State;
 
     const updateState = debounce(() => {
-      const newState = selectorWrapper(
-        // the update is always async and base on the group of values
-        Array.from(results.values()) as TResults
-      );
+      const newChildState = (selector?.(parentState) ?? parentState) as State;
 
       // if the new state is equal to the current state, then we don't need to update the state
-      if (compareCallback?.(currentState, newState)) return;
+      if ($config.isEqual?.(childState, newChildState)) return;
 
-      currentState = newState;
+      childState = newChildState;
 
-      callback(newState);
+      callback(newChildState);
     }, $config.delay ?? 0);
 
-    getters.forEach((useHook, index) => {
-      const subscription = useHook<Subscribe>((value) => {
-        results.set(index, value);
-
-        updateState();
-      });
-
-      subscribers.push(subscription);
-    });
+    subscribers.add(updateState);
 
     return () => {
-      subscribers.forEach((unsubscribe) => unsubscribe());
+      subscribers.delete(updateState);
     };
   };
 
-  return subscribe as SubscribeToEmitter<TDerivate>;
+  return {
+    subscribe: subscribe as SubscribeToEmitter<TDerivate>,
+    dispose: (() => {
+      getterSubscriptions.forEach((unsubscribe) => unsubscribe());
+    }) as UnsubscribeCallback,
+  };
 };
 
 /**
