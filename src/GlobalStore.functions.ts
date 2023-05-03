@@ -9,6 +9,10 @@ import {
   GlobalStoreConfig,
   UnsubscribeCallback,
   Subscribe,
+  StateHook,
+  StoreTools,
+  StateGetter,
+  SubscribeCallback,
 } from "GlobalStore.types";
 import { GlobalStore } from "./GlobalStore";
 
@@ -90,11 +94,7 @@ export const createGlobalStateWithDecoupledFuncs = <
     useState: <State = TState>(
       selector?: (state: TState) => State,
       config?: UseHookConfig<State>
-    ) => [
-      State extends null | never | undefined ? TState : State,
-      Setter,
-      TMetadata
-    ],
+    ) => [State, Setter, TMetadata],
     getter: <Subscription extends Subscribe | false = false>(
       callback?: Subscription extends true
         ? ({
@@ -236,11 +236,7 @@ export const createGlobalState = <
   return useState as <State = TState>(
     selector?: (state: TState) => State,
     config?: UseHookConfig<State>
-  ) => [
-    state: State extends null | never | undefined ? TState : State,
-    setter: Setter,
-    metadata: TMetadata
-  ];
+  ) => [state: State, setter: Setter, metadata: TMetadata];
 };
 
 export type CustomGlobalHookParams<
@@ -404,7 +400,7 @@ export const createCustomGlobalStateWithDecoupledFuncs = <
         selector?: (state: TState) => State,
         config?: UseHookConfig<State>
       ) => [
-        State extends null | never | undefined ? TState : State,
+        State,
         Setter,
         AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>
       ],
@@ -627,10 +623,62 @@ export const createCustomGlobalState = <
     return useHook as unknown as <State = TState>(
       selector?: (state: TState) => State,
       config?: UseHookConfig<State>
-    ) => [
-      state: State extends null | never | undefined ? TState : State,
-      setter: Setter,
-      metadata: InheritMetadata & Metadata
-    ];
+    ) => [state: State, setter: Setter, metadata: InheritMetadata & Metadata];
   };
 };
+
+/**
+ * @description
+ * Use this function to create a custom global hook which contains a fragment of the state of another hook or a fragment
+ */
+export const createDerivate =
+  <TState, TSetter, TMetadata, TDerivate>(
+    useHook: StateHook<TState, TSetter, TMetadata>,
+    selector_: (state: TState) => TDerivate,
+    config_: UseHookConfig<TDerivate> = {}
+  ) =>
+  <State = TDerivate>(
+    selector?: (state: TDerivate) => State,
+    config: UseHookConfig<State> = null
+  ) => {
+    return useHook<State>((state) => {
+      const fragment = selector_(state);
+
+      return (selector ? selector(fragment) : fragment) as State;
+    }, (selector && config ? config : config_) as UseHookConfig<State>);
+  };
+
+/**
+ * @description
+ * This function allows you to create a derivate emitter
+ * With this approach, you can subscribe to changes in a specific fragment or subset of the state.
+ */
+export const createDerivateEmitter =
+  <
+    TDerivate,
+    TGetter extends StateGetter<unknown>,
+    TState = Exclude<ReturnType<TGetter>, UnsubscribeCallback>
+  >(
+    getter: TGetter,
+    selector_: (state: TState) => TDerivate,
+    config_: UseHookConfig<TDerivate> = {}
+  ) =>
+  <State = TDerivate>(
+    callback: SubscribeCallback<State>,
+    selector?: (state: TDerivate) => State,
+    config: UseHookConfig<State> = null
+  ) => {
+    return (getter as unknown as StateGetter<TState, Subscribe>)(
+      ({ subscribeSelector }) => {
+        subscribeSelector<State>(
+          (state) => {
+            const fragment = selector_(state);
+
+            return (selector ? selector(fragment) : fragment) as State;
+          },
+          callback,
+          (selector && config ? config : config_) as UseHookConfig<State>
+        );
+      }
+    );
+  };

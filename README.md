@@ -67,29 +67,30 @@ By defining a custom API for the **useContacts**, we can encapsulate and expose 
 ```ts
 import { createGlobalState } from "react-native-global-state-hooks";
 
-export const useContacts = createGlobalState(
-  {
-    isLoading: true,
-    filter: "",
-    items: [] as Contact[],
-  },
-  {
-    // this are the actions available for this state
-    actions: {
-      setFilter(filter: string) {
-        return ({ setState }: StoreTools<number>) => {
-          setState((state) => ({
-            ...state,
-            filter,
-          }));
-        };
-      },
-    } as const,
-    onInit: async ({ setState }: StoreTools) => {
-      // fetch contacts
+const initialState = {
+  isLoading: true,
+  filter: "",
+  items: [] as Contact[],
+};
+
+type State = typeof initialState;
+
+export const useContacts = createGlobalState(initialState, {
+  // this are the actions available for this state
+  actions: {
+    setFilter(filter: string) {
+      return ({ setState }: StoreTools<State>) => {
+        setState((state) => ({
+          ...state,
+          filter,
+        }));
+      };
     },
-  }
-);
+  } as const,
+  onInit: async ({ setState }: StoreTools<State>) => {
+    // fetch contacts
+  },
+});
 ```
 
 That's it! In this updated version, the **useContacts** hook will no longer return [**state**, **stateSetter**] but instead will return [**state**, **actions**]. This change will provide a more intuitive and convenient way to access and interact with the state and its associated actions.

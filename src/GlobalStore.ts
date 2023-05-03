@@ -261,7 +261,7 @@ export class GlobalStore<
 
       const compareCallback = (() => {
         if (config?.isEqual || config?.isEqual === null) {
-          return config.isEqual;
+          return config?.isEqual;
         }
 
         if (!selector) return null;
@@ -719,9 +719,8 @@ export class GlobalStore<
 
     // we bind the functions to the actions object to allow reusing actions in the same api config by using the -this- keyword
     const actions: ActionCollectionResult<TState, TMetadata, TStateSetter> =
-      actionsKeys.reduce(
-        (accumulator, action_key) => ({
-          ...accumulator,
+      actionsKeys.reduce((accumulator, action_key) => {
+        Object.assign(accumulator, {
           [action_key](...parameters: unknown[]) {
             const actionConfig = config[action_key];
             const action = actionConfig.apply(actions, parameters);
@@ -744,9 +743,10 @@ export class GlobalStore<
             // we return the result of the actions to the invoker
             return result;
           },
-        }),
-        {} as ActionCollectionResult<TState, TMetadata, TStateSetter>
-      );
+        });
+
+        return accumulator;
+      }, {} as ActionCollectionResult<TState, TMetadata, TStateSetter>);
 
     return actions;
   };

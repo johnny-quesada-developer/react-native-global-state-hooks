@@ -27,6 +27,16 @@ export type StateSetter<TState> = (
 
 /**
  * @description
+ * The hook to use the global state
+ * @returns {[State, StateSetter<TState>, TMetadata]} result - the state, the setter and the metadata
+ */
+export type StateHook<TState, TSetter, TMetadata> = <State = TState>(
+  selector?: (state: TState) => State,
+  config?: UseHookConfig<State>
+) => [State, TSetter, TMetadata];
+
+/**
+ * @description
  * Type that prevent ts issues with merging never with other types
  */
 export type AvoidNever<T> = T extends never | null | undefined ? {} : T;
@@ -285,35 +295,6 @@ export type SubscribeCallbackConfig<TState> = UseHookConfig<TState> & {
 export type SubscribeCallback<TState> = (state: TState) => void;
 
 /**
- * Callback function to subscribe to a portion of the store changes
- * @template {TState} TState - The state type
- * @template {TDerivate} TDerivate - The derived state type
- * @param {SubscribeSelectorCallback<TState, TDerivate>} selector - the selector function to derive the state
- * @param {SubscribeCallback<TDerivate>} callback - the callback to execute when the derived state is changed
- * @param {SubscribeCallbackConfig<TDerivate>} config - the configuration object
- * @returns {void} result - void
- */
-export type SubscribeSelectorCallback<TState, TDerivate> = (
-  /**
-   * The selector function to derive the state
-   * @param {TState} state - the current state of the store
-   * @returns {TDerivate} result - the derived state
-   * */
-  selector: (state: TState) => TDerivate,
-
-  /**
-   * The callback to execute when the derived state is changed
-   */
-  callback: SubscribeCallback<TDerivate>,
-
-  /**
-   * The configuration object
-   * In the configuration object you can specify a custom compare function to check if the state is changed
-   */
-  config?: SubscribeCallbackConfig<TDerivate>
-) => void;
-
-/**
  * Use this function to subscribe to the store changes
  */
 export type SubscribeMethod<TState> = (
@@ -376,9 +357,10 @@ export type SubscriberCallback<TState> = ({
  * if you don't pass a callback function the hook will return the current state of the store
  * @returns {UnsubscribeCallback | TState} result - the state or the unsubscribe callback if you pass a callback function
  */
-export type StateGetter<TState> = <
+export type StateGetter<
+  TState,
   Subscription extends Subscribe | false = false
->(
+> = (
   /**
    * @param {SubscriberCallback<TState> | null} callback - the callback function to subscribe to the store changes (optional)
    * use the methods subscribe and subscribeSelect to subscribe to the store changes
