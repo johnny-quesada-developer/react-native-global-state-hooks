@@ -316,7 +316,7 @@ export type SubscribeSelectorMethod<TState> = <TDerivate>(
    * @param {TState} state - the current state of the store
    * @returns {TDerivate} result - the derived state
    * */
-  selector: (state: TState) => TDerivate,
+  selector: SelectorCallback<TState, TDerivate>,
 
   /**
    * This callback will be executed every time the state is changed
@@ -464,3 +464,10 @@ export type SubscribeToEmitter<TState> = <State = TState>(
    */
   config?: SubscribeCallbackConfig<TState>
 ) => UnsubscribeCallback;
+
+export type CombinedAsyncHook<TState> = <TDerivate>(
+  $selector?: SelectorCallback<TState, TDerivate>,
+  config?: UseHookConfig<TDerivate> & {
+    delay?: number;
+  }
+) => [TDerivate];

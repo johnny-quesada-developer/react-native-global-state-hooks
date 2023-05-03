@@ -83,3 +83,23 @@ export const shallowCompare = <T>(value1: T, value2: T) => {
 
   return true;
 };
+
+/**
+ * Debounce a function.
+ */
+export const debounce = <T extends (...args: any[]) => any>(
+  callback: T,
+  delay: number
+) => {
+  let timeout: NodeJS.Timeout;
+
+  return (...args: Parameters<T>): ReturnType<T> => {
+    if (timeout) clearTimeout(timeout);
+
+    timeout = setTimeout(() => {
+      callback(...args);
+    }, delay);
+
+    return callback(...args);
+  };
+};
