@@ -269,28 +269,6 @@ export const createDerivateEmitter = <
   return subscriber as SubscribeToEmitter<TDerivate>;
 };
 
-const [_1, getter1] = createGlobalStateWithDecoupledFuncs({
-  a: 1,
-});
-
-const [_2, getter2] = createGlobalStateWithDecoupledFuncs({
-  b: 2,
-});
-
-function executeFunctions<
-  TGetters extends StateGetter<unknown>[],
-  TResults = {
-    [K in keyof TGetters]: TGetters[K] extends () => infer TResult
-      ? Exclude<TResult, UnsubscribeCallback>
-      : never;
-  }
->(...getters: TGetters): TResults {
-  const results = getters.map((func) => func()) as any;
-  return null;
-}
-
-const aaa2 = executeFunctions(getter1, getter2);
-
 /**
  * @description
  * This function allows you to create a derivate state by merging the state of multiple hooks.
@@ -298,22 +276,26 @@ const aaa2 = executeFunctions(getter1, getter2);
  * By default, the debounce delay is 0, but you can change it by passing a delay in milliseconds as the third parameter.
  */
 export const combineAsyncGetters = <
-  TGetters extends StateGetter<unknown>[],
   TDerivate,
+  TArguments extends StateGetter<unknown>[],
   TResults = {
-    [K in keyof TGetters]: TGetters[K] extends () => infer TResult
+    [K in keyof TArguments]: TArguments[K] extends () => infer TResult
       ? Exclude<TResult, UnsubscribeCallback>
       : never;
   }
 >(
-  selector: SelectorCallback<TResults, TDerivate>,
-  config_?: UseHookConfig<TDerivate> & {
-    delay?: number;
+  parameters: {
+    selector: SelectorCallback<TResults, TDerivate>;
+    config?: UseHookConfig<TDerivate> & {
+      delay?: number;
+    };
   },
-  ...getters: TGetters
+  ...args: TArguments
 ) => {
-  return <State = TDerivate>(
-    $selector?: SelectorCallback<TResults, State>,
+  const getters = args as unknown as StateGetter<unknown>[];
+
+  const useHook = <State = TDerivate>(
+    selector?: SelectorCallback<TResults, State>,
     config?: UseHookConfig<State> & {
       delay?: number;
     }
@@ -321,16 +303,16 @@ export const combineAsyncGetters = <
     const $config = {
       delay: 0,
       isEqual: shallowCompare,
-      ...(config_ ?? {}),
+      ...(parameters.config ?? {}),
       ...(config ?? {}),
     };
 
     const selectorWrapper = useCallback((results: TResults): State => {
-      const parentFragment = selector(results);
+      const parentFragment = parameters.selector(results);
 
       const newState = (
-        $selector
-          ? $selector(parentFragment as unknown as TResults)
+        selector
+          ? selector(parentFragment as unknown as TResults)
           : parentFragment
       ) as State;
 
@@ -384,36 +366,27 @@ export const combineAsyncGetters = <
 
     return [state];
   };
+
+  return useHook;
 };
 
+const [_1, getter1] = createGlobalStateWithDecoupledFuncs({
+  a: 1,
+});
+
+const [_2, getter2] = createGlobalStateWithDecoupledFuncs({
+  b: 2,
+});
+
 const useCombined = combineAsyncGetters(
-  (result) => {
-    return 1;
+  {
+    selector: ([a, b]) => {
+      return {
+        ...a,
+        ...b,
+      };
+    },
   },
-  {},
   getter1,
   getter2
-);
-
-const [state] = useCombined();
-
-function executeFunctions2<TFunctions extends (() => any)[]>(
-  ...functions: TFunctions
-): {
-  [K in keyof TFunctions]: TFunctions[K] extends () => infer U ? U : never;
-} {
-  const results = functions.map((func) => func()) as any;
-  return results;
-}
-
-const aaa = executeFunctions(
-  () => ({
-    a: 1,
-  }),
-  () => ({
-    b: 2,
-  }),
-  () => ({
-    c: 3,
-  })
 );

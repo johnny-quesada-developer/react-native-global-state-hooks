@@ -464,10 +464,3 @@ export type SubscribeToEmitter<TState> = <State = TState>(
    */
   config?: SubscribeCallbackConfig<TState>
 ) => UnsubscribeCallback;
-
-export type CombinedAsyncHook<TState> = <TDerivate>(
-  $selector?: SelectorCallback<TState, TDerivate>,
-  config?: UseHookConfig<TDerivate> & {
-    delay?: number;
-  }
-) => [TDerivate];
