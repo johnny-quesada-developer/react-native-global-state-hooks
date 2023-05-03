@@ -462,5 +462,5 @@ export type SubscribeToEmitter<TState> = <State = TState>(
    * @description
    * The configuration object
    */
-  config?: SubscribeCallbackConfig<TState>
+  param3?: SubscribeCallbackConfig<TState>
 ) => UnsubscribeCallback;

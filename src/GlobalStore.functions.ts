@@ -17,7 +17,6 @@ import {
   SelectorCallback,
   SubscribeCallbackConfig,
   SubscribeToEmitter,
-  CombinedAsyncHook,
 } from "GlobalStore.types";
 import { debounce, shallowCompare } from "GlobalStore.utils";
 import { useCallback, useEffect, useState } from "react";
@@ -275,6 +274,126 @@ export const createDerivateEmitter = <
  * The update of the derivate state is debounced to avoid unnecessary re-renders.
  * By default, the debounce delay is 0, but you can change it by passing a delay in milliseconds as the third parameter.
  */
+export const combineAsyncGettersEmitter = <
+  TDerivate,
+  TArguments extends StateGetter<unknown>[],
+  TResults = {
+    [K in keyof TArguments]: TArguments[K] extends () => infer TResult
+      ? Exclude<TResult, UnsubscribeCallback>
+      : never;
+  }
+>(
+  parameters: {
+    selector: SelectorCallback<TResults, TDerivate>;
+    config?: UseHookConfig<TDerivate> & {
+      delay?: number;
+    };
+  },
+  ...args: TArguments
+) => {
+  const getters = args as unknown as StateGetter<unknown>[];
+
+  const subscribe = <State = TDerivate>(
+    /**
+     * @description
+     * The callback function to subscribe to the store changes or a selector function to derive the state
+     */
+    param1: SubscribeCallback<State> | SelectorCallback<TDerivate, State>,
+
+    /**
+     * @description
+     * The configuration object or the callback function to subscribe to the store changes
+     */
+    param2?: SubscribeCallback<State> | SubscribeCallbackConfig<State>,
+
+    /**
+     * @description
+     * The configuration object
+     */
+    param3?: SubscribeCallbackConfig<State>
+  ) => {
+    const hasExplicitSelector = typeof param2 === "function";
+
+    const selector = (hasExplicitSelector ? param1 : null) as SelectorCallback<
+      TDerivate,
+      State
+    >;
+
+    const callback = (
+      hasExplicitSelector ? param2 : param1
+    ) as SubscribeCallback<State>;
+
+    const config = (
+      hasExplicitSelector ? param3 : param2
+    ) as SubscribeCallbackConfig<State>;
+
+    const $config = {
+      delay: 0,
+      isEqual: shallowCompare,
+      ...(parameters.config ?? {}),
+      ...(config ?? {}),
+    };
+
+    const selectorWrapper = (results: TResults): State => {
+      const parentFragment = parameters.selector(results);
+
+      const newState = (
+        selector ? selector(parentFragment) : parentFragment
+      ) as State;
+
+      return newState;
+    };
+
+    const compareCallback = ($config.isEqual ?? shallowCompare) as (
+      a: State,
+      b: State
+    ) => boolean;
+
+    let currentState = selectorWrapper(
+      getters.map((useHook) => useHook()) as TResults
+    );
+
+    const results = new Map<number, unknown>();
+    const subscribers: UnsubscribeCallback[] = [];
+
+    const updateState = debounce(() => {
+      const newState = selectorWrapper(
+        // the update is always async and base on the group of values
+        Array.from(results.values()) as TResults
+      );
+
+      // if the new state is equal to the current state, then we don't need to update the state
+      if (compareCallback?.(currentState, newState)) return;
+
+      currentState = newState;
+
+      callback(newState);
+    }, $config.delay ?? 0);
+
+    getters.forEach((useHook, index) => {
+      const subscription = useHook<Subscribe>((value) => {
+        results.set(index, value);
+
+        updateState();
+      });
+
+      subscribers.push(subscription);
+    });
+
+    return () => {
+      subscribers.forEach((unsubscribe) => unsubscribe());
+    };
+  };
+
+  return subscribe as SubscribeToEmitter<TDerivate>;
+};
+
+/**
+ * @description
+ * This function allows you to create a derivate state by merging the state of multiple hooks.
+ * The update of the derivate state is debounced to avoid unnecessary re-renders.
+ * By default, the debounce delay is 0, but you can change it by passing a delay in milliseconds as the third parameter.
+ */
 export const combineAsyncGetters = <
   TDerivate,
   TArguments extends StateGetter<unknown>[],
@@ -369,24 +488,3 @@ export const combineAsyncGetters = <
 
   return useHook;
 };
-
-const [_1, getter1] = createGlobalStateWithDecoupledFuncs({
-  a: 1,
-});
-
-const [_2, getter2] = createGlobalStateWithDecoupledFuncs({
-  b: 2,
-});
-
-const useCombined = combineAsyncGetters(
-  {
-    selector: ([a, b]) => {
-      return {
-        ...a,
-        ...b,
-      };
-    },
-  },
-  getter1,
-  getter2
-);
