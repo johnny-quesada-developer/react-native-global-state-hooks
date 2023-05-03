@@ -720,7 +720,7 @@ describe("getter subscriptions", () => {
       );
     }) as SubscriberCallback<typeof state>);
 
-    const removeSubscription = getter(callback);
+    const removeSubscription = getter<Subscribe>(callback);
 
     expect(subscriptionSpy).toBeCalledTimes(1);
     expect(subscriptionSpy).toBeCalledWith(state);

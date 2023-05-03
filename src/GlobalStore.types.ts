@@ -358,16 +358,84 @@ export type SubscriberCallback<TState> = ({
  * @returns {UnsubscribeCallback | TState} result - the state or the unsubscribe callback if you pass a callback function
  */
 export type StateGetter<TState> = <
-  TCallback extends SubscriberCallback<TState>
+  Subscription extends Subscribe | false = false
 >(
   /**
    * @param {SubscriberCallback<TState> | null} callback - the callback function to subscribe to the store changes (optional)
    * use the methods subscribe and subscribeSelect to subscribe to the store changes
    */
-  callback?: TCallback
-) => keyof TCallback extends never ? TState : UnsubscribeCallback;
+  callback?: Subscription extends Subscribe ? SubscriberCallback<TState> : null
+) => Subscription extends Subscribe ? UnsubscribeCallback : TState;
 
 /**
  * Constant value type to indicate that the getter is a subscription
  */
 export type Subscribe = true;
+
+export type createStateConfig<
+  TState,
+  TMetadata,
+  TActions extends ActionCollectionConfig<TState, TMetadata> | null = null
+> = {
+  /**
+   * @description
+   * The type of the actionsConfig object (optional) (default: null) if a configuration is passed, the hook will return an object with the actions then all the store manipulation will be done through the actions
+   */
+  actions?: TActions;
+} & GlobalStoreConfig<TState, TMetadata, TActions>;
+
+export type CustomGlobalHookBuilderParams<
+  TInheritMetadata = null,
+  TCustomConfig = {}
+> = {
+  /**
+   * @description
+   * This function is called when the state is initialized.
+   */
+  onInitialize: (
+    {
+      setState,
+      setMetadata,
+      getMetadata,
+      getState,
+      actions,
+    }: StateConfigCallbackParam<any, TInheritMetadata>,
+    config: TCustomConfig
+  ) => void;
+
+  /**
+   * @description
+   * This function is called when the state is changed.
+   */
+  onChange: (
+    {
+      setState,
+      setMetadata,
+      getMetadata,
+      getState,
+      actions,
+    }: StateChangesParam<any, TInheritMetadata>,
+    config: TCustomConfig
+  ) => void;
+};
+
+export type CustomGlobalHookParams<
+  TCustomConfig,
+  TState,
+  TMetadata,
+  TActions extends ActionCollectionConfig<TState, TMetadata> | null
+> = {
+  /**
+   * @description
+   * Type of the configuration object that the custom hook will require or accept
+   */
+  config?: TCustomConfig;
+
+  /**
+   * @description
+   * The type of the actionsConfig object (optional) (default: null) if a configuration is passed, the hook will return an object with the actions then all the store manipulation will be done through the actions
+   */
+  actions?: TActions;
+} & GlobalStoreConfig<TState, TMetadata, TActions>;
+
+export type SelectorCallback<TState, TDerivate> = (state: TState) => TDerivate;

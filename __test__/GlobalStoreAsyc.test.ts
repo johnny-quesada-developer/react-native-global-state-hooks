@@ -1,6 +1,6 @@
 import { createDecoupledPromise } from "cancelable-promise-jq";
 import { formatToStore } from "json-storage-formatter";
-import { SubscriberCallback } from "../src/GlobalStore.types";
+import { Subscribe, SubscriberCallback } from "../src/GlobalStore.types";
 import {
   GlobalStore,
   asyncStorage,
@@ -145,7 +145,7 @@ describe("getter subscriptions custom global state", () => {
       );
     }) as SubscriberCallback<typeof state>);
 
-    const removeSubscription = getter(callback);
+    const removeSubscription = getter<Subscribe>(callback);
 
     expect(subscriptionSpy).toBeCalledTimes(1);
     expect(subscriptionSpy).toBeCalledWith(state);

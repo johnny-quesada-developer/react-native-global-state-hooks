@@ -364,9 +364,7 @@ export class GlobalStore<
    * @param {UseHookConfig<TState, TDerivate>} config.config.isEqual - The compare function to check if the state is changed (optional) (default: shallowCompare)
    * @returns The state of the store, optionally if you provide a subscriptionCallback it this method will return the unsubscribe function
    */
-  protected getState = (<
-    TCallback extends SubscriberCallback<TState> | null = null
-  >(
+  protected getState = (<TCallback extends SubscriberCallback<TState> | null>(
     $callback?: TCallback
   ) => {
     // if there is no subscription callback return the state
@@ -540,7 +538,7 @@ export class GlobalStore<
 
       type State_ = State extends never | undefined | null ? TState : State;
 
-      type Setter = TStateSetter extends StateSetter<TState> | null | never
+      type Setter = keyof TStateSetter extends never
         ? StateSetter<TState>
         : ActionCollectionResult<TState, TMetadata, TStateSetter>;
 
@@ -560,12 +558,14 @@ export class GlobalStore<
 
     const { getMetadata, getState } = this;
 
+    type Setter = keyof TStateSetter extends never
+      ? StateSetter<TState>
+      : ActionCollectionResult<TState, TMetadata, TStateSetter>;
+
     return [getState, stateOrchestrator, getMetadata] as [
-      () => TState,
-      TStateSetter extends StateSetter<TState> | null
-        ? StateSetter<TState>
-        : ActionCollectionResult<TState, TMetadata, TStateSetter>,
-      () => TMetadata
+      getter: StateGetter<TState>,
+      setter: Setter,
+      metadata: () => TMetadata
     ];
   };
 
