@@ -91,79 +91,115 @@ export const createGlobalStateWithDecoupledFuncs = <
     : ActionCollectionResult<TState, TMetadata, TActions>;
 
   return [store.getHook(), getState, setter] as unknown as [
-    useState: <State = TState>(
+    <State = TState>(
       selector?: (state: TState) => State,
       config?: UseHookConfig<State>
     ) => [State, Setter, TMetadata],
-    getter: <Subscription extends Subscribe | false = false>(
-      callback?: Subscription extends true
-        ? ({
-            state,
-            subscribe,
-            subscribeSelector,
-          }: {
-            state: TState;
-            subscribe: (
-              /**
-               * This callback will be executed every time the state is changed
-               */
-              callback: (state: TState) => void,
+    <
+      TCallback extends ({
+        state,
+        subscribe,
+        subscribeSelector,
+      }: {
+        state: TState;
+        subscribe: (
+          /**
+           * This callback will be executed every time the state is changed
+           */
+          callback: (state: TState) => void,
 
-              /**
-               * The configuration object
-               * In the configuration object you can specify a custom compare function to check if the state is changed
-               */
-              config?: {
-                /**
-                 * The callback to execute when the state is changed to check if the same really changed
-                 * If the function is not provided the derived state will perform a shallow comparison
-                 */
-                isEqual?: (current: TState, next: TState) => boolean;
+          /**
+           * The configuration object
+           * In the configuration object you can specify a custom compare function to check if the state is changed
+           */
+          config?: {
+            /**
+             * The callback to execute when the state is changed to check if the same really changed
+             * If the function is not provided the derived state will perform a shallow comparison
+             */
+            isEqual?: (current: TState, next: TState) => boolean;
 
-                /**
-                 * By default the callback is executed immediately after the subscription
-                 */
-                skipFirst?: boolean;
-              }
-            ) => void;
-            subscribeSelector: <TDerivate>(
-              /**
-               * The selector function to derive the state
-               * @param {TState} state - the current state of the store
-               * @returns {TDerivate} result - the derived state
-               * */
-              selector: (state: TState) => TDerivate,
+            /**
+             * By default the callback is executed immediately after the subscription
+             */
+            skipFirst?: boolean;
+          }
+        ) => void;
+        subscribeSelector: <TDerivate>(
+          /**
+           * The selector function to derive the state
+           * @param {TState} state - the current state of the store
+           * @returns {TDerivate} result - the derived state
+           * */
+          selector: (state: TState) => TDerivate,
 
-              /**
-               * This callback will be executed every time the state is changed
-               */
-              callback: (state: TDerivate) => void,
+          /**
+           * This callback will be executed every time the state is changed
+           */
+          callback: (state: TDerivate) => void,
 
-              /**
-               * The configuration object
-               * In the configuration object you can specify a custom compare function to check if the state is changed
-               */
-              config?: {
-                /**
-                 * The callback to execute when the state is changed to check if the same really changed
-                 * If the function is not provided the derived state will perform a shallow comparison
-                 */
-                isEqual?: (current: TDerivate, next: TDerivate) => boolean;
+          /**
+           * The configuration object
+           * In the configuration object you can specify a custom compare function to check if the state is changed
+           */
+          config?: {
+            /**
+             * The callback to execute when the state is changed to check if the same really changed
+             * If the function is not provided the derived state will perform a shallow comparison
+             */
+            isEqual?: (current: TDerivate, next: TDerivate) => boolean;
 
-                /**
-                 * By default the callback is executed immediately after the subscription
-                 */
-                skipFirst?: boolean;
-              }
-            ) => void;
-          }) => void
-        : null
-    ) => Subscription extends false ? TState : UnsubscribeCallback,
-    setter: TActions extends null
-      ? StateSetter<TState>
+            /**
+             * By default the callback is executed immediately after the subscription
+             */
+            skipFirst?: boolean;
+          }
+        ) => void;
+      }) => void
+    >(
+      callback?: TCallback
+    ) => keyof TCallback extends never ? TState : UnsubscribeCallback,
+    keyof TActions extends never
+      ? (
+          /**
+           * @param {StateSetter<TState>} setter - set the state
+           * @param {{ forceUpdate?: boolean }} options - Options to be passed to the setter
+           * @param {{ forceUpdate?: boolean }} options.forceUpdate - Force the re-render of the subscribers even if the state is the same
+           * @returns {void} result - void
+           * */
+          setter: TState | ((state: TState) => TState),
+          /**
+           * This parameter indicate whether we should force the re-render of the subscribers even if the state is the same,
+           * Do
+           */
+          {
+            forceUpdate,
+          }?: {
+            /**
+             * @deprecated forceUpdate normally should not be used inside components
+             * Use this flag just in custom implementations of the global store
+             */
+            forceUpdate?: boolean;
+          }
+        ) => void
       : ActionCollectionResult<TState, TMetadata, TActions>
   ];
 };
+
+// const [useGlobalState, getState, setter] = createGlobalStateWithDecoupledFuncs(
+//   0,
+//   {
+//     actions: {
+//       increment: () => {
+//         return ({ setState }: StoreTools) => setState((count) => count + 1);
+//       },
+//     },
+//   }
+// );
+
+// const [state, setters, metadata] = useGlobalState();
+
+// setters.increment();
 
 /**
  * Creates a global hook that can be used to access the state and actions across the application
@@ -224,19 +260,13 @@ export const createGlobalState = <
     ) => boolean;
   } = {}
 ) => {
-  const [useState] = createGlobalStateWithDecoupledFuncs(
-    state,
-    config as unknown
-  );
+  const [useState] = createGlobalStateWithDecoupledFuncs<
+    TState,
+    TMetadata,
+    TActions
+  >(state, config as unknown);
 
-  type Setter = TActions extends null
-    ? StateSetter<TState>
-    : ActionCollectionResult<TState, TMetadata, TActions>;
-
-  return useState as <State = TState>(
-    selector?: (state: TState) => State,
-    config?: UseHookConfig<State>
-  ) => [state: State, setter: Setter, metadata: TMetadata];
+  return useState;
 };
 
 export type CustomGlobalHookParams<
@@ -396,7 +426,7 @@ export const createCustomGlobalStateWithDecoupledFuncs = <
       onSubscribed,
       computePreventStateChange,
     }) as unknown as [
-      useState: <State = TState>(
+      <State = TState>(
         selector?: (state: TState) => State,
         config?: UseHookConfig<State>
       ) => [
@@ -404,71 +434,71 @@ export const createCustomGlobalStateWithDecoupledFuncs = <
         Setter,
         AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>
       ],
-      getter: <Subscription extends Subscribe | false = false>(
-        callback?: Subscription extends true
-          ? ({
-              state,
-              subscribe,
-              subscribeSelector,
-            }: {
-              state: TState;
-              subscribe: (
-                /**
-                 * This callback will be executed every time the state is changed
-                 */
-                callback: (state: TState) => void,
+      <
+        TCallback extends ({
+          state,
+          subscribe,
+          subscribeSelector,
+        }: {
+          state: TState;
+          subscribe: (
+            /**
+             * This callback will be executed every time the state is changed
+             */
+            callback: (state: TState) => void,
 
-                /**
-                 * The configuration object
-                 * In the configuration object you can specify a custom compare function to check if the state is changed
-                 */
-                config?: {
-                  /**
-                   * The callback to execute when the state is changed to check if the same really changed
-                   * If the function is not provided the derived state will perform a shallow comparison
-                   */
-                  isEqual?: (current: TState, next: TState) => boolean;
+            /**
+             * The configuration object
+             * In the configuration object you can specify a custom compare function to check if the state is changed
+             */
+            config?: {
+              /**
+               * The callback to execute when the state is changed to check if the same really changed
+               * If the function is not provided the derived state will perform a shallow comparison
+               */
+              isEqual?: (current: TState, next: TState) => boolean;
 
-                  /**
-                   * By default the callback is executed immediately after the subscription
-                   */
-                  skipFirst?: boolean;
-                }
-              ) => void;
-              subscribeSelector: <TDerivate>(
-                /**
-                 * The selector function to derive the state
-                 * @param {TState} state - the current state of the store
-                 * @returns {TDerivate} result - the derived state
-                 * */
-                selector: (state: TState) => TDerivate,
+              /**
+               * By default the callback is executed immediately after the subscription
+               */
+              skipFirst?: boolean;
+            }
+          ) => void;
+          subscribeSelector: <TDerivate>(
+            /**
+             * The selector function to derive the state
+             * @param {TState} state - the current state of the store
+             * @returns {TDerivate} result - the derived state
+             * */
+            selector: (state: TState) => TDerivate,
 
-                /**
-                 * This callback will be executed every time the state is changed
-                 */
-                callback: (state: TDerivate) => void,
+            /**
+             * This callback will be executed every time the state is changed
+             */
+            callback: (state: TDerivate) => void,
 
-                /**
-                 * The configuration object
-                 * In the configuration object you can specify a custom compare function to check if the state is changed
-                 */
-                config?: {
-                  /**
-                   * The callback to execute when the state is changed to check if the same really changed
-                   * If the function is not provided the derived state will perform a shallow comparison
-                   */
-                  isEqual?: (current: TDerivate, next: TDerivate) => boolean;
+            /**
+             * The configuration object
+             * In the configuration object you can specify a custom compare function to check if the state is changed
+             */
+            config?: {
+              /**
+               * The callback to execute when the state is changed to check if the same really changed
+               * If the function is not provided the derived state will perform a shallow comparison
+               */
+              isEqual?: (current: TDerivate, next: TDerivate) => boolean;
 
-                  /**
-                   * By default the callback is executed immediately after the subscription
-                   */
-                  skipFirst?: boolean;
-                }
-              ) => void;
-            }) => void
-          : null
-      ) => Subscription extends false ? TState : UnsubscribeCallback,
-      setter: TActions extends null | undefined | never
+              /**
+               * By default the callback is executed immediately after the subscription
+               */
+              skipFirst?: boolean;
+            }
+          ) => void;
+        }) => void
+      >(
+        callback?: TCallback
+      ) => keyof TCallback extends never ? TState : UnsubscribeCallback,
+      TActions extends null | undefined | never
         ? StateSetter<TState>
         : ActionCollectionResult<
             TState,
@@ -668,17 +698,15 @@ export const createDerivateEmitter =
     selector?: (state: TDerivate) => State,
     config: UseHookConfig<State> = null
   ) => {
-    return (getter as unknown as StateGetter<TState, Subscribe>)(
-      ({ subscribeSelector }) => {
-        subscribeSelector<State>(
-          (state) => {
-            const fragment = selector_(state);
+    return (getter as StateGetter<TState>)(({ subscribeSelector }) => {
+      subscribeSelector<State>(
+        (state) => {
+          const fragment = selector_(state);
 
-            return (selector ? selector(fragment) : fragment) as State;
-          },
-          callback,
-          (selector && config ? config : config_) as UseHookConfig<State>
-        );
-      }
-    );
+          return (selector ? selector(fragment) : fragment) as State;
+        },
+        callback,
+        (selector && config ? config : config_) as UseHookConfig<State>
+      );
+    });
   };

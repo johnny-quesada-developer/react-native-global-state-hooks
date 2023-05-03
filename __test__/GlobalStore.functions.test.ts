@@ -4,7 +4,7 @@ import {
   StoreTools,
   Subscribe,
   SubscriberCallback,
-} from "../../src/GlobalStore.types";
+} from "../src/GlobalStore.types";
 
 import { useState } from "react";
 import { formatFromStore, formatToStore } from "json-storage-formatter";
@@ -14,7 +14,7 @@ import {
   createCustomGlobalStateWithDecoupledFuncs,
   createGlobalStateWithDecoupledFuncs,
   createGlobalState,
-} from "../../src/GlobalStore.functions";
+} from "../src/GlobalStore.functions";
 
 describe("basic", () => {
   it("should be able to create a new instance with state", () => {
@@ -720,7 +720,7 @@ describe("getter subscriptions", () => {
       );
     }) as SubscriberCallback<typeof state>);
 
-    const removeSubscription = getter<Subscribe>(callback);
+    const removeSubscription = getter(callback);
 
     expect(subscriptionSpy).toBeCalledTimes(1);
     expect(subscriptionSpy).toBeCalledWith(state);

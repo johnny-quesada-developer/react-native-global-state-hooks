@@ -357,16 +357,15 @@ export type SubscriberCallback<TState> = ({
  * if you don't pass a callback function the hook will return the current state of the store
  * @returns {UnsubscribeCallback | TState} result - the state or the unsubscribe callback if you pass a callback function
  */
-export type StateGetter<
-  TState,
-  Subscription extends Subscribe | false = false
-> = (
+export type StateGetter<TState> = <
+  TCallback extends SubscriberCallback<TState>
+>(
   /**
    * @param {SubscriberCallback<TState> | null} callback - the callback function to subscribe to the store changes (optional)
    * use the methods subscribe and subscribeSelect to subscribe to the store changes
    */
-  callback?: Subscription extends Subscribe ? SubscriberCallback<TState> : null
-) => Subscription extends Subscribe ? UnsubscribeCallback : TState;
+  callback?: TCallback
+) => keyof TCallback extends never ? TState : UnsubscribeCallback;
 
 /**
  * Constant value type to indicate that the getter is a subscription

@@ -1,4 +1,4 @@
-import { GlobalStore } from "../../src/GlobalStore";
+import { GlobalStore } from "../src/GlobalStore";
 
 import {
   CancelablePromise,
@@ -10,7 +10,7 @@ import {
   ActionCollectionResult,
   GlobalStoreConfig,
   StoreTools,
-} from "../../src/GlobalStore.types";
+} from "../src/GlobalStore.types";
 
 import { useState, useEffect } from "react";
 import { formatFromStore, formatToStore } from "json-storage-formatter";

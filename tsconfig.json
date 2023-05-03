@@ -28,9 +28,10 @@
     "moduleResolution": "node",
     "baseUrl": ".",
     "paths": {
-      "*": ["src/*"]
+      "*": ["src/*"],
+      "__test__/*": ["src/__test__/*"]
     }
   },
-  "include": ["src/**/*", "types/**/*"],
+  "include": ["src/**/*", "types/**/*", "__test__/**/*"],
   "exclude": ["node_modules", "lib"]
 }
