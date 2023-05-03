@@ -89,7 +89,7 @@ export const shallowCompare = <T>(value1: T, value2: T) => {
  */
 export const debounce = <T extends (...args: any[]) => any>(
   callback: T,
-  delay: number
+  delay: number = 0
 ) => {
   let timeout: NodeJS.Timeout;
 

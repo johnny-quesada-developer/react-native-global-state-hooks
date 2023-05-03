@@ -18,8 +18,8 @@ import {
   SubscribeCallbackConfig,
   SubscribeToEmitter,
 } from "GlobalStore.types";
-import { debounce, shallowCompare } from "GlobalStore.utils";
-import { useCallback, useEffect, useState } from "react";
+import { debounce, shallowCompare } from "./GlobalStore.utils";
+import { useEffect, useState } from "react";
 import { GlobalStore } from "./GlobalStore";
 
 /**
@@ -391,6 +391,7 @@ export const combineAsyncGettersEmitter = <
 
   return {
     subscribe: subscribe as SubscribeToEmitter<TDerivate>,
+    getState: () => parentState,
     dispose: (() => {
       getterSubscriptions.forEach((unsubscribe) => unsubscribe());
     }) as UnsubscribeCallback,
@@ -420,79 +421,60 @@ export const combineAsyncGetters = <
   },
   ...args: TArguments
 ) => {
-  const getters = args as unknown as StateGetter<unknown>[];
+  const { subscribe, getState } = combineAsyncGettersEmitter<
+    TDerivate,
+    TArguments,
+    TResults
+  >(parameters, ...args);
 
   const useHook = <State = TDerivate>(
-    selector?: SelectorCallback<TResults, State>,
+    selector?: SelectorCallback<TDerivate, State>,
     config?: UseHookConfig<State> & {
       delay?: number;
     }
-  ): [State] => {
-    const $config = {
-      delay: 0,
-      isEqual: shallowCompare,
-      ...(parameters.config ?? {}),
-      ...(config ?? {}),
-    };
-
-    const selectorWrapper = useCallback((results: TResults): State => {
-      const parentFragment = parameters.selector(results);
-
-      const newState = (
-        selector
-          ? selector(parentFragment as unknown as TResults)
-          : parentFragment
-      ) as State;
-
-      return newState;
-    }, []);
-
+  ) => {
     const [state, setState] = useState<State>(() => {
-      const values = getters.map((useHook) => useHook()) as TResults;
+      const parentState = getState();
 
-      // gets the initial value of the derivate state
-      return selectorWrapper(values);
+      return selector
+        ? selector(parentState)
+        : (parentState as unknown as State);
     });
 
     useEffect(() => {
-      const results = new Map<number, unknown>();
-      const subscribers: UnsubscribeCallback[] = [];
+      const $config = {
+        delay: 0,
+        isEqual: shallowCompare,
+        ...(config ?? {}),
+      };
 
-      const compareCallback = ($config.isEqual ?? shallowCompare) as (
-        a: State,
-        b: State
-      ) => boolean;
+      const compareCallback =
+        $config.isEqual !== undefined ? $config.isEqual : shallowCompare;
 
-      let currentState = state;
+      const unsubscribe = subscribe(
+        (state) => {
+          return selector ? selector(state) : (state as unknown as State);
+        },
+        debounce((state) => {
+          const newState = selector
+            ? selector(state)
+            : (state as unknown as State);
 
-      const updateState = debounce(() => {
-        const newState = selectorWrapper(
-          // the update is always async and base on the group of values
-          Array.from(results.values()) as TResults
-        );
+          if (compareCallback?.(state, newState)) return;
 
-        // if the new state is equal to the current state, then we don't need to update the state
-        if (compareCallback?.(currentState, newState)) return;
-
-        setState(newState);
-      }, $config.delay ?? 0);
-
-      getters.forEach((useHook, index) => {
-        const subscription = useHook<Subscribe>((value) => {
-          results.set(index, value);
-
-          updateState();
-        });
-
-        subscribers.push(subscription);
-      });
+          setState(newState);
+        }, $config.delay ?? 0)
+      );
 
       return () => {
-        subscribers.forEach((unsubscribe) => unsubscribe());
+        unsubscribe();
       };
     }, []);
 
-    return [state];
+    return [state, getState] as [
+      state: typeof state,
+      getParent: typeof getState
+    ];
   };
 
   return useHook;
