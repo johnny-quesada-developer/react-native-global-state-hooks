@@ -15,6 +15,8 @@ import {
   SubscribeMethod,
   SubscribeSelectorMethod,
   SubscribeCallbackConfig,
+  SubscribeCallback,
+  SelectorCallback,
 } from "./GlobalStore.types";
 
 const throwWrongKeyOnActionCollectionConfig = (action_key: string) => {
@@ -320,8 +322,8 @@ export class GlobalStore<
     selector,
     config,
   }: {
-    selector?: (state: TState) => TDerivate;
-    callback: (state: State) => void;
+    selector?: SelectorCallback<TState, TDerivate>;
+    callback: SubscribeCallback<State>;
     config: SubscribeCallbackConfig<State>;
   }) => {
     const initialState = (

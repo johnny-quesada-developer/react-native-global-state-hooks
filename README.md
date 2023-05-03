@@ -46,7 +46,7 @@ export const useContacts = createGlobalState({
 });
 ```
 
-Now, let's say I want to have a filter bar for the contacts that will only have access to the filter.
+Now, let's say we want to have a filter bar for the contacts that will only have access to the filter.
 
 **FilterBar.tsx**
 
@@ -58,11 +58,39 @@ return (
 );
 ```
 
+There you have it again, super simple! By adding a **selector** function, you are able to create a derivative hook that will only trigger when the result of the **selector** changes.
+
+By the way, in the example, the **selector** returning a new object is not a problem at all. This is because, by default, there is a shallow comparison between the previous and current versions of the state, so the render won't trigger if it's not necessary.
+
+## What if you want to reuse the selector?
+
+It will be super common to have the necessity of reusing a specific **selector**, and it can be a little annoying to have to do the same thing again and again. Right?
+
+No problem, you can create a reusable **derivative-state** and use it across your components. Let's create one for our filter.
+
+```ts
+const useFilter = createDerivate(useContacts, ({ filter }) => ({ filter }));
+```
+
+Well, that's it! Now you can simply call **useFilter** inside your component, and everything will continue to work the same.
+
+**FilterBar.tsx**
+
+```ts
+const [{ filter }, setState] = useFilter();
+
+return (
+  <TextInput onChangeText={() => setState((state) => ({ ...state, filter }))} />
+);
+```
+
+Notice that the **state** changes, but the **setter** does not. This is because this is a **DERIVATE state**, and it cannot be directly changed. It will always be derived from the main hook.
+
 # State actions
 
 Is common and often necessary to restrict the manipulation of state to a specific set of actions or operations. To achieve this, we can simplify the process by adding a custom API to the configuration of our **useContacts**.
 
-By defining a custom API for the **useContacts**, we can encapsulate and expose only the necessary actions or operations that are allowed to modify the state. This provides a controlled interface for interacting with the state, ensuring that modifications adhere to the desired restrictions.
+By defining a custom API for the **useContacts**, we can encapsulate and expose only the necessary actions or operations that are allowed to modify the state. This provides a controlled interface for interacting with the state, ensuring that modifications stick to the desired restrictions.
 
 ```ts
 import { createGlobalState } from "react-native-global-state-hooks";
@@ -98,14 +126,28 @@ That's it! In this updated version, the **useContacts** hook will no longer retu
 Let's see how that will look now into our **FilterBar.tsx**
 
 ```tsx
-const [{ filter }, { setFilter }] = useContacts(({ filter }) => ({ filter }));
+const [{ filter }, { setFilter }] = useFilter();
 
 return <TextInput onChangeText={setFilter} />;
 ```
 
-It can't get any simpler, right? Plus, these hooks are strongly typed, so if you're working with TypeScript, you'll love it.
+Yeah, that's it! All the **derived states** and **emitters** (we will talk about this later) will inherit the new actions interface.
 
-Let's continue exploring which other features we can discover with global state hooks!!
+You can even **derive** from another **derived state**! Let's explore a few silly examples:
+
+```ts
+const useFilter = createDerivate(useContacts, ({ filter }) => ({ filter }));
+
+const useFilterString = createDerivate(useFilter, { filter } => filter);
+
+const useContacts = createDerivate(useContacts, ({ items }) => items);
+
+const useContactsLength = createDerivate(useContacts, (items) => items.length);
+
+const useIsContactsEmpty = createDerivate(useContactsLength, (length) => !length);
+```
+
+It can't get any simpler, right? Everything is connected, everything is reactive. Plus, these hooks are strongly typed, so if you're working with **TypeScript**, you'll absolutely love it.
 
 # Decoupled state access
 
@@ -160,11 +202,86 @@ const removeSubscriptionGroup = contactsGetter<Subscribe>(
 );
 ```
 
-That's great, isn't it? And everything stays synchronized with the original state!!
+That's great, isn't it? everything stays synchronized with the original state!!
 
-...
+### Emitters
 
-Similarly, the **contactsSetter** method enables you to modify the state stored in **useContacts**. You can use this method to update the state with a new value or perform any necessary state mutations.
+So, we have seen that we can subscribe a callback to state changes, create **derivative states** from our global hooks, **and derive hooks from those derivative states**. Guess what? We can also create derivative **emitters** and subscribe callbacks to specific portions of the state. Let's review it:
+
+```ts
+const subscribeToFilter = createDerivateEmitter(
+  contactsGetter,
+  ({ filter }) => ({
+    filter,
+  })
+);
+```
+
+Cool, it's basically the same, but instead of using the **hook** as a parameter, we just have to use the **getter** as a parameter, and that will make the magic.
+
+Now we are able to add a callback that will be executed every time the state of the **filter** changes.
+
+```ts
+const removeFilterSubscription = subscribeToFilter<Subscribe>(({ filter }) => {
+  console.log(`The filter value changed: ${filter}`);
+});
+```
+
+By default, the callback will be executed once subscribed, using the current value of the state. If you want to avoid this initial call, you can pass an extra parameter to the **subscribe** function.
+
+```ts
+const removeFilterSubscription = subscribeToFilter<Subscribe>(
+  ({ filter }) => {
+    console.log(`The filter value changed: ${filter}`);
+  },
+  {
+    skipFirst: true,
+  }
+);
+```
+
+Also, of course, if you have an exceptional case where you want to derivate directly from the current **emitter**, you can add a **selector**. This allows you to fine-tune the emitted values based on your requirements
+
+```ts
+const removeFilterSubscription = subscribeToFilter<Subscribe>(
+  ({ filter }) => filter,
+  /**
+   *  Cause of the selector the filter now is an string
+   */
+  (filter) => {
+    console.log(`The filter value changed: ${filter}`);
+  },
+  {
+    skipFirst: true,
+    /**
+     * You can also override the default shallow comparison...
+     * or disable it completely by setting the isEqual callback to null.
+     */
+    isEqual: (a, b) => a === b,
+    // isEqual: null // this will avoid doing a shallow comparison
+  }
+);
+```
+
+And guess what again? You can also derive emitters from derived emitters without any trouble at all! It works basically the same. Let's see an example:
+
+```ts
+const subscribeToItems = createDerivateEmitter(
+  contactsGetter,
+  ({ items }) => items
+);
+
+const subscribeToItemsLength = createDerivateEmitter(
+  subscribeToItems,
+  (items) => items.length
+);
+```
+
+The examples may seem a little silly, but they allow you to see the incredible things you can accomplish with these derivative states and emitters. They open up a world of possibilities!
+
+### Setter
+
+Similarly, the **contactsSetter** method allows you to modify the state stored in **useContacts**. You can use this method to update the state with a new value or perform any necessary state mutations without the restrictions imposed by **hooks**.
 
 These additional methods provide a more flexible and granular way to interact with the state managed by **useContacts**. You can retrieve and modify the state as needed, without establishing a subscription relationship or reactivity with the state changes.
 

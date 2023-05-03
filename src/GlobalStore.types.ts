@@ -33,7 +33,7 @@ export type StateSetter<TState> = (
 export type StateHook<TState, TSetter, TMetadata> = <State = TState>(
   selector?: (state: TState) => State,
   config?: UseHookConfig<State>
-) => [State, TSetter, TMetadata];
+) => [state: State, setter: TSetter, metadata: TMetadata];
 
 /**
  * @description
@@ -439,3 +439,28 @@ export type CustomGlobalHookParams<
 } & GlobalStoreConfig<TState, TMetadata, TActions>;
 
 export type SelectorCallback<TState, TDerivate> = (state: TState) => TDerivate;
+
+/**
+ * @description
+ * Function to subscribe to the store changes
+ * @returns {UnsubscribeCallback} result - Function to unsubscribe from the store
+ */
+export type SubscribeToEmitter<TState> = <State = TState>(
+  /**
+   * @description
+   * The callback function to subscribe to the store changes or a selector function to derive the state
+   */
+  param1: SubscribeCallback<State> | SelectorCallback<TState, State>,
+
+  /**
+   * @description
+   * The configuration object or the callback function to subscribe to the store changes
+   */
+  param2?: SubscribeCallback<State> | SubscribeCallbackConfig<State>,
+
+  /**
+   * @description
+   * The configuration object
+   */
+  config?: SubscribeCallbackConfig<TState>
+) => UnsubscribeCallback;

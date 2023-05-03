@@ -6,7 +6,6 @@ import {
   ActionCollectionResult,
   UseHookConfig,
   AvoidNever,
-  GlobalStoreConfig,
   UnsubscribeCallback,
   StateHook,
   StateGetter,
@@ -16,7 +15,11 @@ import {
   CustomGlobalHookBuilderParams,
   CustomGlobalHookParams,
   SelectorCallback,
+  SubscribeMethod,
+  SubscribeCallbackConfig,
+  SubscribeToEmitter,
 } from "GlobalStore.types";
+import { shallowCompare } from "GlobalStore.utils";
 import { GlobalStore } from "./GlobalStore";
 
 /**
@@ -181,30 +184,86 @@ export const createDerivate =
  * This function allows you to create a derivate emitter
  * With this approach, you can subscribe to changes in a specific fragment or subset of the state.
  */
-export const createDerivateEmitter =
-  <
-    TDerivate,
-    TGetter extends StateGetter<unknown>,
-    TState = Exclude<ReturnType<TGetter>, UnsubscribeCallback>
-  >(
-    getter: TGetter,
-    selector_: SelectorCallback<TState, TDerivate>,
-    config_: UseHookConfig<TDerivate> = {}
-  ) =>
-  <State = TDerivate>(
-    callback: SubscribeCallback<State>,
-    selector?: SelectorCallback<TDerivate, State>,
-    config: UseHookConfig<State> = null
-  ) => {
-    return getter<Subscribe>(({ subscribeSelector }) => {
-      subscribeSelector<State>(
-        (state) => {
-          const fragment = selector_(state as TState);
-
-          return (selector ? selector(fragment) : fragment) as State;
-        },
-        callback,
-        (selector && config ? config : config_) as UseHookConfig<State>
-      );
-    });
+export const createDerivateEmitter = <
+  TDerivate,
+  TGetter extends StateGetter<unknown>,
+  TState = Exclude<ReturnType<TGetter>, UnsubscribeCallback>
+>(
+  getter: TGetter,
+  selector: SelectorCallback<TState, TDerivate>
+): SubscribeToEmitter<TDerivate> => {
+  type Infected = {
+    _father_emitter?: {
+      getter: StateGetter<unknown>;
+      selector: SelectorCallback<TState, TDerivate>;
+    };
   };
+
+  const father_emitter = (getter as Infected)._father_emitter;
+
+  if (father_emitter) {
+    // if a subscriber is already a derivate emitter, then we need to merge the selectors
+    const selectorWrapper = (state: TState): TDerivate => {
+      const fatherFragment = father_emitter.selector(state);
+
+      return selector(fatherFragment as unknown as TState);
+    };
+
+    const subscriber = createDerivateEmitter<TDerivate, TGetter, TState>(
+      father_emitter.getter as TGetter,
+      selectorWrapper
+    );
+
+    (subscriber as Infected)._father_emitter = {
+      getter: father_emitter.getter,
+      selector: selectorWrapper,
+    };
+
+    return subscriber;
+  }
+
+  const subscriber = <State = TDerivate>(
+    param1: SubscribeCallback<State> | SelectorCallback<TDerivate, State>,
+    param2?: SubscribeCallback<State> | SubscribeCallbackConfig<State>,
+    param3: SubscribeCallbackConfig<State> = {}
+  ) => {
+    const hasExplicitSelector = typeof param2 === "function";
+
+    const $selector = (hasExplicitSelector ? param1 : null) as SelectorCallback<
+      TDerivate,
+      State
+    >;
+
+    const callback = (
+      hasExplicitSelector ? param2 : param1
+    ) as SubscribeCallback<State>;
+
+    const config = (
+      hasExplicitSelector ? param3 : param2
+    ) as SubscribeCallbackConfig<State>;
+
+    return (getter as StateGetter<TState>)<Subscribe>(
+      ({ subscribeSelector }) => {
+        subscribeSelector<State>(
+          (state) => {
+            const fatherFragment = selector(state);
+
+            return (
+              $selector?.(fatherFragment) ??
+              (fatherFragment as unknown as State)
+            );
+          },
+          callback,
+          config
+        );
+      }
+    );
+  };
+
+  (subscriber as Infected)._father_emitter = {
+    getter,
+    selector,
+  };
+
+  return subscriber as SubscribeToEmitter<TDerivate>;
+};

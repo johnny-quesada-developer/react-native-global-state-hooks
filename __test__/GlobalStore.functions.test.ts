@@ -4,6 +4,7 @@ import {
   StoreTools,
   Subscribe,
   SubscriberCallback,
+  SubscribeToEmitter,
 } from "../src/GlobalStore.types";
 
 import { useState } from "react";
@@ -14,6 +15,8 @@ import {
   createCustomGlobalStateWithDecoupledFuncs,
   createGlobalStateWithDecoupledFuncs,
   createGlobalState,
+  createDerivate,
+  createDerivateEmitter,
 } from "../src/GlobalStore.functions";
 
 describe("basic", () => {
@@ -752,5 +755,138 @@ describe("getter subscriptions", () => {
     // the subscription should not be called since it was removed
     expect(subscriptionSpy).toBeCalledTimes(2);
     expect(subscriptionDerivateSpy).toBeCalledTimes(1);
+  });
+});
+
+describe("create fragment", () => {
+  it("should create a fragment as a hook", () => {
+    const initialState = {
+      a: 1,
+      b: 2,
+      c: 3,
+    };
+
+    const [useData, getter, setter] =
+      createGlobalStateWithDecoupledFuncs(initialState);
+
+    expect(useData).toBeInstanceOf(Function);
+    expect(getter).toBeInstanceOf(Function);
+    expect(setter).toBeInstanceOf(Function);
+
+    expect(getter()).toBe(initialState);
+
+    const useDerivate = createDerivate(useData, ({ a, b }) => {
+      return {
+        a,
+        b,
+      };
+    });
+
+    let [derivate] = useDerivate();
+
+    const useSub = createDerivate(useDerivate, ({ a }) => {
+      return a;
+    });
+
+    let [sub] = useSub();
+
+    expect(derivate).toEqual({
+      a: 1,
+      b: 2,
+    });
+
+    expect(sub).toBe(1);
+
+    setter((state) => ({
+      ...state,
+      c: null,
+      a: 12,
+    }));
+
+    [derivate] = useDerivate();
+
+    expect(derivate).toEqual({
+      a: 12,
+      b: 2,
+    });
+
+    [sub] = useSub();
+
+    expect(sub).toBe(12);
+  });
+
+  it("should create a derivate emitter", () => {
+    expect.assertions(10);
+
+    const initialState = {
+      secondRound: false,
+      a: 1,
+      b: 2,
+      c: 3,
+    };
+
+    const [useData, getter, setter] =
+      createGlobalStateWithDecoupledFuncs(initialState);
+
+    expect(useData).toBeInstanceOf(Function);
+    expect(getter).toBeInstanceOf(Function);
+    expect(setter).toBeInstanceOf(Function);
+
+    expect(getter()).toBe(initialState);
+
+    let subscribe: SubscribeToEmitter<any> = createDerivateEmitter(
+      getter,
+      ({ a, b, secondRound }) => {
+        return {
+          secondRound,
+          a,
+          b,
+        };
+      }
+    );
+
+    subscribe((derivate) => {
+      expect(derivate).toEqual({
+        secondRound: derivate.secondRound,
+        a: 1,
+        b: 2,
+      });
+    });
+
+    subscribe = createDerivateEmitter(subscribe, ({ a, secondRound }) => {
+      return {
+        secondRound,
+        a,
+      };
+    });
+
+    subscribe((derivate) => {
+      expect(derivate).toEqual({
+        secondRound: derivate.secondRound,
+        a: 1,
+      });
+    });
+
+    subscribe = createDerivateEmitter(subscribe, ({ a }) => {
+      return a;
+    });
+
+    subscribe((derivate) => {
+      expect(derivate).toEqual(1);
+    });
+
+    subscribe(
+      (state) => {
+        return `${state}`;
+      },
+      (derivate) => {
+        expect(derivate).toEqual("1");
+      }
+    );
+
+    setter((state) => ({
+      ...state,
+      secondRound: true,
+    }));
   });
 });
