@@ -377,11 +377,16 @@ export type SubscriberCallback<TState> = ({
  * @returns {UnsubscribeCallback | TState} result - the state or the unsubscribe callback if you pass a callback function
  */
 export type StateGetter<TState> = <
-  TCallback extends SubscriberCallback<TState> | null = null
+  Subscription extends Subscribe | false = false
 >(
   /**
    * @param {SubscriberCallback<TState> | null} callback - the callback function to subscribe to the store changes (optional)
    * use the methods subscribe and subscribeSelect to subscribe to the store changes
    */
-  callback?: TCallback
-) => TCallback extends null | never | undefined ? TState : UnsubscribeCallback;
+  callback?: Subscription extends Subscribe ? SubscriberCallback<TState> : null
+) => Subscription extends Subscribe ? UnsubscribeCallback : TState;
+
+/**
+ * Constant value type to indicate that the getter is a subscription
+ */
+export type Subscribe = true;

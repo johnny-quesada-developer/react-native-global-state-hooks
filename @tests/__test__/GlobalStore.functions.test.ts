@@ -1,6 +1,10 @@
 import { createDecoupledPromise } from "cancelable-promise-jq";
 
-import { StoreTools, SubscriberCallback } from "../../src/GlobalStore.types";
+import {
+  StoreTools,
+  Subscribe,
+  SubscriberCallback,
+} from "../../src/GlobalStore.types";
 
 import { useState } from "react";
 import { formatFromStore, formatToStore } from "json-storage-formatter";
@@ -526,7 +530,9 @@ describe("custom global hooks", () => {
 
     $actions.increase();
 
-    expect(getCount()).toEqual(2);
+    const count = getCount();
+
+    expect(count).toEqual(2);
   });
 
   it("should be able to create a custom global hook builder", () => {
@@ -714,7 +720,7 @@ describe("getter subscriptions", () => {
       );
     }) as SubscriberCallback<typeof state>);
 
-    const removeSubscription = getter(callback);
+    const removeSubscription = getter<Subscribe>(callback);
 
     expect(subscriptionSpy).toBeCalledTimes(1);
     expect(subscriptionSpy).toBeCalledWith(state);

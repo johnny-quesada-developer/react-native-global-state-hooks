@@ -424,16 +424,6 @@ export class GlobalStore<
       );
     }
 
-    // // this.subscribers.set(subscription, { selector, config });
-
-    // // const test = this.getState({
-    // //   subscriptionCallback: (state) => {},
-    // // });
-
-    // // test();
-
-    // // const stateV = this.getState();
-
     return () => {
       Array.from(changesSubscribers.keys()).forEach((subscriber) => {
         this.subscribers.delete(subscriber);
@@ -745,7 +735,7 @@ export class GlobalStore<
             // executes the actions bringing access to the state setter and a copy of the state
             const result = action.call(actions, {
               setState,
-              getState: getState as StateGetter<TState>,
+              getState,
               setMetadata,
               getMetadata,
               actions: actions as ActionCollectionResult<TState, TMetadata>,
