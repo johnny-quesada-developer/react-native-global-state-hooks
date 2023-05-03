@@ -269,7 +269,27 @@ export const createDerivateEmitter = <
   return subscriber as SubscribeToEmitter<TDerivate>;
 };
 
-type Unarray<T> = T extends Array<infer U> ? U : T;
+const [_1, getter1] = createGlobalStateWithDecoupledFuncs({
+  a: 1,
+});
+
+const [_2, getter2] = createGlobalStateWithDecoupledFuncs({
+  b: 2,
+});
+
+function executeFunctions<
+  TGetters extends StateGetter<unknown>[],
+  TResults = {
+    [K in keyof TGetters]: TGetters[K] extends () => infer TResult
+      ? Exclude<TResult, UnsubscribeCallback>
+      : never;
+  }
+>(...getters: TGetters): TResults {
+  const results = getters.map((func) => func()) as any;
+  return null;
+}
+
+const aaa2 = executeFunctions(getter1, getter2);
 
 /**
  * @description
@@ -278,19 +298,19 @@ type Unarray<T> = T extends Array<infer U> ? U : T;
  * By default, the debounce delay is 0, but you can change it by passing a delay in milliseconds as the third parameter.
  */
 export const combineAsyncGetters = <
-  TGetters extends Array<StateGetter<unknown>>,
+  TGetters extends StateGetter<unknown>[],
   TDerivate,
-  TResults extends [
-    Unarray<Array<Exclude<ReturnType<TGetters[number]>, UnsubscribeCallback>>>
-  ]
+  TResults = {
+    [K in keyof TGetters]: TGetters[K] extends () => infer TResult
+      ? Exclude<TResult, UnsubscribeCallback>
+      : never;
+  }
 >(
-  getters: TGetters,
   selector: SelectorCallback<TResults, TDerivate>,
-  config_?:
-    | (UseHookConfig<TDerivate> & {
-        delay?: number;
-      })
-    | null
+  config_?: UseHookConfig<TDerivate> & {
+    delay?: number;
+  },
+  ...getters: TGetters
 ) => {
   return <State = TDerivate>(
     $selector?: SelectorCallback<TResults, State>,
@@ -366,32 +386,34 @@ export const combineAsyncGetters = <
   };
 };
 
-const [_1, getter1] = createGlobalStateWithDecoupledFuncs({
-  a: 1,
-});
-
-const [_2, getter2] = createGlobalStateWithDecoupledFuncs({
-  b: 2,
-});
-
-const useCombined = combineAsyncGetters([getter1, getter2], (result) => {
-  return 1;
-});
+const useCombined = combineAsyncGetters(
+  (result) => {
+    return 1;
+  },
+  {},
+  getter1,
+  getter2
+);
 
 const [state] = useCombined();
 
-function executeFunctions<TFunctions extends (() => any)[]>(
-  functions: TFunctions
-): Unarray<TFunctions> {
-  const results = functions.map((func) => func());
-  return results as any;
+function executeFunctions2<TFunctions extends (() => any)[]>(
+  ...functions: TFunctions
+): {
+  [K in keyof TFunctions]: TFunctions[K] extends () => infer U ? U : never;
+} {
+  const results = functions.map((func) => func()) as any;
+  return results;
 }
 
-const aaa = executeFunctions([
+const aaa = executeFunctions(
   () => ({
     a: 1,
   }),
   () => ({
     b: 2,
   }),
-]);
+  () => ({
+    c: 3,
+  })
+);
