@@ -186,20 +186,18 @@ Additionally, to subscribe to state changes, you can pass a callback function as
  * This not only allows you to retrieve the current value of the state...
  * but also enables you to subscribe to any changes in the state or a portion of it
  */
-const removeSubscriptionGroup = contactsGetter<Subscribe>(
-  ({ subscribe, subscribeSelector }) => {
-    subscribe((state) => {
-      console.log("state changed: ", state);
-    });
+const removeSubscriptionGroup = contactsGetter<Subscribe>((subscribe) => {
+  subscribe((state) => {
+    console.log("state changed: ", state);
+  });
 
-    subscribeSelector(
-      (state) => state.isLoading,
-      (isLoading) => {
-        console.log("is loading changed", isLoading);
-      }
-    );
-  }
-);
+  subscribe(
+    (state) => state.isLoading,
+    (isLoading) => {
+      console.log("is loading changed", isLoading);
+    }
+  );
+});
 ```
 
 That's great, isn't it? everything stays synchronized with the original state!!

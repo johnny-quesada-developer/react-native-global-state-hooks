@@ -2,7 +2,7 @@ import { combineAsyncGetters } from "../src/GlobalStore.combiners";
 import { createGlobalStateWithDecoupledFuncs } from "../src/GlobalStore.functionHooks";
 
 describe("combiners", () => {
-  it.only("should combine two global states", () => {
+  it("should combine two global states", () => {
     const [, getter1, setter1] = createGlobalStateWithDecoupledFuncs({
       a: 1,
     });

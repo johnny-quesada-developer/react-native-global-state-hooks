@@ -229,34 +229,29 @@ export const createDerivateEmitter = <
     const hasExplicitSelector = typeof param2 === "function";
 
     const $selector = (hasExplicitSelector ? param1 : null) as SelectorCallback<
-      TDerivate,
-      State
+      unknown,
+      unknown
     >;
 
     const callback = (
       hasExplicitSelector ? param2 : param1
-    ) as SubscribeCallback<State>;
+    ) as SubscribeCallback<unknown>;
 
     const config = (
       hasExplicitSelector ? param3 : param2
-    ) as SubscribeCallbackConfig<State>;
+    ) as SubscribeCallbackConfig<unknown>;
 
-    return (getter as StateGetter<TState>)<Subscribe>(
-      ({ subscribeSelector }) => {
-        subscribeSelector<State>(
-          (state) => {
-            const fatherFragment = selector(state);
+    return (getter as StateGetter<unknown>)<Subscribe>((subscribe) => {
+      subscribe(
+        (state) => {
+          const fatherFragment = selector(state as TState);
 
-            return (
-              $selector?.(fatherFragment) ??
-              (fatherFragment as unknown as State)
-            );
-          },
-          callback,
-          config
-        );
-      }
-    );
+          return $selector?.(fatherFragment) ?? fatherFragment;
+        },
+        callback,
+        config
+      );
+    });
   };
 
   (subscriber as Infected)._father_emitter = {

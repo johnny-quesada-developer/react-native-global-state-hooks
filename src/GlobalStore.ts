@@ -12,19 +12,18 @@ import {
   UseHookConfig,
   StateGetter,
   SubscriberCallback,
-  SubscribeMethod,
-  SubscribeSelectorMethod,
   SubscribeCallbackConfig,
   SubscribeCallback,
   SelectorCallback,
   SetStateCallback,
   SubscriberParameters,
   SubscriptionCallback,
+  SubscribeToEmitter,
 } from "./GlobalStore.types";
 
 const throwWrongKeyOnActionCollectionConfig = (action_key: string) => {
   throw new Error(`[WRONG CONFIGURATION!]: Every key inside the storeActionsConfig must be a higher order function that returns a function \n[${action_key}]: key is not a valid function, try something like this: \n{\n
-    ${action_key}: (param) => ({ setState, getState, setMetadata, getMetadata }) => {\n
+    ${action_key}: (param) => ({ setState, getState, setMetadata, getMetadata, actions }) => {\n
       setState((state) => ({ ...state, ...param }))\n
     }\n
 }\n`);
@@ -32,7 +31,7 @@ const throwWrongKeyOnActionCollectionConfig = (action_key: string) => {
 
 export const throwNoSubscribersWereAdded = () => {
   throw new Error(
-    "No new subscribers were added, please make sure to add at least one subscriber with the subscribe/subscribeSelector methods"
+    "No new subscribers were added, please make sure to add at least one subscriber with the subscribe method"
   );
 };
 
@@ -313,25 +312,20 @@ export class GlobalStore<
 
   protected getMetadata = () => this.config.metadata ?? null;
 
-  protected createChangesSubscriber = <
-    TDerivate,
-    State = TDerivate extends never ? TState : TDerivate
-  >({
+  protected createChangesSubscriber = ({
     callback,
     selector,
     config,
   }: {
-    selector?: SelectorCallback<TState, TDerivate>;
-    callback: SubscribeCallback<State>;
-    config: SubscribeCallbackConfig<State>;
+    selector?: SelectorCallback<unknown, unknown>;
+    callback: SubscribeCallback<unknown>;
+    config: SubscribeCallbackConfig<unknown>;
   }) => {
-    const initialState = (
-      selector ? selector(this.stateWrapper.state) : this.stateWrapper.state
-    ) as State;
+    const initialState = selector
+      ? selector(this.stateWrapper.state)
+      : this.stateWrapper.state;
 
-    let stateWrapper: {
-      state: State;
-    } = {
+    let stateWrapper = {
       state: initialState,
     };
 
@@ -340,9 +334,9 @@ export class GlobalStore<
     }: {
       state: unknown;
     }) => {
-      stateWrapper.state = state as State;
+      stateWrapper.state = state;
 
-      callback(state as State);
+      callback(state);
     };
 
     if (!config?.skipFirst) {
@@ -371,51 +365,43 @@ export class GlobalStore<
     // if there is no subscription callback return the state
     if (!$callback) return this.stateWrapper.state;
 
-    const { state } = this.stateWrapper;
-
     const changesSubscribers: Map<
       SubscriptionCallback,
       SubscriberParameters<TState>
     > = new Map();
 
-    const subscribe = ((callback, config = {}) => {
+    const subscribe = ((param1, param2, param3) => {
+      const hasExplicitSelector = typeof param2 === "function";
+
+      const selector = (
+        hasExplicitSelector ? param1 : null
+      ) as SelectorCallback<unknown, unknown>;
+
+      const callback = (
+        hasExplicitSelector ? param2 : param1
+      ) as SubscribeCallback<unknown>;
+
+      const config = (
+        hasExplicitSelector ? param3 : param2
+      ) as SubscribeCallbackConfig<unknown>;
+
       const { subscription, stateWrapper } = this.createChangesSubscriber({
-        selector: null,
+        selector,
         callback,
         config,
       });
 
       this.updateSubscription({
-        selector: null,
+        selector,
         config,
         stateWrapper,
         invokerSetState: subscription,
       });
 
       changesSubscribers.set(subscription, { config });
-    }) as SubscribeMethod<TState>;
+    }) as SubscribeToEmitter<TState>;
 
-    const subscribeSelector = ((selector, callback, config = {}) => {
-      const { subscription, stateWrapper } = this.createChangesSubscriber({
-        selector,
-        callback,
-        config,
-      });
-
-      this.updateSubscription({
-        selector,
-        config: {
-          isEqual: shallowCompare,
-          ...config,
-        },
-        stateWrapper,
-        invokerSetState: subscription,
-      });
-
-      changesSubscribers.set(subscription, { config, selector });
-    }) as SubscribeSelectorMethod<TState>;
-
-    $callback({ state, subscribe, subscribeSelector });
+    $callback(subscribe);
 
     if (!changesSubscribers.size) {
       throwNoSubscribersWereAdded();

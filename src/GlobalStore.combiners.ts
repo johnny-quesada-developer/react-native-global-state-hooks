@@ -8,8 +8,6 @@ import {
   SubscribeCallbackConfig,
   SubscribeToEmitter,
   SubscriberCallback,
-  SubscribeMethod,
-  SubscribeSelectorMethod,
 } from "./GlobalStore.types";
 import { shallowCompare } from "./GlobalStore.utils";
 import { debounce } from "lodash";
@@ -70,7 +68,7 @@ export const combineAsyncGettersEmitter = <
   }, parameters?.config?.delay);
 
   const getterSubscriptions = getters.map((useHook, index) =>
-    useHook<Subscribe>(({ subscribe }) => {
+    useHook<Subscribe>((subscribe) => {
       subscribe((value) => {
         dictionary.set(index, value);
 
@@ -147,26 +145,7 @@ export const combineAsyncGettersEmitter = <
 
     const internalSubscribers: UnsubscribeCallback[] = [];
 
-    const subscribeFromGetter = ((callback, config = {}) => {
-      const subscription = subscribe(callback, config);
-
-      internalSubscribers.push(subscription);
-    }) as SubscribeMethod<TDerivate>;
-
-    const subscribeSelector = ((selector, callback, config = {}) => {
-      const subscription = subscribe(selector, callback, {
-        isEqual: shallowCompare,
-        ...config,
-      });
-
-      internalSubscribers.push(subscription);
-    }) as SubscribeSelectorMethod<TDerivate>;
-
-    $callback({
-      state: parentState,
-      subscribe: subscribeFromGetter,
-      subscribeSelector,
-    });
+    $callback(subscribe as SubscribeToEmitter<TDerivate>);
 
     if (!internalSubscribers.length) {
       throwNoSubscribersWereAdded();

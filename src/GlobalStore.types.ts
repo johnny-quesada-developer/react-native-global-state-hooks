@@ -295,59 +295,11 @@ export type SubscribeCallbackConfig<TState> = UseHookConfig<TState> & {
 export type SubscribeCallback<TState> = (state: TState) => void;
 
 /**
- * Use this function to subscribe to the store changes
+ * Callback function to subscribe to the store changes from a getter
  */
-export type SubscribeMethod<TState> = (
-  /**
-   * This callback will be executed every time the state is changed
-   */
-  callback: SubscribeCallback<TState>,
-
-  /**
-   * The configuration object
-   * In the configuration object you can specify a custom compare function to check if the state is changed
-   */
-  config?: SubscribeCallbackConfig<TState>
+export type SubscriberCallback<TState> = (
+  subscribe: SubscribeToEmitter<TState>
 ) => void;
-
-export type SubscribeSelectorMethod<TState> = <TDerivate>(
-  /**
-   * The selector function to derive the state
-   * @param {TState} state - the current state of the store
-   * @returns {TDerivate} result - the derived state
-   * */
-  selector: SelectorCallback<TState, TDerivate>,
-
-  /**
-   * This callback will be executed every time the state is changed
-   */
-  callback: SubscribeCallback<TDerivate>,
-
-  /**
-   * The configuration object
-   * In the configuration object you can specify a custom compare function to check if the state is changed
-   */
-  config?: SubscribeCallbackConfig<TDerivate>
-) => void;
-
-export type SubscriberCallback<TState> = ({
-  subscribe,
-}: {
-  /**
-   * Current state of the store
-   */
-  state: TState;
-
-  /**
-   * Allow you to subscribe to the store changes
-   */
-  subscribe: SubscribeMethod<TState>;
-
-  /**
-   * Allow to select a derived state from the store
-   */
-  subscribeSelector: SubscribeSelectorMethod<TState>;
-}) => void;
 
 /**
  * Callback function to get the current state of the store or to subscribe to the store changes
@@ -445,24 +397,40 @@ export type SelectorCallback<TState, TDerivate> = (state: TState) => TDerivate;
  * Function to subscribe to the store changes
  * @returns {UnsubscribeCallback} result - Function to unsubscribe from the store
  */
-export type SubscribeToEmitter<TState> = <State = TState>(
+export type SubscribeToEmitter<TState> = <
+  TParam1 extends SubscribeCallback<TState> | SelectorCallback<TState, unknown>,
+  TResult = ReturnType<TParam1>,
+  TConfig = TResult extends void | null | undefined | never
+    ? SubscribeCallbackConfig<TState>
+    : SubscribeCallbackConfig<TResult>,
+  TParam2 extends
+    | SubscribeCallbackConfig<TState>
+    | SubscribeCallback<TResult> = TResult extends
+    | void
+    | null
+    | undefined
+    | never
+    ? TConfig
+    : SubscribeCallback<TResult>,
+  TParam3 = TResult extends void | null | undefined | never ? never : TConfig
+>(
   /**
    * @description
    * The callback function to subscribe to the store changes or a selector function to derive the state
    */
-  param1: SubscribeCallback<State> | SelectorCallback<TState, State>,
+  param1: TParam1,
 
   /**
    * @description
    * The configuration object or the callback function to subscribe to the store changes
    */
-  param2?: SubscribeCallback<State> | SubscribeCallbackConfig<State>,
+  param2?: TParam2,
 
   /**
    * @description
    * The configuration object
    */
-  param3?: SubscribeCallbackConfig<TState>
+  param3?: TParam3
 ) => UnsubscribeCallback;
 
 export type SubscriberParameters<TState> = {

@@ -708,12 +708,12 @@ describe("getter subscriptions", () => {
     const subscriptionSpy = jest.fn();
     const subscriptionDerivateSpy = jest.fn();
 
-    const callback = jest.fn((({ subscribe, subscribeSelector }) => {
+    const callback = jest.fn(((subscribe) => {
       subscribe((state) => {
         subscriptionSpy(state);
       });
 
-      subscribeSelector(
+      subscribe(
         (state) => {
           return state.a;
         },
