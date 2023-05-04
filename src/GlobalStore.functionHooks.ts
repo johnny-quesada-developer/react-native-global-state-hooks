@@ -17,7 +17,7 @@ import {
   SelectorCallback,
   SubscribeCallbackConfig,
   SubscribeToEmitter,
-} from "GlobalStore.types";
+} from "./GlobalStore.types";
 
 import { GlobalStore } from "./GlobalStore";
 

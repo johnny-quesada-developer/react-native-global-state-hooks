@@ -1,5 +1,5 @@
 import { createDecoupledPromise } from "cancelable-promise-jq";
-import { Subscribe } from "GlobalStore.types";
+import { Subscribe } from "../src/GlobalStore.types";
 import { combineAsyncGetters } from "../src/GlobalStore.combiners";
 import { createGlobalStateWithDecoupledFuncs } from "../src/GlobalStore.functionHooks";
 
