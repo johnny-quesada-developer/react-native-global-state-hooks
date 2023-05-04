@@ -8,6 +8,7 @@ import {
   SubscribeCallbackConfig,
   SubscribeToEmitter,
   SubscriberCallback,
+  StateHook,
 } from "./GlobalStore.types";
 import { shallowCompare } from "./GlobalStore.utils";
 import { debounce } from "lodash";
@@ -19,6 +20,7 @@ import { throwNoSubscribersWereAdded } from "./GlobalStore";
  * This function allows you to create a derivate state by merging the state of multiple hooks.
  * The update of the derivate state is debounced to avoid unnecessary re-renders.
  * By default, the debounce delay is 0, but you can change it by passing a delay in milliseconds as the third parameter.
+ * @returns a tuple with the following elements: [subscribe, getState, dispose]
  */
 export const combineAsyncGettersEmitter = <
   TDerivate,
@@ -119,6 +121,11 @@ export const combineAsyncGettersEmitter = <
 
     let childState = (selector?.(parentState) ?? parentState) as State;
 
+    if (!$config.skipFirst) {
+      // execute immediately the callback with the current state
+      callback(childState);
+    }
+
     const updateState = debounce(() => {
       const newChildState = (selector?.(parentState) ?? parentState) as State;
 
@@ -145,15 +152,19 @@ export const combineAsyncGettersEmitter = <
 
     const internalSubscribers: UnsubscribeCallback[] = [];
 
-    $callback(subscribe as SubscribeToEmitter<TDerivate>);
+    $callback(((...parameters) => {
+      internalSubscribers.push(subscribe(...parameters));
+    }) as SubscribeToEmitter<TDerivate>);
 
     if (!internalSubscribers.length) {
       throwNoSubscribersWereAdded();
     }
 
     return () => {
-      internalSubscribers.forEach((subscriber) => {
-        subscribers.delete(subscriber);
+      internalSubscribers.forEach((unsubscribe) => {
+        unsubscribe();
+
+        subscribers.delete(unsubscribe);
       });
     };
   }) as StateGetter<TDerivate>;
@@ -176,6 +187,7 @@ export const combineAsyncGettersEmitter = <
  * This function allows you to create a derivate state by merging the state of multiple hooks.
  * The update of the derivate state is debounced to avoid unnecessary re-renders.
  * By default, the debounce delay is 0, but you can change it by passing a delay in milliseconds as the third parameter.
+ * @returns A tuple containing the subscribe function, the state getter and the dispose function
  */
 export const combineAsyncGetters = <
   TDerivate,
@@ -200,7 +212,7 @@ export const combineAsyncGetters = <
     TResults
   >(parameters, ...args);
 
-  const useHook = <State = TDerivate>(
+  const useHook = (<State = TDerivate>(
     selector?: SelectorCallback<TDerivate, State>,
     config?: UseHookConfig<State> & {
       delay?: number;
@@ -244,15 +256,12 @@ export const combineAsyncGetters = <
       };
     }, []);
 
-    return [state, getState] as [
-      state: typeof state,
-      getParent: typeof getState
-    ];
-  };
+    return [state, null, null];
+  }) as StateHook<TDerivate, null, null>;
 
   return [useHook, getState, dispose] as [
     useHook: typeof useHook,
-    getState: () => TDerivate,
+    getState: StateGetter<TDerivate>,
     dispose: UnsubscribeCallback
   ];
 };

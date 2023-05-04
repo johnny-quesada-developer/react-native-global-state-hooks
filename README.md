@@ -202,7 +202,7 @@ const removeSubscriptionGroup = contactsGetter<Subscribe>((subscribe) => {
 
 That's great, isn't it? everything stays synchronized with the original state!!
 
-### Emitters
+# Emitters
 
 So, we have seen that we can subscribe a callback to state changes, create **derivative states** from our global hooks, **and derive hooks from those derivative states**. Guess what? We can also create derivative **emitters** and subscribe callbacks to specific portions of the state. Let's review it:
 
@@ -275,9 +275,130 @@ const subscribeToItemsLength = createDerivateEmitter(
 );
 ```
 
-The examples may seem a little silly, but they allow you to see the incredible things you can accomplish with these derivative states and emitters. They open up a world of possibilities!
+The examples may seem a little silly, but they allow you to see the incredible things you can accomplish with these **derivative states** and **emitters**. They open up a world of possibilities!
 
-### Setter
+# Combining getters
+
+What if you have two states and you want to combine them? You may have already guessed it right? ... you can create combined **emitters** and **hooks** from the hook **getters**.
+
+By utilizing the approach of combining **emitters** and **hooks**, you can effectively merge multiple states and make them shareable. This allows for better organization and simplifies the management of the combined states. You don't need to refactor everything; you just need to combine the **global state hooks** you already have. Let's see a simple example:
+
+Fist we are gonna create a couple of **global state**, is important to create them with the **createGlobalStateWithDecoupledFuncs** since we need the decoupled **getter**. (In case you are using an instance of **GlobalStore** or **GlobalStoreAbstract** you can just pick up the getters from the **getHookDecoupled** method)
+
+```ts
+const [useHook1, getter1, setter1] = createGlobalStateWithDecoupledFuncs({
+  propA: 1,
+  propB: 2,
+});
+
+const [, getter2] = createGlobalStateWithDecoupledFuncs({
+  propC: 3,
+  propD: 4,
+});
+```
+
+Okay, cool, the first state as **propA, propB** while the second one has **propC, propD**, let's combine them:
+
+```ts
+const [useCombinedHook, getter, dispose] = combineAsyncGetters(
+  {
+    selector: ([state1, state2]) => ({
+      ...state1,
+      ...state2,
+    }),
+  },
+  getter1,
+  getter2
+);
+```
+
+Well, that's it! Now you have access to a **getter** that will return the combined value of the two states. From this new **getter**, you can retrieve the value or subscribe to its changes. Let'see:
+
+```ts
+const value = getter(); // { propA, propB, propC, propD }
+
+// subscribe to the new emitter
+const unsubscribeGroup = getter<Subscribe>((subscribe) => {
+  subscribe((state) => {
+    console.log(subscribe); // full state
+  });
+
+  // Please note that if you add a selector,
+  // the callback will only trigger if the result of the selector changes.
+  subscribe(
+    ({ propA, propD }) => ({ propA, propD }),
+    (derivate) => {
+      console.log(derivate); // { propA, propD }
+    }
+  );
+});
+```
+
+Regarding the newly created hook, **useCombinedHook**, you can seamlessly utilize it across all your components, just like your other **global state hooks**. This enables a consistent and familiar approach for accessing and managing the combined state within your application.
+
+```ts
+const [combinedState] = useCombinedHook();
+```
+
+The main difference with **combined hooks** compared to individual **global state hooks** is the absence of **metadata** and **actions**. Instead, combined hooks provide a condensed representation of the underlying global states using simple React functionality. This streamlined approach ensures lightweight usage, making it easy to access and manage the combined state within your components.
+
+### Let's explore some additional examples.
+
+Similar to your other **global state hooks**, **combined hooks** allow you to use **selectors** directly from consumer components. This capability eliminates the need to create an excessive number of reusable hooks if they are not truly necessary. By utilizing selectors, you can efficiently extract specific data from the **combined state** and utilize it within your components. This approach offers a more concise and focused way of accessing the required state values without the need for creating additional hooks unnecessarily.
+
+```ts
+const [fragment] = useCombinedHook(({ propA, propD }) => ({ propA, propD }));
+```
+
+Lastly, you have the flexibility to continue combining getters if desired. This means you can extend the functionality of combined hooks by adding more getters to merge additional states. By combining getters in this way, you can create a comprehensive and unified representation of the combined states within your application. This approach allows for modular and scalable state management, enabling you to efficiently handle complex state compositions.
+
+Let's see an example:
+
+```ts
+const [useCombinedHook, combinedGetter1, dispose1] = combineAsyncGetters(
+  {
+    selector: ([state1, state2]) => ({
+      ...state1,
+      ...state2,
+    }),
+  },
+  getter1,
+  getter2
+);
+
+const [useHook3, getter3, setter3] = createGlobalStateWithDecoupledFuncs({
+  propE: 1,
+  propF: 2,
+});
+
+const [useIsLoading, isLoadingGetter, isLoadingSetter] =
+  createGlobalStateWithDecoupledFuncs(false);
+```
+
+Once we created another peace of state, we can combine it with our other **global hooks** and **emitters**
+
+```ts
+const [useCombinedHook2, combinedGetter2, dispose2] = combineAsyncGetters(
+  {
+    selector: ([state1, state2, isLoading]) => ({
+      ...state1,
+      ...state2,
+      isLoading,
+    }),
+  },
+  combinedGetter1,
+  getter3,
+  isLoadingGetter
+);
+```
+
+You have the freedom to combine as many global hooks as you wish. This means you can merge multiple states into a single cohesive unit by combining their respective hooks. This approach offers flexibility and scalability, allowing you to handle complex state compositions in a modular and efficient manner.
+
+### **Quick note**:
+
+Please be aware that the third parameter is a **dispose callback**, which can be particularly useful in **high-order** functions when you want to release any resources associated with the hook. By invoking the dispose callback, the hook will no longer report any changes, ensuring that resources are properly cleaned up. This allows for efficient resource management and can be beneficial in scenarios where you need to handle resource cleanup or termination in a controlled manner.
+
+## Setter
 
 Similarly, the **contactsSetter** method allows you to modify the state stored in **useContacts**. You can use this method to update the state with a new value or perform any necessary state mutations without the restrictions imposed by **hooks**.
 
