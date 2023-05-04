@@ -17,7 +17,7 @@ import {
   createGlobalState,
   createDerivate,
   createDerivateEmitter,
-} from "../src/GlobalStore.functions";
+} from "../src/GlobalStore.functionHooks";
 
 describe("basic", () => {
   it("should be able to create a new instance with state", () => {

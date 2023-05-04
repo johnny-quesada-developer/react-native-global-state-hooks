@@ -10,7 +10,7 @@ import {
 
 import { formatFromStore, formatToStore } from "json-storage-formatter";
 import { getFakeAsyncStorage } from "./getFakeAsyncStorage";
-import { createCustomGlobalStateWithDecoupledFuncs } from "../src/GlobalStore.functions";
+import { createCustomGlobalStateWithDecoupledFuncs } from "../src/GlobalStore.functionHooks";
 
 export const { fakeAsyncStorage: asyncStorage } = getFakeAsyncStorage();
 

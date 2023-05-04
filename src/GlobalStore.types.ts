@@ -464,3 +464,13 @@ export type SubscribeToEmitter<TState> = <State = TState>(
    */
   param3?: SubscribeCallbackConfig<TState>
 ) => UnsubscribeCallback;
+
+export type SubscriberParameters<TState> = {
+  selector?: (state: TState) => unknown;
+  config?: UseHookConfig<any> | SubscribeCallbackConfig<any>;
+  currentState?: unknown;
+};
+
+export type SubscriptionCallback = (params: { state: unknown }) => void;
+
+export type SetStateCallback = (parameters: { state: unknown }) => void;

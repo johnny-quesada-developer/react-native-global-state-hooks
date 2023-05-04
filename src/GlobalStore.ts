@@ -17,6 +17,9 @@ import {
   SubscribeCallbackConfig,
   SubscribeCallback,
   SelectorCallback,
+  SetStateCallback,
+  SubscriberParameters,
+  SubscriptionCallback,
 } from "./GlobalStore.types";
 
 const throwWrongKeyOnActionCollectionConfig = (action_key: string) => {
@@ -27,15 +30,11 @@ const throwWrongKeyOnActionCollectionConfig = (action_key: string) => {
 }\n`);
 };
 
-type SubscriberParameters<TState> = {
-  selector?: (state: TState) => unknown;
-  config?: UseHookConfig<any> | SubscribeCallbackConfig<any>;
-  currentState?: unknown;
+export const throwNoSubscribersWereAdded = () => {
+  throw new Error(
+    "No new subscribers were added, please make sure to add at least one subscriber with the subscribe/subscribeSelector methods"
+  );
 };
-
-type SubscriptionCallback = (params: { state: unknown }) => void;
-
-type SetStateCallback = (parameters: { state: unknown }) => void;
 
 /**
  * The GlobalStore class is the main class of the library and it is used to create a GlobalStore instances
@@ -419,9 +418,7 @@ export class GlobalStore<
     $callback({ state, subscribe, subscribeSelector });
 
     if (!changesSubscribers.size) {
-      throw new Error(
-        "No new subscribers were added, please make sure to add at least one subscriber with the subscribe/subscribeSelector methods"
-      );
+      throwNoSubscribersWereAdded();
     }
 
     return () => {
