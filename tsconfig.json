@@ -28,10 +28,11 @@
     "moduleResolution": "node",
     "baseUrl": ".",
     "paths": {
-      "*": ["src/*"],
-      "__test__/*": ["src/__test__/*"]
+      "*": ["src/*"]
+      // "__test__/*": ["src/__test__/*"]
     }
   },
-  "include": ["src/**/*", "types/**/*", "__test__/**/*"],
+  // "include": ["src/**/*", "types/**/*", "__test__/**/*"],
+  "include": ["src/**/*", "types/**/*"],
   "exclude": ["node_modules", "lib"]
 }
