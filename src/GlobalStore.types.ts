@@ -319,11 +319,16 @@ export type StateGetter<TState> = <
   callback?: Subscription extends Subscribe ? SubscriberCallback<TState> : null
 ) => Subscription extends Subscribe ? UnsubscribeCallback : TState;
 
+export type MetadataGetter<TMetadata> = () => TMetadata;
+
 /**
  * Constant value type to indicate that the getter is a subscription
  */
 export type Subscribe = true;
 
+/**
+ * Configuration of the state (optional) - if you don't need to use the state configuration you don't need to pass this parameter
+ */
 export type createStateConfig<
   TState,
   TMetadata,
@@ -371,6 +376,10 @@ export type CustomGlobalHookBuilderParams<
   ) => void;
 };
 
+/**
+ * @description
+ * Configuration of the custom global hook
+ */
 export type CustomGlobalHookParams<
   TCustomConfig,
   TState,

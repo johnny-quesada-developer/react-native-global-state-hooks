@@ -19,6 +19,7 @@ import {
   SubscriberParameters,
   SubscriptionCallback,
   SubscribeToEmitter,
+  MetadataGetter,
 } from "./GlobalStore.types";
 
 const throwWrongKeyOnActionCollectionConfig = (action_key: string) => {
@@ -548,9 +549,9 @@ export class GlobalStore<
       : ActionCollectionResult<TState, TMetadata, TStateSetter>;
 
     return [getState, stateOrchestrator, getMetadata] as [
-      getter: StateGetter<TState>,
-      setter: Setter,
-      metadata: () => TMetadata
+      StateGetter<TState>,
+      Setter,
+      MetadataGetter<TMetadata>
     ];
   };
 

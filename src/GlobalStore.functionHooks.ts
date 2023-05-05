@@ -22,11 +22,7 @@ import {
 import { GlobalStore } from "./GlobalStore";
 
 /**
- * Creates a global hook that can be used to access the state and actions across the application
- * @param {TState} state - The initial state
- * @param {{ config?: GlobalStoreConfig<TState, TMetadata, TStateSetter>; actionsConfig?: TStateSetter | null }} parameters - The configuration object (optional) (default: null)
- * @param {GlobalStoreConfig<TState, TMetadata, TStateSetter>} parameters.config - The configuration object
- * @param {TStateSetter | null} parameters.actionsConfig - The setter configuration object (optional) (default: null)
+ * Creates a global state with the given state and config.
  * @returns {} [HOOK, DECOUPLED_GETTER, DECOUPLED_SETTER] this is an array with the hook, the decoupled getState function and the decoupled setter of the state
  */
 export const createGlobalStateWithDecoupledFuncs = <
@@ -50,18 +46,14 @@ export const createGlobalStateWithDecoupledFuncs = <
     : ActionCollectionResult<TState, TMetadata, TActions>;
 
   return [store.getHook(), getState, setter] as [
-    hook: StateHook<TState, Setter, TMetadata>,
-    getter: StateGetter<TState>,
-    setter: Setter
+    StateHook<TState, Setter, TMetadata>,
+    StateGetter<TState>,
+    Setter
   ];
 };
 
 /**
  * Creates a global hook that can be used to access the state and actions across the application
- * @param {TState} state - The initial state of the store
- * @param {{ config?: GlobalStoreConfig<TState, TMetadata, TStateSetter>; actionsConfig?: TStateSetter | null }} parameters - The configuration object of the store and the configuration object of the state setter (optional) (default: null)
- * @param {GlobalStoreConfig<TState, TMetadata, TStateSetter>} parameters.config - The configuration object of the store
- * @param {TStateSetter | null} parameters.actionsConfig - The configuration object of the state setter (optional) (default: null)
  * @returns {} - () => [TState, Setter, TMetadata] the hook that can be used to access the state and the setter of the state
  */
 export const createGlobalState = <
@@ -76,7 +68,7 @@ export const createGlobalState = <
     TState,
     TMetadata,
     TActions
-  >(state, config as unknown);
+  >(state, config);
 
   return useState;
 };

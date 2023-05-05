@@ -107,3 +107,4 @@ dist
 
 /lib
 /coverage
+.DS_Store
