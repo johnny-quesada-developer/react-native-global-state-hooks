@@ -1,6 +1,6 @@
 {
   "name": "react-native-global-state-hooks",
-  "version": "5.0.11",
+  "version": "5.0.12",
   "description": "This is a package to easily handling global-state across your react-native-components No-redux",
   "main": "lib/bundle.js",
   "types": "lib/src/index.d.ts",
