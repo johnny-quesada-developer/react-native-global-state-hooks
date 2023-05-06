@@ -1,5 +1,5 @@
 import { shallowCompare } from "./GlobalStore.utils";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   ActionCollectionConfig,
@@ -484,13 +484,12 @@ export class GlobalStore<
    * Returns a custom hook that allows to handle a global state
    * @returns {[TState, TStateSetter, TMetadata]} - The state, the state setter or the actions map, the metadata
    * */
-  public getHook =
-    () =>
-    <State = TState>(
+  public getHook = () => {
+    return <State = TState>(
       selector?: (state: TState) => State,
       config: UseHookConfig<State> = {}
     ) => {
-      const [stateWrapper, invokerSetState] = useState<{
+      const [stateWrapper, setState] = useState<{
         state: unknown;
       }>(() => {
         if (selector) {
@@ -504,18 +503,25 @@ export class GlobalStore<
         return this.stateWrapper;
       });
 
+      const invokerSetStateRef = useRef(null);
+
+      // this use effect avoid having errors when using strict mode
+      useEffect(() => {
+        invokerSetStateRef.current = setState;
+
+        return () => {
+          this.subscribers.delete(invokerSetStateRef.current);
+        };
+      }, [setState]);
+
+      const invokerSetState = invokerSetStateRef.current;
+
       this.updateSubscription({
         invokerSetState,
         stateWrapper,
         selector,
         config,
       });
-
-      useEffect(() => {
-        return () => {
-          this.subscribers.delete(invokerSetState);
-        };
-      }, []);
 
       const stateOrchestrator = useMemo(
         () => this.getStateOrchestrator(invokerSetState),
@@ -534,6 +540,7 @@ export class GlobalStore<
         this.config.metadata ?? null,
       ] as [state: State_, setter: Setter, metadata: TMetadata];
     };
+  };
 
   /**
    * Returns an array with the a function to get the state, the state setter or the actions map, and a function to get the metadata
