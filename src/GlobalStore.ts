@@ -503,16 +503,20 @@ export class GlobalStore<
         return this.stateWrapper;
       });
 
-      const invokerSetStateRef = useRef(null);
+      const invokerSetStateRef = useRef(setState);
 
       // this use effect avoid having errors when using strict mode
       useEffect(() => {
-        invokerSetStateRef.current = setState;
+        if (setState !== invokerSetStateRef.current) {
+          this.subscribers.delete(invokerSetStateRef.current);
+        }
+      }, [setState]);
 
+      useEffect(() => {
         return () => {
           this.subscribers.delete(invokerSetStateRef.current);
         };
-      }, [setState]);
+      }, []);
 
       const invokerSetState = invokerSetStateRef.current;
 
@@ -525,7 +529,7 @@ export class GlobalStore<
 
       const stateOrchestrator = useMemo(
         () => this.getStateOrchestrator(invokerSetState),
-        []
+        [invokerSetState]
       );
 
       type State_ = State extends never | undefined | null ? TState : State;
