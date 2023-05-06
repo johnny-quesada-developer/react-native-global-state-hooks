@@ -463,6 +463,18 @@ export class GlobalStore<
       return;
     }
 
+    this.subscribers.set(invokerSetState, {
+      selector,
+      config,
+      currentState: state,
+    });
+  };
+
+  protected executeOnSubscribed = ({
+    invokerSetState,
+  }: {
+    invokerSetState: StateSetter<any>;
+  }) => {
     const { onSubscribed } = this;
     const { onSubscribed: onSubscribedFromConfig } = this.config;
 
@@ -472,20 +484,15 @@ export class GlobalStore<
       onSubscribed?.(parameters);
       onSubscribedFromConfig?.(parameters);
     }
-
-    this.subscribers.set(invokerSetState, {
-      selector,
-      config,
-      currentState: state,
-    });
   };
 
   /**
    * Returns a custom hook that allows to handle a global state
    * @returns {[TState, TStateSetter, TMetadata]} - The state, the state setter or the actions map, the metadata
    * */
-  public getHook = () => {
-    return <State = TState>(
+  public getHook =
+    () =>
+    <State = TState>(
       selector?: (state: TState) => State,
       config: UseHookConfig<State> = {}
     ) => {
@@ -503,7 +510,13 @@ export class GlobalStore<
         return this.stateWrapper;
       });
 
-      const invokerSetStateRef = useRef(setState);
+      const invokerSetStateRef = useRef(null);
+
+      if (invokerSetStateRef.current === null) {
+        this.executeOnSubscribed({ invokerSetState: setState });
+      }
+
+      invokerSetStateRef.current = setState;
 
       // this use effect avoid having errors when using strict mode
       useEffect(() => {
@@ -544,7 +557,6 @@ export class GlobalStore<
         this.config.metadata ?? null,
       ] as [state: State_, setter: Setter, metadata: TMetadata];
     };
-  };
 
   /**
    * Returns an array with the a function to get the state, the state setter or the actions map, and a function to get the metadata
