@@ -501,15 +501,6 @@ export class GlobalStore<
         };
       }, []);
 
-      // by using a ref we can avoid to lose the id when StrictMode is enabled
-      useEffect(() => {
-        if (subscriptionIdRef.current !== null) return;
-
-        subscriptionIdRef.current = uniqueId();
-
-        this.executeOnSubscribed();
-      }, []);
-
       const [stateWrapper, setState] = useState<{
         state: unknown;
       }>(() => {
@@ -524,13 +515,31 @@ export class GlobalStore<
         return this.stateWrapper;
       });
 
-      this.updateSubscription({
-        subscriptionId: subscriptionIdRef.current,
-        stateWrapper,
-        selector,
-        config,
-        callback: setState,
-      });
+      // by using a ref we can avoid to lose the id when StrictMode is enabled
+      useEffect(() => {
+        if (subscriptionIdRef.current !== null) return;
+
+        subscriptionIdRef.current = uniqueId();
+      }, []);
+
+      useEffect(() => {
+        const subscriptionId = subscriptionIdRef.current;
+        if (subscriptionId === null) return;
+
+        const isFirstTime = !this.subscribers.has(subscriptionId);
+
+        this.updateSubscription({
+          subscriptionId,
+          stateWrapper,
+          selector,
+          config,
+          callback: setState,
+        });
+
+        if (isFirstTime) {
+          this.executeOnSubscribed();
+        }
+      }, [stateWrapper]);
 
       type State_ = State extends never | undefined | null ? TState : State;
 

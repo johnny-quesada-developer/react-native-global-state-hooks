@@ -137,7 +137,7 @@ describe("GlobalStore Basic", () => {
 
     expect(getState()).toBe(stateValue2);
     expect(useState).toHaveBeenCalledTimes(2);
-    expect(useEffect).toHaveBeenCalledTimes(4);
+    expect(useEffect).toHaveBeenCalledTimes(6);
 
     expect(setter1).toBeCalledTimes(1);
     expect(setter2).toBeCalledTimes(1);
@@ -190,7 +190,7 @@ describe("GlobalStore with actions", () => {
 
     expect(getState()).toBe(countStoreInitialState);
     expect(useState).toHaveBeenCalledTimes(2);
-    expect(useEffect).toHaveBeenCalledTimes(4);
+    expect(useEffect).toHaveBeenCalledTimes(6);
 
     expect(setter1).toBeCalledTimes(0);
     expect(setter2).toBeCalledTimes(0);
@@ -212,7 +212,7 @@ describe("GlobalStore with actions", () => {
 
     expect(getState()).toBe(2);
     expect(useState).toHaveBeenCalledTimes(2);
-    expect(useEffect).toHaveBeenCalledTimes(4);
+    expect(useEffect).toHaveBeenCalledTimes(6);
 
     expect(setter1).toBeCalledTimes(1);
     expect(setter2).toBeCalledTimes(1);
