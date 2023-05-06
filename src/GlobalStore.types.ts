@@ -191,9 +191,7 @@ export type StateConfigCallbackParam<
     | ActionCollectionConfig<TState, TMetadata>
     | StateSetter<TState> = StateSetter<TState>
 > = {
-  actions: TStateSetter extends ActionCollectionConfig<TState, TMetadata>
-    ? ActionCollectionResult<TState, TMetadata, TStateSetter>
-    : null;
+  actions: ActionCollectionResult<TState, TMetadata, TStateSetter>;
 } & StoreTools<TState, TMetadata>;
 
 /**
@@ -442,10 +440,12 @@ export type SubscribeToEmitter<TState> = <
   param3?: TParam3
 ) => UnsubscribeCallback;
 
-export type SubscriberParameters<TState> = {
-  selector?: (state: TState) => unknown;
-  config?: UseHookConfig<any> | SubscribeCallbackConfig<any>;
-  currentState?: unknown;
+export type SubscriberParameters = {
+  subscriptionId: string;
+  selector: SelectorCallback<any, any>;
+  config: UseHookConfig<any> | SubscribeCallbackConfig<any>;
+  currentState: unknown;
+  callback: SubscriptionCallback;
 };
 
 export type SubscriptionCallback = (params: { state: unknown }) => void;

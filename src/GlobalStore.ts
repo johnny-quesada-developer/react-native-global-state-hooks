@@ -1,5 +1,5 @@
-import { shallowCompare } from "./GlobalStore.utils";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { shallowCompare, uniqueId } from "./GlobalStore.utils";
+import { useEffect, useRef, useState } from "react";
 
 import {
   ActionCollectionConfig,
@@ -53,8 +53,13 @@ export class GlobalStore<
    * list of all the subscribers setState functions
    * @template {TState} TState - The type of the state object
    * */
-  public subscribers: Map<SubscriptionCallback, SubscriberParameters<TState>> =
-    new Map();
+  public subscribers: Map<string, SubscriberParameters> = new Map();
+
+  /**
+   * Actions of the store
+   */
+  public actions?: ActionCollectionResult<TState, TMetadata, TStateSetter> =
+    null;
 
   /**
    * additional configuration for the store
@@ -224,12 +229,19 @@ export class GlobalStore<
   }
 
   protected initialize = async () => {
+    /**
+     * actions map is created just once after the initialization
+     */
+    if (this.actionsConfig) {
+      this.actions = this.getStoreActionsMap();
+    }
+
     const { onInit } = this;
     const { onInit: onInitFromConfig } = this.config;
 
     if (!onInit && !onInitFromConfig) return;
 
-    const parameters = this.getConfigCallbackParam({});
+    const parameters = this.getConfigCallbackParam();
 
     onInit?.(parameters);
     onInitFromConfig?.(parameters);
@@ -238,15 +250,12 @@ export class GlobalStore<
   /**
    * set the state and update all the subscribers
    * @param {StateSetter<TState>} setter - The setter function or the value to set
-   * @param {SetStateCallback} invokerSetState - The setState function of the component that invoked the state change (optional) (default: null) this is used to updated first the component that invoked the state change
    * */
   protected setState = ({
-    invokerSetState,
     state,
     forceUpdate,
   }: {
     state: TState;
-    invokerSetState?: SetStateCallback;
     forceUpdate: boolean;
   }) => {
     // update the main state
@@ -254,11 +263,8 @@ export class GlobalStore<
       state,
     };
 
-    const executeSetState = (
-      setter: SubscriptionCallback,
-      parameters: SubscriberParameters<TState>
-    ) => {
-      const { selector, currentState, config } = parameters;
+    const executeSetState = (parameters: SubscriberParameters) => {
+      const { selector, callback, currentState, config } = parameters;
 
       const compareCallback = (() => {
         if (config?.isEqual || config?.isEqual === null) {
@@ -275,20 +281,12 @@ export class GlobalStore<
 
       if (!forceUpdate && compareCallback?.(currentState, newState)) return;
 
-      setter({ state: newState });
+      callback({ state: newState });
     };
 
-    if (invokerSetState) {
-      const parameters = this.subscribers.get(invokerSetState);
-
-      executeSetState(invokerSetState, parameters);
-    }
-
     // update all the subscribers
-    Array.from(this.subscribers.entries()).forEach(([setState, parameters]) => {
-      if (setState === invokerSetState) return;
-
-      executeSetState(setState, parameters);
+    Array.from(this.subscribers.values()).forEach((parameters) => {
+      executeSetState(parameters);
     });
   };
 
@@ -330,7 +328,7 @@ export class GlobalStore<
       state: initialState,
     };
 
-    const subscription: SubscriptionCallback = ({
+    const subscriptionCallback: SubscriptionCallback = ({
       state,
     }: {
       state: unknown;
@@ -346,7 +344,7 @@ export class GlobalStore<
 
     return {
       stateWrapper,
-      subscription,
+      subscriptionCallback,
     };
   };
 
@@ -366,10 +364,7 @@ export class GlobalStore<
     // if there is no subscription callback return the state
     if (!$callback) return this.stateWrapper.state;
 
-    const changesSubscribers: Map<
-      SubscriptionCallback,
-      SubscriberParameters<TState>
-    > = new Map();
+    const changesSubscribers: string[] = [];
 
     const subscribe = ((param1, param2, param3) => {
       const hasExplicitSelector = typeof param2 === "function";
@@ -386,30 +381,34 @@ export class GlobalStore<
         hasExplicitSelector ? param3 : param2
       ) as SubscribeCallbackConfig<unknown>;
 
-      const { subscription, stateWrapper } = this.createChangesSubscriber({
-        selector,
-        callback,
-        config,
-      });
+      const { subscriptionCallback, stateWrapper } =
+        this.createChangesSubscriber({
+          selector,
+          callback,
+          config,
+        });
 
-      this.updateSubscription({
+      const subscriptionId = uniqueId();
+
+      const subscription = this.updateSubscription({
+        subscriptionId,
         selector,
         config,
         stateWrapper,
-        invokerSetState: subscription,
+        callback: subscriptionCallback,
       });
 
-      changesSubscribers.set(subscription, { config });
+      changesSubscribers.push(subscriptionId);
     }) as SubscribeToEmitter<TState>;
 
     $callback(subscribe);
 
-    if (!changesSubscribers.size) {
+    if (!changesSubscribers.length) {
       throwNoSubscribersWereAdded();
     }
 
     return () => {
-      Array.from(changesSubscribers.keys()).forEach((subscriber) => {
+      changesSubscribers.forEach((subscriber) => {
         this.subscribers.delete(subscriber);
       });
     };
@@ -421,65 +420,62 @@ export class GlobalStore<
    * this parameter object allows to update the state, get the state, update the metadata, get the metadata
    * @returns {StateConfigCallbackParam<TState, TMetadata>} - The parameters object
    * */
-  protected getConfigCallbackParam = ({
-    invokerSetState,
-  }: {
-    invokerSetState?: SetStateCallback;
-  }): StateConfigCallbackParam<TState, TMetadata, TStateSetter> => {
-    const { setMetadata, getMetadata, getState } = this;
-
-    const setState = this.getSetStateWrapper({ invokerSetState });
-
-    const actions = this.getStoreActionsMap();
+  protected getConfigCallbackParam = (): StateConfigCallbackParam<
+    TState,
+    TMetadata,
+    TStateSetter
+  > => {
+    const { setMetadata, getMetadata, getState, actions, setStateWrapper } =
+      this;
 
     return {
       setMetadata,
       getMetadata,
       getState,
-      setState,
+      setState: setStateWrapper,
       actions,
     } as StateConfigCallbackParam<TState, TMetadata, TStateSetter>;
   };
 
-  protected updateSubscription = <State = TState>({
+  protected updateSubscription = ({
+    subscriptionId,
+    callback,
     selector,
     config = {},
     stateWrapper: { state },
-    invokerSetState,
-  }: {
-    selector?: (state: TState) => State;
-    config: UseHookConfig<any>;
+  }: Omit<SubscriberParameters, "currentState"> & {
     stateWrapper: {
       state: unknown;
     };
-    invokerSetState: SetStateCallback;
   }) => {
-    const subscriber = this.subscribers.get(invokerSetState);
+    const subscriber = this.subscribers.get(subscriptionId);
 
     if (subscriber) {
       // every time the hook is called we update the reference of the state
       subscriber.currentState = state;
 
-      return;
+      return subscriber;
     }
 
-    this.subscribers.set(invokerSetState, {
+    const newSubscriber: SubscriberParameters = {
+      subscriptionId,
       selector,
       config,
       currentState: state,
-    });
+      callback,
+    };
+
+    this.subscribers.set(subscriptionId, newSubscriber);
+
+    return newSubscriber;
   };
 
-  protected executeOnSubscribed = ({
-    invokerSetState,
-  }: {
-    invokerSetState: StateSetter<any>;
-  }) => {
+  protected executeOnSubscribed = () => {
     const { onSubscribed } = this;
     const { onSubscribed: onSubscribedFromConfig } = this.config;
 
     if (onSubscribed || onSubscribedFromConfig) {
-      const parameters = this.getConfigCallbackParam({ invokerSetState });
+      const parameters = this.getConfigCallbackParam();
 
       onSubscribed?.(parameters);
       onSubscribedFromConfig?.(parameters);
@@ -493,9 +489,27 @@ export class GlobalStore<
   public getHook =
     () =>
     <State = TState>(
-      selector?: (state: TState) => State,
+      selector?: SelectorCallback<TState, State>,
       config: UseHookConfig<State> = {}
     ) => {
+      const subscriptionIdRef = useRef(null);
+
+      // remove the subscription when the component is unmounted
+      useEffect(() => {
+        return () => {
+          this.subscribers.delete(subscriptionIdRef.current);
+        };
+      }, []);
+
+      // by using a ref we can avoid to lose the id when StrictMode is enabled
+      useEffect(() => {
+        if (subscriptionIdRef.current !== null) return;
+
+        subscriptionIdRef.current = uniqueId();
+
+        this.executeOnSubscribed();
+      }, []);
+
       const [stateWrapper, setState] = useState<{
         state: unknown;
       }>(() => {
@@ -510,40 +524,13 @@ export class GlobalStore<
         return this.stateWrapper;
       });
 
-      const invokerSetStateRef = useRef(null);
-
-      if (invokerSetStateRef.current === null) {
-        this.executeOnSubscribed({ invokerSetState: setState });
-      }
-
-      invokerSetStateRef.current = setState;
-
-      // this use effect avoid having errors when using strict mode
-      useEffect(() => {
-        if (setState !== invokerSetStateRef.current) {
-          this.subscribers.delete(invokerSetStateRef.current);
-        }
-      }, [setState]);
-
-      useEffect(() => {
-        return () => {
-          this.subscribers.delete(invokerSetStateRef.current);
-        };
-      }, []);
-
-      const invokerSetState = invokerSetStateRef.current;
-
       this.updateSubscription({
-        invokerSetState,
+        subscriptionId: subscriptionIdRef.current,
         stateWrapper,
         selector,
         config,
+        callback: setState,
       });
-
-      const stateOrchestrator = useMemo(
-        () => this.getStateOrchestrator(invokerSetState),
-        [invokerSetState]
-      );
 
       type State_ = State extends never | undefined | null ? TState : State;
 
@@ -553,7 +540,7 @@ export class GlobalStore<
 
       return [
         stateWrapper.state,
-        stateOrchestrator,
+        this.getStateOrchestrator(),
         this.config.metadata ?? null,
       ] as [state: State_, setter: Setter, metadata: TMetadata];
     };
@@ -567,48 +554,28 @@ export class GlobalStore<
 
     const { getMetadata, getState } = this;
 
-    type Setter = keyof TStateSetter extends never
-      ? StateSetter<TState>
-      : ActionCollectionResult<TState, TMetadata, TStateSetter>;
-
     return [getState, stateOrchestrator, getMetadata] as [
       StateGetter<TState>,
-      Setter,
+      typeof stateOrchestrator,
       MetadataGetter<TMetadata>
     ];
   };
 
   /**
-   * returns a wrapper for the setState function that will update the state and all the subscribers
-   * @param {{ invokerSetState?: SetStateCallback }} parameters - The setState function of the component that invoked the state change (optional) (default: null) this is used to updated first the component that invoked the state change
-   * @returns {StateSetter<TState>} - The state setter
-   * */
-  protected getSetStateWrapper = ({
-    invokerSetState,
-  }: {
-    invokerSetState?: SetStateCallback;
-  } = {}): StateSetter<TState> => {
-    const setState = ((setter: StateSetter<TState>, { forceUpdate } = {}) => {
-      this.computeSetState({ invokerSetState, setter, forceUpdate });
-    }) as StateSetter<TState>;
-
-    return setState;
-  };
-
-  /**
    * Returns the state setter or the actions map
-   * @param {{ invokerSetState?: SetStateCallback }} parameters - The setState function of the component that invoked the state change (optional) (default: null) this is used to updated first the component that invoked the state change
    * @returns {TStateSetter} - The state setter or the actions map
    * */
-  protected getStateOrchestrator(invokerSetState?: SetStateCallback) {
-    const stateHasCustomActions = this.actionsConfig;
+  protected getStateOrchestrator = () => {
+    return (() => {
+      if (this.actions) {
+        return this.actions;
+      }
 
-    if (stateHasCustomActions) {
-      return this.getStoreActionsMap({ invokerSetState });
-    }
-
-    return this.getSetStateWrapper({ invokerSetState });
-  }
+      return this.setStateWrapper;
+    })() as keyof TStateSetter extends never
+      ? StateSetter<TState>
+      : ActionCollectionResult<TState, TMetadata, TStateSetter>;
+  };
 
   /**
    * Calculate whenever or not we should compute the callback parameters on the state change
@@ -637,17 +604,11 @@ export class GlobalStore<
    * the function also execute the functions:
    * - onStateChanged (if defined) - this function is executed after the state change
    * - computePreventStateChange (if defined) - this function is executed before the state change and it should return a boolean value that will be used to determine if the state change should be prevented or not
-   * @param {{ setter: StateSetter<TState>; invokerSetState?: SetStateCallback }} parameters - The state setter and the setState function of the component that invoked the state change (optional) (default: null) this is used to updated first the component that invoked the state change
    */
-  protected computeSetState = ({
+  protected setStateWrapper: StateSetter<TState> = (
     setter,
-    invokerSetState,
-    forceUpdate,
-  }: {
-    setter: StateSetter<TState>;
-    invokerSetState?: SetStateCallback;
-    forceUpdate: boolean;
-  }) => {
+    { forceUpdate } = {}
+  ) => {
     const isSetterFunction = typeof setter === "function";
     const previousState = this.stateWrapper.state;
 
@@ -658,18 +619,12 @@ export class GlobalStore<
     // if the state didn't change, we don't need to do anything
     if (!forceUpdate && Object.is(this.stateWrapper.state, newState)) return;
 
-    const itHasStateCallbacks = this.hasStateCallbacks();
-
-    const actions = itHasStateCallbacks && this.getStoreActionsMap({});
-    const setState =
-      itHasStateCallbacks && this.getSetStateWrapper({ invokerSetState });
-
-    const { setMetadata, getMetadata, getState } = this;
+    const { setMetadata, getMetadata, getState, actions, setState } = this;
 
     const callbackParameter = {
       setMetadata,
       getMetadata,
-      setState: setState || null,
+      setState: setState,
       getState,
       actions,
       previousState,
@@ -691,7 +646,6 @@ export class GlobalStore<
 
     this.setState({
       forceUpdate,
-      invokerSetState,
       state: newState,
     });
 
@@ -706,32 +660,31 @@ export class GlobalStore<
 
   /**
    * This creates a map of actions that can be used to modify or interact with the state
-   * @param {{ invokerSetState?: SetStateCallback }} parameters - The setState function of the component that invoked the state change (optional) (default: null) this is used to updated first the component that invoked the state change
    * @returns {ActionCollectionResult<TState, TMetadata, TStateSetter>} - The actions map result of the configuration object passed to the constructor
    * */
-  protected getStoreActionsMap = ({
-    invokerSetState,
-  }: {
-    invokerSetState?: SetStateCallback;
-  } = {}): ActionCollectionResult<TState, TMetadata, TStateSetter> => {
+  protected getStoreActionsMap = (): ActionCollectionResult<
+    TState,
+    TMetadata,
+    TStateSetter
+  > => {
     if (!this.actionsConfig) return null;
 
-    const { actionsConfig, setMetadata } = this;
-    const config = actionsConfig as ActionCollectionConfig<TState, TMetadata>;
+    const {
+      actionsConfig,
+      setMetadata,
+      setStateWrapper,
+      getState,
+      getMetadata,
+    } = this;
 
-    const actionsKeys = Object.keys(config);
-    const setState: StateSetter<TState> = this.getSetStateWrapper({
-      invokerSetState,
-    });
-
-    const { getState, getMetadata } = this;
+    const actionsKeys = Object.keys(actionsConfig);
 
     // we bind the functions to the actions object to allow reusing actions in the same api config by using the -this- keyword
     const actions: ActionCollectionResult<TState, TMetadata, TStateSetter> =
       actionsKeys.reduce((accumulator, action_key) => {
         Object.assign(accumulator, {
           [action_key](...parameters: unknown[]) {
-            const actionConfig = config[action_key];
+            const actionConfig = actionsConfig[action_key];
             const action = actionConfig.apply(actions, parameters);
             const actionIsNotAFunction = typeof action !== "function";
 
@@ -742,7 +695,7 @@ export class GlobalStore<
 
             // executes the actions bringing access to the state setter and a copy of the state
             const result = action.call(actions, {
-              setState,
+              setState: setStateWrapper,
               getState,
               setMetadata,
               getMetadata,

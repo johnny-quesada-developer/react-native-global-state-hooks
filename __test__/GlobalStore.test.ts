@@ -52,9 +52,7 @@ const createCountStoreWithActions = (spy?: jest.Mock) => {
         state: number;
       };
       actionsConfig: ActionCollectionConfig<number, unknown>;
-      getStoreActionsMap: (param: {
-        invokerSetState?: React.Dispatch<React.SetStateAction<number>>;
-      }) => ActionCollectionResult<
+      getStoreActionsMap: () => ActionCollectionResult<
         number,
         null,
         ActionCollectionConfig<number, null>
@@ -132,7 +130,8 @@ describe("GlobalStore Basic", () => {
     useHook();
     useHook();
 
-    const [[setter1], [setter2]] = Array.from(store.subscribers.entries());
+    const [[, { callback: setter1 }], [__, { callback: setter2 }]] =
+      store.subscribers;
 
     setState(stateValue2);
 
@@ -153,7 +152,7 @@ describe("GlobalStore with actions", () => {
     expect(store.stateWrapper.state).toBe(countStoreInitialState);
     expect(store.actionsConfig).toBeDefined();
 
-    const actions = store.getStoreActionsMap({});
+    const actions = store.getStoreActionsMap();
 
     expect(actions).not.toBeInstanceOf(Function);
     expect(actions.increase).toBeDefined();
@@ -186,7 +185,8 @@ describe("GlobalStore with actions", () => {
     useHook();
     useHook();
 
-    const [[setter1], [setter2]] = store.subscribers;
+    const [[, { callback: setter1 }], [__, { callback: setter2 }]] =
+      store.subscribers;
 
     expect(getState()).toBe(countStoreInitialState);
     expect(useState).toHaveBeenCalledTimes(2);
@@ -205,7 +205,8 @@ describe("GlobalStore with actions", () => {
     useHook();
     useHook();
 
-    const [[setter1], [setter2]] = store.subscribers;
+    const [[, { callback: setter1 }], [__, { callback: setter2 }]] =
+      store.subscribers;
 
     actions.increase();
 
