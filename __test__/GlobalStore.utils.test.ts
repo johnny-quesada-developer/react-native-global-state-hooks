@@ -48,4 +48,15 @@ describe("shallowCompare", () => {
 
     expect(shallowCompare(object, { ...object, a: 3, b: 4 })).toBe(false);
   });
+
+  it("should handle null and undefined", () => {
+    expect(shallowCompare(null, null)).toBe(true);
+    expect(shallowCompare(undefined, undefined)).toBe(true);
+    expect(shallowCompare(null, undefined)).toBe(false);
+    expect(shallowCompare(undefined, null)).toBe(false);
+
+    expect(shallowCompare(null, {})).toBe(false);
+    expect(shallowCompare(undefined, {})).toBe(false);
+    expect(shallowCompare({ a: null }, { a: null })).toBe(true);
+  });
 });

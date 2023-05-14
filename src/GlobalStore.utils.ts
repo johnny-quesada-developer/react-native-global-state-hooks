@@ -1,4 +1,4 @@
-import { isPrimitive, isDate } from "json-storage-formatter";
+import { isPrimitive, isDate, isNil } from "json-storage-formatter";
 
 /**
  * Shallow compare two values and return true if they are equal.
@@ -17,6 +17,8 @@ export const shallowCompare = <T>(value1: T, value2: T) => {
   if (typeofValue1 !== typeofValue2) return false;
 
   if (
+    isNil(value1) ||
+    isNil(value2) ||
     (isPrimitive(value1) && isPrimitive(value2)) ||
     (isDate(value1) && isDate(value2)) ||
     (typeofValue1 === "function" && typeofValue2 === "function")
