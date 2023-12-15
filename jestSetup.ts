@@ -1,7 +1,12 @@
 import React from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+import { getFakeAsyncStorage } from "./__test__/getFakeAsyncStorage";
+
+const { fakeAsyncStorage: asyncStorage } = getFakeAsyncStorage();
 
 beforeEach(() => {
-  spyOn(React, "useState").and.callFake(((initialState) => {
+  jest.spyOn(React, "useState").mockImplementation(((initialState) => {
     const value =
       typeof initialState === "function" ? initialState() : initialState;
 
@@ -20,6 +25,10 @@ beforeEach(() => {
 
     return [value, setState];
   }) as any);
+
+  jest.spyOn(AsyncStorage, "getItem").mockImplementation(asyncStorage.getItem);
+
+  jest.spyOn(AsyncStorage, "setItem").mockImplementation(asyncStorage.setItem);
 
   let index = 0;
   const map = new Map();
@@ -55,13 +64,13 @@ beforeEach(() => {
     return value;
   });
 
-  spyOn(React, "useEffect").and.callFake(mockMemo);
+  jest.spyOn(React, "useEffect").mockImplementation(mockMemo);
 
-  spyOn(React, "useLayoutEffect").and.callFake(mockMemo);
+  jest.spyOn(React, "useLayoutEffect").mockImplementation(mockMemo);
 
-  spyOn(React, "useMemo").and.callFake(mockMemo);
+  jest.spyOn(React, "useMemo").mockImplementation(mockMemo);
 
-  spyOn(React, "useRef").and.callFake(mockUseRef);
+  jest.spyOn(React, "useRef").mockImplementation(mockUseRef as any);
 });
 
 afterEach(() => {

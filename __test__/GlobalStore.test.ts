@@ -1,5 +1,3 @@
-import { GlobalStore } from "../src/GlobalStore";
-
 import {
   CancelablePromise,
   createDecoupledPromise,
@@ -9,12 +7,14 @@ import {
   ActionCollectionConfig,
   ActionCollectionResult,
   GlobalStoreConfig,
-  StoreTools,
-} from "../src/GlobalStore.types";
+  GlobalStore,
+} from "../src";
 
 import { useState, useEffect } from "react";
 import { formatFromStore, formatToStore } from "json-storage-formatter";
 import { getFakeAsyncStorage } from "./getFakeAsyncStorage";
+import { TMetadataBase } from "GlobalStore.types";
+import { StoreTools } from "react-hooks-global-states";
 
 const countStoreInitialState = 1;
 const createCountStoreWithActions = (spy?: jest.Mock) => {
@@ -57,7 +57,11 @@ const createCountStoreWithActions = (spy?: jest.Mock) => {
         null,
         ActionCollectionConfig<number, null>
       >;
-    } & GlobalStoreConfig<number, null, ActionCollectionConfig<number, null>>);
+    } & GlobalStoreConfig<
+      number,
+      null,
+      ActionCollectionConfig<number, TMetadataBase<null>>
+    >);
 };
 
 describe("GlobalStore Basic", () => {

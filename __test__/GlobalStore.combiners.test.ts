@@ -1,7 +1,10 @@
 import { createDecoupledPromise } from "cancelable-promise-jq";
-import { Subscribe } from "../src/GlobalStore.types";
-import { combineAsyncGetters } from "../src/GlobalStore.combiners";
-import { createGlobalStateWithDecoupledFuncs } from "../src/GlobalStore.functionHooks";
+
+import {
+  Subscribe,
+  createGlobalStateWithDecoupledFuncs,
+  combineAsyncGetters,
+} from "../src";
 
 describe("combiners", () => {
   it("should combine two global states", () => {

@@ -1,12 +1,13 @@
 import {
+  ActionCollectionConfig,
   StateSetter,
   StateConfigCallbackParam,
   StateChangesParam,
-  ActionCollectionConfig,
-  GlobalStoreConfig,
-} from "./GlobalStore.types";
+} from "react-hooks-global-states";
 
 import { GlobalStore } from "./GlobalStore";
+
+import { GlobalStoreConfig, TMetadataBase } from "./GlobalStore.types";
 
 /**
  * @description
@@ -16,9 +17,9 @@ import { GlobalStore } from "./GlobalStore";
  */
 export abstract class GlobalStoreAbstract<
   TState,
-  TMetadata = null,
+  TMetadata extends Record<string, unknown>,
   TStateSetter extends
-    | ActionCollectionConfig<TState, TMetadata>
+    | ActionCollectionConfig<TState, TMetadataBase<TMetadata>>
     | StateSetter<TState> = StateSetter<TState>
 > extends GlobalStore<TState, TMetadata, TStateSetter> {
   constructor(
@@ -30,13 +31,21 @@ export abstract class GlobalStoreAbstract<
   }
 
   protected onInit = (
-    parameters: StateConfigCallbackParam<TState, TMetadata, TStateSetter>
+    parameters: StateConfigCallbackParam<
+      TState,
+      TMetadataBase<TMetadata>,
+      TStateSetter
+    >
   ) => {
     this.onInitialize(parameters);
   };
 
   protected onStateChanged = (
-    parameters: StateChangesParam<TState, TMetadata, TStateSetter>
+    parameters: StateChangesParam<
+      TState,
+      TMetadataBase<TMetadata>,
+      TStateSetter
+    >
   ) => {
     this.onChange(parameters);
   };
@@ -47,7 +56,11 @@ export abstract class GlobalStoreAbstract<
     getMetadata,
     getState,
     actions,
-  }: StateConfigCallbackParam<TState, TMetadata, TStateSetter>) => void;
+  }: StateConfigCallbackParam<
+    TState,
+    TMetadataBase<TMetadata>,
+    TStateSetter
+  >) => void;
 
   protected abstract onChange: ({
     setState,
@@ -55,5 +68,5 @@ export abstract class GlobalStoreAbstract<
     getMetadata,
     getState,
     actions,
-  }: StateChangesParam<TState, TMetadata, TStateSetter>) => void;
+  }: StateChangesParam<TState, TMetadataBase<TMetadata>, TStateSetter>) => void;
 }

@@ -1,23 +1,20 @@
 import { createDecoupledPromise } from "cancelable-promise-jq";
 
 import {
-  StoreTools,
   Subscribe,
   SubscriberCallback,
   SubscribeToEmitter,
-} from "../src/GlobalStore.types";
-
-import { useState } from "react";
-import { formatFromStore, formatToStore } from "json-storage-formatter";
-import { getFakeAsyncStorage } from "./getFakeAsyncStorage";
-
-import {
   createCustomGlobalStateWithDecoupledFuncs,
   createGlobalStateWithDecoupledFuncs,
   createGlobalState,
   createDerivate,
   createDerivateEmitter,
-} from "../src/GlobalStore.functionHooks";
+} from "../src";
+
+import { useState } from "react";
+import { formatFromStore, formatToStore } from "json-storage-formatter";
+import { getFakeAsyncStorage } from "./getFakeAsyncStorage";
+import { StoreTools } from "react-hooks-global-states";
 
 describe("basic", () => {
   it("should be able to create a new instance with state", () => {
@@ -118,6 +115,8 @@ describe("with actions", () => {
 
     expect(useCount).toBeInstanceOf(Function);
     expect(metadata.modificationsCounter).toBe(0);
+    expect(metadata.asyncStorageKey).toBeUndefined();
+    expect(metadata.isAsyncStorageReady).toBeUndefined();
 
     expect(actions).toBeInstanceOf(Object);
     expect(actions.decrease).toBeInstanceOf(Function);
@@ -187,7 +186,7 @@ describe("with configuration callbacks", () => {
 
     expect(onSubscribedSpy).toBeCalledTimes(0);
 
-    const [state, setState] = useCount();
+    const [state, setState, metadata] = useCount();
 
     expect(onSubscribedSpy).toBeCalledTimes(1);
 
@@ -210,7 +209,12 @@ describe("with configuration callbacks", () => {
 
     expect(onStateChangedSpy).toBeCalledTimes(0);
 
-    const [, setState] = useCount();
+    const [, setState, metadata] = useCount();
+
+    /*
+     * By default if not metadata is passed, or async storage is not required, the metadata will be null
+     */
+    expect(metadata).toBe(null);
 
     setState({ a: true });
 

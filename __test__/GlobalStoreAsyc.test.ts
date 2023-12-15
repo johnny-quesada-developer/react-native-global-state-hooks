@@ -1,15 +1,21 @@
 import { createDecoupledPromise } from "cancelable-promise-jq";
-import { formatToStore } from "json-storage-formatter";
-import { Subscribe, SubscriberCallback } from "../src/GlobalStore.types";
+
+import asyncStorage from "@react-native-async-storage/async-storage";
+
 import {
+  Subscribe,
+  SubscriberCallback,
   GlobalStore,
-  asyncStorage,
+  createGlobalStateWithDecoupledFuncs,
   createGlobalState,
-} from "./GlobalStoreAsync";
+  formatToStore,
+} from "../src";
+
+import React = require("react");
 
 describe("GlobalStoreAsync Basics", () => {
   it("should create a store with async storage", async () => {
-    asyncStorage.setItem("counter", 0);
+    asyncStorage.setItem("counter", 0 as unknown as string);
 
     const { promise, resolve } = createDecoupledPromise();
 
@@ -18,10 +24,10 @@ describe("GlobalStoreAsync Basics", () => {
         createDecoupledPromise();
 
       const storage = new GlobalStore(0, {
-        metadata: {
-          asyncStorageKey: "counter",
-          isAsyncStorageReady: false,
+        asyncStorage: {
+          key: "counter",
         },
+        metadata: {},
       });
 
       const [getState, _, getMetadata] = storage.getHookDecoupled();
@@ -70,7 +76,10 @@ describe("GlobalStoreAsync Basics", () => {
 
 describe("createGlobalState", () => {
   it("should create a store with async storage", async () => {
-    asyncStorage.setItem("data", formatToStore(new Map([["prop", 0]])));
+    asyncStorage.setItem(
+      "data",
+      formatToStore(new Map([["prop", 0]])) as unknown as string
+    );
 
     const { promise, resolve } = createDecoupledPromise();
 
@@ -78,16 +87,18 @@ describe("createGlobalState", () => {
       const { promise: onStateChangedPromise, resolve: onStateChangedResolve } =
         createDecoupledPromise();
 
-      const [useData] = createGlobalState(new Map<string, number>(), {
-        config: {
-          asyncStorageKey: "data",
+      const useData = createGlobalState(new Map<string, number>(), {
+        asyncStorage: {
+          key: "data",
         },
+        metadata: {},
         onStateChanged: onStateChangedResolve,
       });
 
-      let [data, setData, metadata] = useData();
+      let hook = useData();
+      let [data, setData, metadata] = hook;
 
-      expect(metadata.isAsyncStorageReady).toBe(null);
+      expect(metadata?.isAsyncStorageReady).toBe(false);
 
       await onStateChangedPromise;
 
@@ -115,7 +126,7 @@ describe("createGlobalState", () => {
 
 describe("getter subscriptions custom global state", () => {
   it("should subscribe to changes from getter", () => {
-    const [_, getter, setter] = createGlobalState({
+    const [_, getter, setter] = createGlobalStateWithDecoupledFuncs({
       a: 3,
       b: 2,
     });
