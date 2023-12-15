@@ -34,7 +34,7 @@ export {
   AvoidNever,
   MetadataSetter,
   StateChanges,
-  // StoreTools,
+  StoreTools,
   ActionCollectionConfig,
   ActionCollectionResult,
   // GlobalStoreConfig,

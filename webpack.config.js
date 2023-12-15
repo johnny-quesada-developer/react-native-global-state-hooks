@@ -55,6 +55,9 @@ module.exports = {
       },
     ],
   },
+  optimization: {
+    minimize: false, // Disable code compression
+  },
   plugins: [
     new CleanWebpackPlugin({
       cleanAfterEveryBuildPatterns: ["**/__test__/**"],
