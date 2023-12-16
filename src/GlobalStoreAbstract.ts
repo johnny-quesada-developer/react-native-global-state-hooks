@@ -1,12 +1,13 @@
+import { StateSetter } from "react-hooks-global-states";
+
+import { GlobalStore } from "./GlobalStore";
+
 import {
-  StateSetter,
+  GlobalStoreConfig,
   StateConfigCallbackParam,
   StateChangesParam,
   ActionCollectionConfig,
-  GlobalStoreConfig,
 } from "./GlobalStore.types";
-
-import { GlobalStore } from "./GlobalStore";
 
 /**
  * @description

@@ -1,25 +1,22 @@
+import * as GlobalStoreBase from "react-hooks-global-states";
+
 import {
-  ActionCollectionConfig,
-  StateConfigCallbackParam,
-  StateChangesParam,
-  StateSetter,
-  ActionCollectionResult,
-  UseHookConfig,
-  AvoidNever,
-  UnsubscribeCallback,
-  StateHook,
-  StateGetter,
-  SubscribeCallback,
-  Subscribe,
   createStateConfig,
-  CustomGlobalHookBuilderParams,
   CustomGlobalHookParams,
-  SelectorCallback,
-  SubscribeCallbackConfig,
-  SubscribeToEmitter,
+  TMetadataResult,
+  ActionCollectionConfig,
+  ActionCollectionResult,
 } from "./GlobalStore.types";
 
 import { GlobalStore } from "./GlobalStore";
+
+import {
+  AvoidNever,
+  CustomGlobalHookBuilderParams,
+  StateGetter,
+  StateHook,
+  StateSetter,
+} from "react-hooks-global-states";
 
 /**
  * Creates a global state with the given state and config.
@@ -45,10 +42,10 @@ export const createGlobalStateWithDecoupledFuncs = <
     ? StateSetter<TState>
     : ActionCollectionResult<TState, TMetadata, TActions>;
 
-  return [store.getHook(), getState, setter] as [
-    StateHook<TState, Setter, TMetadata>,
-    StateGetter<TState>,
-    Setter
+  return [store.getHook(), getState, setter] as unknown as [
+    hook: StateHook<TState, Setter, TMetadataResult<TMetadata>>,
+    getter: StateGetter<TState>,
+    setter: Setter
   ];
 };
 
@@ -79,12 +76,15 @@ export const createGlobalState = <
  * You can use this function to create a store with async storage.
  */
 export const createCustomGlobalStateWithDecoupledFuncs = <
-  TInheritMetadata = null,
-  TCustomConfig = null
+  TInheritMetadata extends Record<string, unknown>,
+  TCustomConfig extends Record<string, unknown>
 >({
   onInitialize,
   onChange,
-}: CustomGlobalHookBuilderParams<TInheritMetadata, TCustomConfig>) => {
+}: CustomGlobalHookBuilderParams<
+  AvoidNever<TInheritMetadata>,
+  AvoidNever<TCustomConfig>
+>) => {
   /**
    * @description
    * Use this function to create a custom global store.
@@ -96,10 +96,7 @@ export const createCustomGlobalStateWithDecoupledFuncs = <
   return <
     TState,
     TMetadata = null,
-    TActions extends ActionCollectionConfig<
-      TState,
-      AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>
-    > | null = null
+    TActions extends ActionCollectionConfig<TState, TMetadata> | null = null
   >(
     state: TState,
     {
@@ -107,10 +104,10 @@ export const createCustomGlobalStateWithDecoupledFuncs = <
       onInit,
       onStateChanged,
       ...parameters
-    }: CustomGlobalHookParams<
+    }: GlobalStoreBase.CustomGlobalHookParams<
       TCustomConfig,
       TState,
-      AvoidNever<TInheritMetadata> & AvoidNever<TMetadata>,
+      TMetadata,
       TActions
     > = {
       config: null,
@@ -118,138 +115,29 @@ export const createCustomGlobalStateWithDecoupledFuncs = <
   ) => {
     const onInitWrapper = ((callBackParameters) => {
       onInitialize(
-        callBackParameters as StateConfigCallbackParam<
-          unknown,
-          TInheritMetadata
+        callBackParameters as GlobalStoreBase.StateConfigCallbackParam<
+          any,
+          GlobalStoreBase.AvoidNever<TInheritMetadata>
         >,
-        customConfig
+        customConfig as AvoidNever<TCustomConfig>
       );
 
       onInit?.(callBackParameters);
     }) as typeof onInit;
 
-    const onStateChangeWrapper = ((callBackParameters) => {
-      onChange(
-        callBackParameters as StateChangesParam<unknown, TInheritMetadata>,
-        customConfig
-      );
+    const onStateChangeWrapper = (callBackParameters) => {
+      onChange(callBackParameters, customConfig as AvoidNever<TCustomConfig>);
 
       onStateChanged?.(callBackParameters);
-    }) as typeof onStateChanged;
-
-    return createGlobalStateWithDecoupledFuncs<
-      TState,
-      typeof parameters.metadata,
-      TActions
-    >(state, {
-      onInit: onInitWrapper,
-      onStateChanged: onStateChangeWrapper,
-      ...parameters,
-    });
-  };
-};
-
-/**
- * @description
- * Use this function to create a custom global hook which contains a fragment of the state of another hook or a fragment
- */
-export const createDerivate =
-  <TState, TSetter, TMetadata, TDerivate>(
-    useHook: StateHook<TState, TSetter, TMetadata>,
-    selector_: SelectorCallback<TState, TDerivate>,
-    config_: UseHookConfig<TDerivate> = {}
-  ) =>
-  <State = TDerivate>(
-    selector?: SelectorCallback<TDerivate, State>,
-    config: UseHookConfig<State> = null
-  ) => {
-    return useHook<State>((state) => {
-      const fragment = selector_(state);
-
-      return (selector ? selector(fragment) : fragment) as State;
-    }, (selector && config ? config : config_) as UseHookConfig<State>);
-  };
-
-/**
- * @description
- * This function allows you to create a derivate emitter
- * With this approach, you can subscribe to changes in a specific fragment or subset of the state.
- */
-export const createDerivateEmitter = <
-  TDerivate,
-  TGetter extends StateGetter<unknown>,
-  TState = Exclude<ReturnType<TGetter>, UnsubscribeCallback>
->(
-  getter: TGetter,
-  selector: SelectorCallback<TState, TDerivate>
-): SubscribeToEmitter<TDerivate> => {
-  type Infected = {
-    _father_emitter?: {
-      getter: StateGetter<unknown>;
-      selector: SelectorCallback<TState, TDerivate>;
-    };
-  };
-
-  const father_emitter = (getter as Infected)._father_emitter;
-
-  if (father_emitter) {
-    // if a subscriber is already a derivate emitter, then we need to merge the selectors
-    const selectorWrapper = (state: TState): TDerivate => {
-      const fatherFragment = father_emitter.selector(state);
-
-      return selector(fatherFragment as unknown as TState);
     };
 
-    const subscriber = createDerivateEmitter<TDerivate, TGetter, TState>(
-      father_emitter.getter as TGetter,
-      selectorWrapper
+    return createGlobalStateWithDecoupledFuncs<TState, TMetadata, TActions>(
+      state,
+      {
+        onInit: onInitWrapper,
+        onStateChanged: onStateChangeWrapper,
+        ...parameters,
+      }
     );
-
-    (subscriber as Infected)._father_emitter = {
-      getter: father_emitter.getter,
-      selector: selectorWrapper,
-    };
-
-    return subscriber;
-  }
-
-  const subscriber = <State = TDerivate>(
-    param1: SubscribeCallback<State> | SelectorCallback<TDerivate, State>,
-    param2?: SubscribeCallback<State> | SubscribeCallbackConfig<State>,
-    param3: SubscribeCallbackConfig<State> = {}
-  ) => {
-    const hasExplicitSelector = typeof param2 === "function";
-
-    const $selector = (hasExplicitSelector ? param1 : null) as SelectorCallback<
-      unknown,
-      unknown
-    >;
-
-    const callback = (
-      hasExplicitSelector ? param2 : param1
-    ) as SubscribeCallback<unknown>;
-
-    const config = (
-      hasExplicitSelector ? param3 : param2
-    ) as SubscribeCallbackConfig<unknown>;
-
-    return (getter as StateGetter<unknown>)<Subscribe>((subscribe) => {
-      subscribe(
-        (state) => {
-          const fatherFragment = selector(state as TState);
-
-          return $selector?.(fatherFragment) ?? fatherFragment;
-        },
-        callback,
-        config
-      );
-    });
   };
-
-  (subscriber as Infected)._father_emitter = {
-    getter,
-    selector,
-  };
-
-  return subscriber as SubscribeToEmitter<TDerivate>;
 };

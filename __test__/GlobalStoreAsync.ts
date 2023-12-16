@@ -6,7 +6,7 @@ import {
   StateChangesParam,
   StateConfigCallbackParam,
   StateSetter,
-} from "../src/GlobalStore.types";
+} from "../src";
 
 import { formatFromStore, formatToStore } from "json-storage-formatter";
 import { getFakeAsyncStorage } from "./getFakeAsyncStorage";
@@ -46,10 +46,11 @@ export class GlobalStore<
     if (!asyncStorageKey) return;
 
     const storedItem = (await asyncStorage.getItem(asyncStorageKey)) as string;
+
     setMetadata({
       ...metadata,
       isAsyncStorageReady: true,
-    });
+    } as TMetadata);
 
     if (storedItem === null) {
       const state = getState();
