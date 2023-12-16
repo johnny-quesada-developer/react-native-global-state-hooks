@@ -9,12 +9,12 @@ import {
   createGlobalState,
   createDerivate,
   createDerivateEmitter,
+  StoreTools,
 } from "../src";
 
 import { useState } from "react";
 import { formatFromStore, formatToStore } from "json-storage-formatter";
 import { getFakeAsyncStorage } from "./getFakeAsyncStorage";
-import { StoreTools } from "react-hooks-global-states";
 
 describe("basic", () => {
   it("should be able to create a new instance with state", () => {
@@ -501,7 +501,7 @@ describe("custom global hooks", () => {
             };
           },
           increase: () => {
-            return ({ setState }) => {
+            return ({ setState }: StoreTools) => {
               setState((state) => state + 1);
 
               $actions.log("increase");

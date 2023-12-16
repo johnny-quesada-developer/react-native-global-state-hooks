@@ -32,6 +32,29 @@ return <Button onClick={() => setCount((count) => count + 1)}>{count}</Button>;
 
 Isn't it cool? It works just like a regular **useState**. Notice the only difference is that now you don't need to provide the initial value since this is a global hook, and the initial value has already been provided.
 
+# Using async persist storage
+
+Just add a key for the async storage
+
+```ts
+const useCountPersisted = createGlobalState(1, {
+  asyncStorage: {
+    key: "count",
+  },
+});
+```
+
+After this the metadata of the hooks will now include a flag which will help you to determinate if the async storage was already reached.
+
+```ts
+const [count, setCount, { isAsyncStorageReady }] = useCountPersisted();
+```
+
+If no key is provided, the default metadata is null. Otherwise, it's set to **{ isAsyncStorageReady: false }**.
+
+Upon the first successful retrieval from **AsyncStorage**, components will re-render with **{ isAsyncStorageReady: true }** in the metadata.
+The metadata and components will be updated and re-rendered even if there's no difference between the value stored in **AsyncStorage** and the store's default value. This is the only instance where the metadata forces a re-render, after this the metadata will not update the component
+
 # Selectors
 
 What if you already have a global state that you want to subscribe to, but you don't want your component to listen to all the changes of the state, only a small portion of it? Let's create a more complex **state**
@@ -468,6 +491,28 @@ export const [useCount, getCount, $actions] =
 In the example the hook will work the same and you'll have access to the correct typing.
 
 # Extending Global Hooks
+
+## `[IMPORTANT!]`: From version 6.0.0, you can continue creating your custom implementations or using your previous ones. However, now AsyncStorage is already integrated into the global hooks with @react-native-async-storage/async-storage. You simply need to add a key for the persistent storage, and that will do the trick.
+
+```ts
+// this is all you need fo using async storage
+const useCountPersisted = createGlobalState(1, {
+  asyncStorage: {
+    key: "count",
+  },
+});
+
+/**
+ * Usage in your components:
+ * [NOTE]: If no key is provided, the default metadata is null. Otherwise, it's set to { isAsyncStorageReady: false }.
+ *
+ * Upon the first successful retrieval from AsyncStorage, components will re-render with { isAsyncStorageReady: true } in the metadata.
+ * The metadata and components will be updated and re-rendered even if there's no difference between the value stored in AsyncStorage and the store's default value. This is the only instance where the metadata forces a re-render, after this the metadata will not update the component
+ */
+const [count, setCount, { isAsyncStorageReady }] = useCountPersisted();
+```
+
+##### Now lets continue analizing how to create a custom GlobalStore!
 
 Creating a global hook that connects to an asyncStorage is made incredibly easy with the **createCustomGlobalState** function.
 
