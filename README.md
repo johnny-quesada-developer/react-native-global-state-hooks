@@ -1,14 +1,22 @@
-# react-native-global-state-hooks
+# react-native-global-state-hooks 🌟
 
-This is a package to easily handling **global state hooks** across your **react components**
+![Image John Avatar](https://raw.githubusercontent.com/johnny-quesada-developer/global-hooks-example/main/public/avatar2.jpeg)
 
-For seen a running example of the hooks, you can check the following link: [react-global-state-hooks-example](https://johnny-quesada-developer.github.io/react-global-state-hooks-example/)
+Hi There! Welcome to **react-native-global-state-hooks** your New State Management Solution for React Native Components 🚀
 
-To see **TODO-LIST** with the hooks and **async storage** take a look here: [todo-list-with-global-hooks](https://github.com/johnny-quesada-developer/todo-list-with-global-hooks.git).
+Are you looking for a solution to manage **global state** in your **React Native components**? Look no further!
 
-To see how to create a custom hook connected to your favorite async storage, please refer to the documentation section titled **Extending Global Hooks**
+**react-native-global-state-hooks** is your option for efficiently handling global state management in your React Native applications.
 
-You can also see an introduction video [here!](https://www.youtube.com/watch?v=1UBqXk2MH8I), you can see the code of the video here: [global-hooks-example-code](https://github.com/johnny-quesada-developer/global-hooks-example), and a live version of it here: [global-hooks-example-live](https://johnny-quesada-developer.github.io/global-hooks-example/)
+One line of code for a **global state**! try it out now on [CODEPEN-react-global-state-hooks](https://codepen.io/johnnynabetes/pen/WNmeGwb?editors=0010) and witness the magic ✨.
+
+For a deeper dive into how these hooks work, check out a comprehensive example at [react-global-state-hooks-example](https://johnny-quesada-developer.github.io/react-global-state-hooks-example/) 📘.
+
+You can explore a **TODO-LIST** example using global state and asynchronous storage by heading to [todo-list-with-global-hooks](https://github.com/johnny-quesada-developer/todo-list-with-global-hooks.git) 📝.
+
+For a more visual introduction, watch our informative video [here!](https://www.youtube.com/watch?v=1UBqXk2MH8I) 🎥 and dive into the code on [global-hooks-example](https://github.com/johnny-quesada-developer/global-hooks-example) 🧩.
+
+The best part? **react-hooks-global-states** is compatible with both **React** and **React Native**. If you're building web applications, explore this [**react-global-state-hooks**](https://www.npmjs.com/package/react-global-state-hooks), and for your React Native projects, here you are **react-native-global-state-hooks**. These specialized libraries extend the capabilities of **react-hooks-global-states** to perfectly fit your specific development environments. Discover the ease of global state management today! 🌐
 
 # Creating a global state
 
