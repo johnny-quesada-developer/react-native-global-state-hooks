@@ -16,7 +16,7 @@ You can explore a **TODO-LIST** example using global state and asynchronous stor
 
 For a more visual introduction, watch our informative video [here!](https://www.youtube.com/watch?v=1UBqXk2MH8I) 🎥 and dive into the code on [global-hooks-example](https://github.com/johnny-quesada-developer/global-hooks-example) 🧩.
 
-The best part? **react-hooks-global-states** is compatible with both **React** and **React Native**. If you're building web applications, explore this [**react-global-state-hooks**](https://www.npmjs.com/package/react-global-state-hooks), and for your React Native projects, here you are **react-native-global-state-hooks**. These specialized libraries extend the capabilities of **react-hooks-global-states** to perfectly fit your specific development environments. Discover the ease of global state management today! 🌐
+The best part? [react-hooks-global-states](https://www.npmjs.com/package/react-hooks-global-states) is compatible with both **React** and **React Native**. If you're building web applications, explore this [react-global-state-hooks](https://www.npmjs.com/package/react-global-state-hooks), and for your React Native projects, here you are at **react-native-global-state-hooks**. These specialized libraries extend the capabilities of [react-hooks-global-states](https://www.npmjs.com/package/react-hooks-global-states) to perfectly fit your specific development environments. Discover the ease of global state management today! 🌐
 
 # Creating a global state
 
