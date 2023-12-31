@@ -1,6 +1,6 @@
 {
   "name": "react-native-global-state-hooks",
-  "version": "6.0.6",
+  "version": "6.0.7",
   "description": "This is a package to easily handling global-state across your react-native-components No-redux... The library now includes @react-native-async-storage/async-storage to persist your state across sessions... if you want to keep using the old version without async-storage or react-native dependencies just use version 5.0.15 or user react-hooks-global-states instead",
   "main": "lib/bundle.js",
   "types": "lib/src/index.d.ts",
@@ -72,7 +72,7 @@
     "ts-jest": "^29.1.1",
     "ts-loader": "^9.4.2",
     "tslib": "^2.5.0",
-    "typescript": "^4.9.5",
+    "typescript": "^5.3.3",
     "webpack": "^5.76.3",
     "webpack-cli": "^5.0.1"
   },
@@ -93,6 +93,6 @@
     }
   },
   "dependencies": {
-    "react-hooks-global-states": "^1.0.4"
+    "react-hooks-global-states": "^1.0.5"
   }
 }

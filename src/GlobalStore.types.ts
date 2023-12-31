@@ -120,8 +120,8 @@ export type ActionCollectionResult<
  * @template {ActionCollectionResult<TState, TStateSetter>} TStateSetter - the result of the API (optional) - if you don't pass an API as a parameter, you can pass null
  * */
 export type StateConfigCallbackParam<
-  TState,
-  TMetadata,
+  TState = any,
+  TMetadata = null,
   TStateSetter extends
     | ActionCollectionConfig<TState, TMetadata>
     | GlobalStoreBase.StateSetter<TState> = GlobalStoreBase.StateSetter<TState>
@@ -136,8 +136,8 @@ export type StateConfigCallbackParam<
  * @template {TStateSetter} TStateSetter - The storeActionsConfig type (optional) - if you pass an storeActionsConfig the hook will return an object with the actions
  */
 export type StateChangesParam<
-  TState,
-  TMetadata,
+  TState = any,
+  TMetadata = null,
   TStateSetter extends
     | ActionCollectionConfig<TState, TMetadata>
     | GlobalStoreBase.StateSetter<TState> = GlobalStoreBase.StateSetter<TState>
