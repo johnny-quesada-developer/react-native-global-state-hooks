@@ -55,6 +55,7 @@ export {
   SetStateCallback,
   // StateChangesParam,
   // StateConfigCallbackParam,
+  // createStatefulContext,
 } from "react-hooks-global-states";
 
 export {
@@ -80,3 +81,4 @@ export {
 } from "./GlobalStore.functionHooks";
 
 export { getAsyncStorageItem, setAsyncStorageItem } from "./GlobalStore.utils";
+export * from "./GlobalStore.context";

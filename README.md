@@ -498,6 +498,122 @@ export const [useCount, getCount, $actions] =
 
 In the example the hook will work the same and you'll have access to the correct typing.
 
+# Stateful Context with Actions
+
+**The ultimate blend of flexibility and control in React state management!** You can now create an isolated global state within a React context, giving each consumer of the context provider a unique state instance. But that’s not all...
+
+**Stateful Context with Actions** extends the powerful features of global hooks into the realm of React Context. By integrating global hooks within a context, you bring all the benefits of global state management—such as modularity, selectors, derived states, and actions—into a context-specific environment. This means each consumer of the context not only gets a unique state instance but also inherits all the advanced capabilities of global hooks.
+
+## Creating a Stateful Context
+
+Forget about the boilerplate of creating a context... with **createStatefulContext** it's straightforward and powerful. You can create a context and provider with one line of code.
+
+```tsx
+export const [useCounterContext, CounterProvider] = createStatefulContext(2);
+```
+
+Then just wrap the components you need with the provider:
+
+```tsx
+<CounterProvider>
+  <MyComponent />
+</CounterProvider>
+```
+
+And finally, access the context value with the generated custom hook:
+
+```tsx
+const MyComponent = () => {
+  const [useCounter] = useCounterContext();
+
+  // If the component needs to react to state changes, simply use the hook
+  const [count, setCount] = useCounter();
+
+  return <>{count}</>;
+};
+```
+
+What’s the advantage of this, you might ask? Well, now you have all the capabilities of the global hooks within the isolated scope of the context. For example, you can choose whether or not to listen to changes in the state:
+
+```tsx
+const MyComponent = () => {
+  const [, , setCount] = useCounterContext();
+
+  // This component can access only the setter of the state,
+  // and won't re-render if the counter changes
+  return (
+    <button onClick={() => setCount((count) => count + 1)}>Increase</button>
+  );
+};
+```
+
+Now you have selectors—if the state changes, the component will only re-render if the selected portion of the state changes.
+
+```tsx
+const MyComponent = () => {
+  const [useCounter] = useCounterContext();
+
+  // Notice that we can select and derive values from the state
+  const [isEven, setCount] = useCounter((count) => count % 2 === 0);
+
+  useEffect(() => {
+    // Since the counter initially was 2 and now is 4, it’s still an even number.
+    // Because of this, the component will not re-render.
+    setCount(4);
+  }, []);
+
+  return <>{isEven ? "is even" : "is odd"}</>;
+};
+```
+
+**createStatefulContext** also allows you to add custom actions to control the manipulation of the state.
+
+```tsx
+import { createStatefulContext, StoreTools } from "react-global-state-hooks";
+
+type CounterState = {
+  count: number;
+};
+
+const initialState: CounterState = {
+  count: 0,
+};
+
+export const [useCounterContext, CounterProvider] = createStatefulContext(
+  initialState,
+  {
+    actions: {
+      increase: (value: number = 1) => {
+        return ({ setState }: StoreTools<CounterState>) => {
+          setState((state) => ({
+            ...state,
+            count: state.count + value,
+          }));
+        };
+      },
+      decrease: (value: number = 1) => {
+        return ({ setState }: StoreTools<CounterState>) => {
+          setState((state) => ({
+            ...state,
+            count: state.count - value,
+          }));
+        };
+      },
+    } as const,
+  }
+);
+```
+
+And just like with regular global hooks, now instead of a setter, the hook will return the collection of actions:
+
+```tsx
+const MyComponent = () => {
+  const [, , actions] = useCounterContext();
+
+  return <button onClick={() => actions.increase(1)}>Increase</button>;
+};
+```
+
 # Extending Global Hooks
 
 ## `[IMPORTANT!]`: From version 6.0.0, you can continue creating your custom implementations or using your previous ones. However, now AsyncStorage is already integrated into the global hooks with @react-native-async-storage/async-storage. You simply need to add a key for the persistent storage, and that will do the trick.
