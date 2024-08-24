@@ -44,8 +44,8 @@ export const createGlobalStateWithDecoupledFuncs = <
 
   return [store.getHook(), getState, setter] as unknown as [
     hook: StateHook<TState, Setter, TMetadataResult<TMetadata>>,
-    getter: StateGetter<TState>,
-    setter: Setter
+    stateRetriever: StateGetter<TState>,
+    stateMutator: Setter
   ];
 };
 
@@ -61,11 +61,23 @@ export const createGlobalState = <
   state: TState,
   config: createStateConfig<TState, TMetadata, TActions> = {}
 ) => {
-  const [useState] = createGlobalStateWithDecoupledFuncs<
-    TState,
-    TMetadata,
-    TActions
-  >(state, config);
+  const [useState, stateRetriever, stateMutator] =
+    createGlobalStateWithDecoupledFuncs<TState, TMetadata, TActions>(
+      state,
+      config
+    );
+
+  type GlobalStateHook = typeof useState & {
+    stateControls: () => [
+      stateRetriever: typeof stateRetriever,
+      stateMutator: typeof stateMutator
+    ];
+  };
+
+  (useState as unknown as GlobalStateHook).stateControls = () => [
+    stateRetriever,
+    stateMutator,
+  ];
 
   return useState;
 };

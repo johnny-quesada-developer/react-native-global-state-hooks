@@ -26,7 +26,9 @@ export {
   shallowCompare,
   debounce,
   combineAsyncGettersEmitter,
+  combineRetrieverEmitterAsynchronously,
   combineAsyncGetters,
+  combineRetrieverAsynchronously,
 
   // types
   StateSetter,

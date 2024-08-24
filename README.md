@@ -115,7 +115,7 @@ return (
 );
 ```
 
-Notice that the **state** changes, but the **setter** does not. This is because this is a **DERIVATE state**, and it cannot be directly changed. It will always be derived from the main hook.
+Notice that the **state** changes, but the **stateMutator** does not. This is because this is a **DERIVATE state**, and it cannot be directly changed. It will always be derived from the main hook.
 
 # State actions
 
@@ -152,7 +152,7 @@ export const useContacts = createGlobalState(initialState, {
 });
 ```
 
-That's it! In this updated version, the **useContacts** hook will no longer return [**state**, **stateSetter**] but instead will return [**state**, **actions**]. This change will provide a more intuitive and convenient way to access and interact with the state and its associated actions.
+That's it! In this updated version, the **useContacts** hook will no longer return [**state**, **stateMutator**] but instead will return [**state**, **actions**]. This change will provide a more intuitive and convenient way to access and interact with the state and its associated actions.
 
 Let's see how that will look now into our **FilterBar.tsx**
 
@@ -180,44 +180,44 @@ const useIsContactsEmpty = createDerivate(useContactsLength, (length) => !length
 
 It can't get any simpler, right? Everything is connected, everything is reactive. Plus, these hooks are strongly typed, so if you're working with **TypeScript**, you'll absolutely love it.
 
-# Decoupled state access
-
-If you need to access the global state outside of a component or a hook without subscribing to state changes, or even inside a **ClassComponent**, you can use the **createGlobalStateWithDecoupledFuncs**.
+# State Controls
 
 Decoupled state access is particularly useful when you want to create components that have editing access to a specific store but don't necessarily need to reactively respond to state changes.
 
-Using decoupled state access allows you to retrieve the state when needed without establishing a reactive relationship with the state changes. This approach provides more flexibility and control over when and how components interact with the global state. Let's see and example:
+Using the state controls allows you to retrieve the state when needed without establishing a reactive relationship with the state changes. This approach provides more flexibility and control over when and how components interact with the global state. Let's see and example:
 
 ```ts
-import { createGlobalStateWithDecoupledFuncs } from "react-native-global-state-hooks";
+import { createGlobalState } from "react-native-global-state-hooks";
 
-export const [useContacts, contactsGetter, contactsSetter] =
-  createGlobalStateWithDecoupledFuncs({
-    isLoading: true,
-    filter: "",
-    items: [] as Contact[],
-  });
+export const useContacts = createGlobalState({
+  isLoading: true,
+  filter: "",
+  items: [] as Contact[],
+});
+
+export const [contactsRetriever, contactsRetriever] =
+  useContacts.stateControls();
 ```
 
-That's great! With the addition of the **contactsGetter** and **contactsSetter** methods, you now have the ability to access and modify the state without the need for subscription to the hook.
+That's great! With the addition of the **contactsRetriever** and **contactsRetriever** methods, you now have the ability to access and modify the state without the need for subscription to the hook.
 
-While **useContacts** will allow your components to subscribe to the custom hook, using the **contactsGetter** method you will be able retrieve the current value of the state. This allows you to access the state whenever necessary, without being reactive to its changes. Let' see how:
+While **useContacts** will allow your components to subscribe to the custom hook, using the **contactsRetriever** method you will be able retrieve the current value of the state. This allows you to access the state whenever necessary, without being reactive to its changes. Let' see how:
 
 ```ts
 // To synchronously get the value of the state
-const value = contactsGetter();
+const value = contactsRetriever();
 
 // the type of value will be { isLoading: boolean; filter: string; items: Contact[] }
 ```
 
-Additionally, to subscribe to state changes, you can pass a callback function as a parameter to the **getter**. This approach enables you to create a subscription group, allowing you to subscribe to either the entire state or a specific portion of it. When a callback function is provided to the **getter**, it will return a cleanup function instead of the state. This cleanup function can be used to unsubscribe or clean up the subscription when it is no longer needed.
+Additionally, to subscribe to state changes, you can pass a callback function as a parameter to the **stateRetriever**. This approach enables you to create a subscription group, allowing you to subscribe to either the entire state or a specific portion of it. When a callback function is provided to the **stateRetriever**, it will return a cleanup function instead of the state. This cleanup function can be used to unsubscribe or clean up the subscription when it is no longer needed.
 
 ```ts
 /**
  * This not only allows you to retrieve the current value of the state...
  * but also enables you to subscribe to any changes in the state or a portion of it
  */
-const removeSubscriptionGroup = contactsGetter<Subscribe>((subscribe) => {
+const removeSubscriptionGroup = contactsRetriever<Subscribe>((subscribe) => {
   subscribe((state) => {
     console.log("state changed: ", state);
   });
@@ -239,14 +239,14 @@ So, we have seen that we can subscribe a callback to state changes, create **der
 
 ```ts
 const subscribeToFilter = createDerivateEmitter(
-  contactsGetter,
+  contactsRetriever,
   ({ filter }) => ({
     filter,
   })
 );
 ```
 
-Cool, it's basically the same, but instead of using the **hook** as a parameter, we just have to use the **getter** as a parameter, and that will make the magic.
+Cool, it's basically the same, but instead of using the **hook** as a parameter, we just have to use the **stateRetriever** as a parameter, and that will make the magic.
 
 Now we are able to add a callback that will be executed every time the state of the **filter** changes.
 
@@ -296,7 +296,7 @@ And guess what again? You can also derive emitters from derived emitters without
 
 ```ts
 const subscribeToItems = createDerivateEmitter(
-  contactsGetter,
+  contactsRetriever,
   ({ items }) => items
 );
 
@@ -308,48 +308,52 @@ const subscribeToItemsLength = createDerivateEmitter(
 
 The examples may seem a little silly, but they allow you to see the incredible things you can accomplish with these **derivative states** and **emitters**. They open up a world of possibilities!
 
-# Combining getters
+# Combining stateRetrievers
 
-What if you have two states and you want to combine them? You may have already guessed it right? ... you can create combined **emitters** and **hooks** from the hook **getters**.
+What if you have two states and you want to combine them? You may have already guessed it right? ... you can create combined **emitters** and **hooks** from the **stateRetrievers**.
 
 By utilizing the approach of combining **emitters** and **hooks**, you can effectively merge multiple states and make them shareable. This allows for better organization and simplifies the management of the combined states. You don't need to refactor everything; you just need to combine the **global state hooks** you already have. Let's see a simple example:
 
-Fist we are gonna create a couple of **global state**, is important to create them with the **createGlobalStateWithDecoupledFuncs** since we need the decoupled **getter**. (In case you are using an instance of **GlobalStore** or **GlobalStoreAbstract** you can just pick up the getters from the **getHookDecoupled** method)
+Fist we are gonna create a couple of **global states**:
 
 ```ts
-const [useHook1, getter1, setter1] = createGlobalStateWithDecoupledFuncs({
+const useHook1 = createGlobalState({
   propA: 1,
   propB: 2,
 });
 
-const [, getter2] = createGlobalStateWithDecoupledFuncs({
+const [stateRetriever1, stateMutator1] = useHook1.stateControls();
+
+const useHook2 = createGlobalState({
   propC: 3,
   propD: 4,
 });
+
+const [stateRetriever2] = useHook2.stateControls();
 ```
 
 Okay, cool, the first state as **propA, propB** while the second one has **propC, propD**, let's combine them:
 
 ```ts
-const [useCombinedHook, getter, dispose] = combineAsyncGetters(
+const [useCombinedHook, stateRetriever, dispose] = combineAsyncGetters(
   {
     selector: ([state1, state2]) => ({
       ...state1,
       ...state2,
     }),
   },
-  getter1,
-  getter2
+  stateRetriever1,
+  stateRetriever2
 );
 ```
 
-Well, that's it! Now you have access to a **getter** that will return the combined value of the two states. From this new **getter**, you can retrieve the value or subscribe to its changes. Let'see:
+Well, that's it! Now you have access to a **stateRetriever** that will return the combined value of the two states. From this new **stateRetriever**, you can retrieve the value or subscribe to its changes. Let'see:
 
 ```ts
-const value = getter(); // { propA, propB, propC, propD }
+const value = stateRetriever(); // { propA, propB, propC, propD }
 
 // subscribe to the new emitter
-const unsubscribeGroup = getter<Subscribe>((subscribe) => {
+const unsubscribeGroup = stateRetriever<Subscribe>((subscribe) => {
   subscribe((state) => {
     console.log(subscribe); // full state
   });
@@ -381,29 +385,33 @@ Similar to your other **global state hooks**, **combined hooks** allow you to us
 const [fragment] = useCombinedHook(({ propA, propD }) => ({ propA, propD }));
 ```
 
-Lastly, you have the flexibility to continue combining getters if desired. This means you can extend the functionality of combined hooks by adding more getters to merge additional states. By combining getters in this way, you can create a comprehensive and unified representation of the combined states within your application. This approach allows for modular and scalable state management, enabling you to efficiently handle complex state compositions.
+Lastly, you have the flexibility to continue combining stateRetriever if desired. This means you can extend the functionality of combined hooks by adding more stateRetriever to merge additional states. By combining stateRetriever in this way, you can create a comprehensive and unified representation of the combined states within your application. This approach allows for modular and scalable state management, enabling you to efficiently handle complex state compositions.
 
 Let's see an example:
 
 ```ts
-const [useCombinedHook, combinedGetter1, dispose1] = combineAsyncGetters(
-  {
-    selector: ([state1, state2]) => ({
-      ...state1,
-      ...state2,
-    }),
-  },
-  getter1,
-  getter2
-);
+const [useCombinedHook, combinedStateRetriever1, dispose1] =
+  combineAsyncGetters(
+    {
+      selector: ([state1, state2]) => ({
+        ...state1,
+        ...state2,
+      }),
+    },
+    stateRetriever1,
+    stateRetriever2
+  );
 
-const [useHook3, getter3, setter3] = createGlobalStateWithDecoupledFuncs({
+const useHook3 = createGlobalState({
   propE: 1,
   propF: 2,
 });
 
-const [useIsLoading, isLoadingGetter, isLoadingSetter] =
-  createGlobalStateWithDecoupledFuncs(false);
+const [stateRetriever3, stateMutator3] = useHook3.stateControls();
+
+const useIsLoading = createGlobalState(false);
+
+const [isLoadingGetter, isLoadingSetter] = useIsLoading.stateControls();
 ```
 
 Once we created another peace of state, we can combine it with our other **global hooks** and **emitters**
@@ -417,8 +425,8 @@ const [useCombinedHook2, combinedGetter2, dispose2] = combineAsyncGetters(
       isLoading,
     }),
   },
-  combinedGetter1,
-  getter3,
+  combinedStateRetriever1,
+  stateRetriever3,
   isLoadingGetter
 );
 ```
@@ -431,7 +439,7 @@ Please be aware that the third parameter is a **dispose callback**, which can be
 
 ## Setter
 
-Similarly, the **contactsSetter** method allows you to modify the state stored in **useContacts**. You can use this method to update the state with a new value or perform any necessary state mutations without the restrictions imposed by **hooks**.
+Similarly, the **contactsRetriever** method allows you to modify the state stored in **useContacts**. You can use this method to update the state with a new value or perform any necessary state mutations without the restrictions imposed by **hooks**.
 
 These additional methods provide a more flexible and granular way to interact with the state managed by **useContacts**. You can retrieve and modify the state as needed, without establishing a subscription relationship or reactivity with the state changes.
 
@@ -471,29 +479,28 @@ export const useCount = createGlobalState(0, {
 
 Notice that the **StoreTools** will contain a reference to the generated actions API. From there, you'll be able to access all actions from inside another one... the **StoreTools** is generic and allow your to set an interface for getting the typing on the actions.
 
-If you don't want to create an extra type please use **createGlobalStateWithDecoupledFuncs** in that way you'll be able to use the decoupled **actions** which will have the correct typing. Let's take a quick look into that:
-
 ```ts
-import { createGlobalStateWithDecoupledFuncs } from "react-native-global-state-hooks";
+import { createGlobalState } from "react-native-global-state-hooks";
 
-export const [useCount, getCount, $actions] =
-  createGlobalStateWithDecoupledFuncs(0, {
-    actions: {
-      log: (currentValue: string) => {
-        return ({ getState }: StoreTools<number>): void => {
-          console.log(`Current Value: ${getState()}`);
-        };
-      },
+export const useCount = createGlobalState(0, {
+  actions: {
+    log: (currentValue: string) => {
+      return ({ getState }: StoreTools<number>): void => {
+        console.log(`Current Value: ${getState()}`);
+      };
+    },
 
-      increase(value: number = 1) {
-        return ({ getState, setState }: StoreTools<number>) => {
-          setState((count) => count + value);
+    increase(value: number = 1) {
+      return ({ getState, setState }: StoreTools<number>) => {
+        setState((count) => count + value);
 
-          $actions.log(message);
-        };
-      },
-    } as const,
-  });
+        $actions.log(message);
+      };
+    },
+  } as const,
+});
+
+export const [getCount, $actions] = useCount.stateControls();
 ```
 
 In the example the hook will work the same and you'll have access to the correct typing.
@@ -539,7 +546,7 @@ What’s the advantage of this, you might ask? Well, now you have all the capabi
 const MyComponent = () => {
   const [, , setCount] = useCounterContext();
 
-  // This component can access only the setter of the state,
+  // This component can access only the stateMutator of the state,
   // and won't re-render if the counter changes
   return (
     <button onClick={() => setCount((count) => count + 1)}>Increase</button>
@@ -604,7 +611,7 @@ export const [useCounterContext, CounterProvider] = createStatefulContext(
 );
 ```
 
-And just like with regular global hooks, now instead of a setter, the hook will return the collection of actions:
+And just like with regular global hooks, now instead of a setState function, the hook will return the collection of actions:
 
 ```tsx
 const MyComponent = () => {

@@ -56,7 +56,7 @@ export class GlobalStore<
         config?: UseHookConfig<State>
       ) => [
         state: State,
-        setter: keyof TStateSetter extends never
+        stateMutator: keyof TStateSetter extends never
           ? StateSetter<TState>
           : ActionCollectionResult<TState, TMetadata, TStateSetter>,
         metadata: MetadataGetter<TMetadataResult<TMetadata>>
@@ -104,7 +104,7 @@ export class GlobalStore<
   // @ts-ignore-next-line - we need to override the return type to add the metadata
   public getHook: () => () => [
     state: TState,
-    setter: keyof TStateSetter extends never
+    stateMutator: keyof TStateSetter extends never
       ? StateSetter<TState>
       : ActionCollectionResult<TState, TMetadata, TStateSetter>,
     metadata: MetadataGetter<TMetadataResult<TMetadata>>
