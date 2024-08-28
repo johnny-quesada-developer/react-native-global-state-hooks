@@ -81,17 +81,72 @@ Now, let's say we want to have a filter bar for the contacts that will only have
 
 **FilterBar.tsx**
 
-```ts
-const [{ filter }, setState] = useContacts(({ filter }) => ({ filter }));
+```tsx
+const [contacts] = useContacts((state) =>
+  state.contacts.filter((contact) => contact.status === "active")
+);
 
 return (
-  <TextInput onChangeText={() => setState((state) => ({ ...state, filter }))} />
+  <View>
+    {contacts.map((contact) => (
+      <Text key={contact.id}>{contact.name}</Text>
+    ))}
+  </View>
 );
 ```
 
 There you have it again, super simple! By adding a **selector** function, you are able to create a derivative hook that will only trigger when the result of the **selector** changes.
 
-By the way, in the example, the **selector** returning a new object is not a problem at all. This is because, by default, there is a shallow comparison between the previous and current versions of the state, so the render won't trigger if it's not necessary.
+If you want to have more control over when the hook should recompute the selector result, there are a couple of options:
+
+```tsx
+const [filter, setFilter] = useState("");
+
+const [contacts] = useContacts(
+  (state) => state.contacts.filter((contact) => contact.name.includes(filter)),
+  {
+    /**
+     * You can use the `isEqualRoot` to validate if the values before the selector are equal.
+     * This validation will run before `isEqual` and if the result is true the selector will not be recomputed.
+     * If the result is true the re-render of the component will be prevented.
+     */
+    isEqualRoot: (r1, r2) => r1.filter === r2.filter,
+
+    /**
+     * You can use the `isEqual` to validate if the values after the selector are equal.
+     * This validation will run after the selector computed a new value...
+     * and if the result is true it will prevent the re-render of the component.
+     */
+    isEqual: (filter1, filter2) => filter1 === filter2,
+
+    /**
+     * You can use the `dependencies` array as with regular hooks to to force the recomputation of the selector.
+     * Is important ot mention that changes in the dependencies will not trigger a re-render of the component...
+     * Instead the recomputation of the selector will returned immediately.
+     */
+    dependencies: [filter],
+  }
+);
+
+return (
+  <View>
+    {contacts.map((contact) => (
+      <Text key={contact.id}>{contact.name}</Text>
+    ))}
+  </View>
+);
+```
+
+If you want to perform a shallow comparison between the previous and new values, you can use the **shallowCompare** function from the library.
+
+```TSX
+({
+  /**
+  * You can use the `shallowCompare` from the GlobalStore.utils to compare the values at first level.
+  */
+  isEqual: shallowCompare,
+})
+```
 
 ## What if you want to reuse the selector?
 
