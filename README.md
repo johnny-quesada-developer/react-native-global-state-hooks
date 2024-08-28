@@ -680,6 +680,8 @@ const MyComponent = () => {
 
 ## `[IMPORTANT!]`: From version 6.0.0, you can continue creating your custom implementations or using your previous ones. However, now AsyncStorage is already integrated into the global hooks with @react-native-async-storage/async-storage. You simply need to add a key for the persistent storage, and that will do the trick.
 
+**`BUT!`** If you are against using **@react-native-async-storage/async-storage**, you can always use the base library [**react-hooks-global-state**](https://www.npmjs.com/package/react-hooks-global-states), which provides all the global hooks functionality without the persistent storage options. Take a look at the documentation—there's even an example of how to implement your own persistent storage in your own way.
+
 ```ts
 // this is all you need fo using async storage
 const useCountPersisted = createGlobalState(1, {
