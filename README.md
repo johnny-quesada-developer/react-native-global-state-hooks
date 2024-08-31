@@ -753,7 +753,7 @@ const useCountPersisted = createGlobalState(1, {
 const [count, setCount, { isAsyncStorageReady }] = useCountPersisted();
 ```
 
-##### Now lets continue analizing how to create a custom GlobalStore!
+##### Now lets continue analyzing how to create a custom GlobalStore!
 
 Creating a global hook that connects to an asyncStorage is made incredibly easy with the **createCustomGlobalState** function.
 

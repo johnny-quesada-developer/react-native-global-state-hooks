@@ -12,7 +12,6 @@ import { getAsyncStorageItem, setAsyncStorageItem } from "./GlobalStore.utils";
 import {
   GlobalStoreAbstract,
   MetadataGetter,
-  SelectorCallback,
   StateGetter,
   StateSetter,
   UseHookConfig,
