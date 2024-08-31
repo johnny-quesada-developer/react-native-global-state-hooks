@@ -34,35 +34,6 @@ export class GlobalStore<
   ) {
     super(state, config, actionsConfig);
 
-    const { getHookDecoupled, getHook } = this;
-
-    this.getHookDecoupled = () =>
-      getHookDecoupled() as [
-        StateGetter<TState>,
-        keyof TStateSetter extends never
-          ? StateSetter<TState>
-          : ActionCollectionResult<TState, TMetadata, TStateSetter>,
-        MetadataGetter<TMetadataResult<TMetadata>>
-      ];
-
-    this.getHook = () => {
-      const hook = getHook();
-
-      type THookResult = ReturnType<typeof hook>;
-      type State = THookResult[0];
-
-      return hook as (
-        selector?: SelectorCallback<TState, State>,
-        config?: UseHookConfig<State>
-      ) => [
-        state: State,
-        stateMutator: keyof TStateSetter extends never
-          ? StateSetter<TState>
-          : ActionCollectionResult<TState, TMetadata, TStateSetter>,
-        metadata: MetadataGetter<TMetadataResult<TMetadata>>
-      ];
-    };
-
     const isExtensionClass = this.constructor !== GlobalStore;
     if (isExtensionClass) return;
 
@@ -85,6 +56,7 @@ export class GlobalStore<
   };
 
   /**
+   * @deprecated
    * Returns an array with the a function to get the state, the state setter or the actions map, and a function to get the metadata
    * @returns {[() => TState, TStateSetter, () => TMetadata]} - The state getter, the state setter or the actions map, the metadata getter
    * */
@@ -97,18 +69,52 @@ export class GlobalStore<
     MetadataGetter<TMetadataResult<TMetadata>>
   ];
 
+  // @ts-ignore-next-line - we need to override the return type to add the metadata
+  public stateControls: () => [
+    StateGetter<TState>,
+    keyof TStateSetter extends never
+      ? StateSetter<TState>
+      : ActionCollectionResult<TState, TMetadata, TStateSetter>,
+    MetadataGetter<TMetadataResult<TMetadata>>
+  ];
+
+  // @ts-ignore-next-line - we need to override the return type to add the metadata
+  createSelectorHook: <
+    RootState,
+    StateMutator,
+    RootSelectorResult,
+    RootDerivate = RootSelectorResult extends never
+      ? RootState
+      : RootSelectorResult
+  >(
+    this: GlobalStoreBase.StateHook<
+      RootState,
+      StateMutator,
+      MetadataGetter<TMetadataResult<TMetadata>>
+    >,
+    mainSelector?: (state: RootState) => RootSelectorResult,
+    {
+      isEqualRoot,
+      isEqual,
+    }?: Omit<UseHookConfig<RootDerivate, RootState>, "dependencies">
+  ) => GlobalStoreBase.StateHook<
+    RootDerivate,
+    StateMutator,
+    MetadataGetter<TMetadataResult<TMetadata>>
+  >;
+
   /**
    * Returns a custom hook that allows to handle a global state
    * @returns {[TState, TStateSetter, TMetadata]} - The state, the state setter or the actions map, the metadata
    * */
   // @ts-ignore-next-line - we need to override the return type to add the metadata
-  public getHook: () => () => [
-    state: TState,
-    stateMutator: keyof TStateSetter extends never
+  public getHook: () => GlobalStoreBase.StateHook<
+    TState,
+    keyof TStateSetter extends never
       ? StateSetter<TState>
       : ActionCollectionResult<TState, TMetadata, TStateSetter>,
-    metadata: MetadataGetter<TMetadataResult<TMetadata>>
-  ];
+    MetadataGetter<TMetadataResult<TMetadata>>
+  >;
 
   protected onInitialize = ({
     setState,

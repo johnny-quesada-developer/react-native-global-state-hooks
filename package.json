@@ -93,6 +93,6 @@
     }
   },
   "dependencies": {
-    "react-hooks-global-states": "^2.0.3"
+    "react-hooks-global-states": "2.1.0"
   }
 }
