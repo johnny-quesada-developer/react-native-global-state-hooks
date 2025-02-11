@@ -1,3 +1,4 @@
 {
-  "unreachable": "ignore"
+  "unreachable": "ignore",
+  "printWidth": 110
 }

@@ -895,17 +895,17 @@ onInit?: ({
 /**
 * @description - callback function called every time the state is changed
 */
-onStateChanged?: (parameters: StateChangesParam<TState, TMetadata, TActions>) => void;
+onStateChanged?: (parameters: StoreTools<any, any> & StateChanges<unknown>) => void;
 
 /**
 * callback function called every time a component is subscribed to the store
 */
-onSubscribed?: (parameters: StateConfigCallbackParam<TState, TMetadata, TActions>) => void;
+onSubscribed?: (parameters: StoreTools<any, any>) => void;
 
 /**
 * callback function called every time the state is about to change and it allows you to prevent the state change
 */
-computePreventStateChange?: (parameters: StateChangesParam<TState, TMetadata, TActions>) => boolean;
+computePreventStateChange?: (parameters: StoreTools<any, any> & StateChanges<unknown>) => boolean;
 ```
 
 You can pass this callbacks between on the second parameter of the builders like **createGlobalState**
@@ -992,7 +992,7 @@ export class GlobalStore<
   protected onChange = ({
     getMetadata,
     getState,
-  }: StateChangesParam<TState, TMetadata, NonNullable<TStateSetter>>) => {
+  }: StoreTools<any, any> & StateChanges<unknown>) => {
     const asyncStorageKey = getMetadata()?.asyncStorageKey;
 
     if (!asyncStorageKey) return;
@@ -1012,9 +1012,8 @@ Then, from an instance of the global store, you will be able to access the hooks
 
 ```ts
 const storage = new GlobalStore(0, {
-  metadata: {
-    asyncStorageKey: "counter",
-    isAsyncStorageReady: false,
+  asyncStorage: {
+    key: "counter",
   },
 });
 

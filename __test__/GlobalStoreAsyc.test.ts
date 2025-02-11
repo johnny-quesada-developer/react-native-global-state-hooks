@@ -1,12 +1,12 @@
-import { createDecoupledPromise } from "cancelable-promise-jq";
+import { createDecoupledPromise } from "easy-cancelable-promise/createDecoupledPromise";
+import { formatToStore } from "json-storage-formatter/formatToStore";
+import { getFakeAsyncStorage } from "./getFakeAsyncStorage";
+import { GlobalStore } from "../src/GlobalStore";
+import { createGlobalState } from "../src/createGlobalState";
+import { asyncStorageWrapper } from "../src/asyncStorageWrapper";
 
-import { Subscribe, SubscriberCallback, formatToStore } from "../src";
-
-import {
-  GlobalStore,
-  asyncStorage,
-  createGlobalState,
-} from "./GlobalStoreAsync";
+export const { fakeAsyncStorage: asyncStorage } = getFakeAsyncStorage();
+asyncStorageWrapper.addAsyncStorageManager(() => Promise.resolve(asyncStorage));
 
 describe("GlobalStoreAsync Basics", () => {
   it("should create a store with async storage", async () => {
@@ -19,22 +19,31 @@ describe("GlobalStoreAsync Basics", () => {
         createDecoupledPromise();
 
       const storage = new GlobalStore(0, {
-        metadata: {
-          asyncStorageKey: "counter",
-          isAsyncStorageReady: false,
+        asyncStorage: {
+          key: "counter",
         },
       });
 
-      const [getState, _, getMetadata] = storage.getHookDecoupled();
+      const useStorage = storage.getHook();
 
-      const onStateChanged = (storage as any).onStateChanged;
+      const [getState, _, getMetadata] = useStorage.stateControls();
+
+      const onStateChanged = Object.getOwnPropertyDescriptor(
+        storage,
+        "onStateChanged"
+      )?.value;
+
       onStateChanged.bind(storage);
 
       jest
-        .spyOn(storage, "onStateChanged" as any)
+        .spyOn(
+          storage as unknown as {
+            onStateChanged: () => void;
+          },
+          "onStateChanged"
+        )
         .mockImplementation((...parameters) => {
           onStateChanged(...parameters);
-
           onStateChangedResolve();
         });
 
@@ -42,20 +51,9 @@ describe("GlobalStoreAsync Basics", () => {
 
       expect(getMetadata().isAsyncStorageReady).toBe(false);
 
-      // add a subscriber to the store
-      storage.getHook()();
-
-      const [[id, parameters]] = storage.subscribers;
-      const { callback: setState } = parameters;
-      parameters.callback = jest.fn(setState);
-
-      storage.subscribers = new Map([[id, parameters]]);
-
       await onStateChangedPromise;
 
       expect(getMetadata().isAsyncStorageReady).toBe(true);
-      expect(setState).toBeCalledTimes(1);
-
       expect(getState()).toBe(0);
 
       const storedValue = await asyncStorage.getItem("counter");
@@ -79,16 +77,18 @@ describe("createGlobalState", () => {
       const { promise: onStateChangedPromise, resolve: onStateChangedResolve } =
         createDecoupledPromise();
 
-      const [useData] = createGlobalState(new Map<string, number>(), {
-        config: {
-          asyncStorageKey: "data",
+      const useData = createGlobalState(new Map<string, number>(), {
+        asyncStorage: {
+          key: "data",
         },
-        onStateChanged: onStateChangedResolve,
+        callbacks: {
+          onStateChanged: onStateChangedResolve,
+        },
       });
 
       let [data, setData, metadata] = useData();
 
-      expect(metadata.isAsyncStorageReady).toBe(null);
+      expect(metadata.isAsyncStorageReady).toBe(false);
 
       await onStateChangedPromise;
 
@@ -116,10 +116,10 @@ describe("createGlobalState", () => {
 
 describe("getter subscriptions custom global state", () => {
   it("should subscribe to changes from getter", () => {
-    const [_, getter, setter] = createGlobalState({
+    const [getter, setter] = createGlobalState({
       a: 3,
       b: 2,
-    });
+    }).stateControls();
 
     const state = getter();
 
@@ -132,22 +132,19 @@ describe("getter subscriptions custom global state", () => {
     const subscriptionSpy = jest.fn();
     const subscriptionDerivateSpy = jest.fn();
 
-    const callback = jest.fn(((subscribe) => {
-      subscribe((state) => {
-        subscriptionSpy(state);
-      });
-
-      subscribe(
+    const subscriptions = [
+      getter(
         (state) => {
           return state.a;
         },
         (derivate) => {
           subscriptionDerivateSpy(derivate);
         }
-      );
-    }) as SubscriberCallback<typeof state>);
-
-    const removeSubscription = getter<Subscribe>(callback);
+      ),
+      getter((state) => {
+        subscriptionSpy(state);
+      }),
+    ];
 
     expect(subscriptionSpy).toBeCalledTimes(1);
     expect(subscriptionSpy).toBeCalledWith(state);
@@ -169,7 +166,7 @@ describe("getter subscriptions custom global state", () => {
     // the derivate should not be called since it didn't change
     expect(subscriptionDerivateSpy).toBeCalledTimes(1);
 
-    removeSubscription();
+    subscriptions.forEach((removeSubscription) => removeSubscription());
 
     setter((state) => ({
       ...state,

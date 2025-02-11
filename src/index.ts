@@ -1,86 +1,70 @@
 /**
- * The commented exports are the ones that are overridden by this library.
- * The intention is to extend the capabilities to specially web development.
- * The original library is intended to be used just with react,
+ * By handling the same structure as the original library,
+ * We can add the specific overrides for web while keeping the modularity of the library.
  */
-export {
-  clone,
-  isNil,
-  isNumber,
-  isBoolean,
-  isString,
-  isDate,
-  isRegex,
-  isFunction,
-  isPrimitive,
-  formatFromStore,
-  formatToStore,
-  throwNoSubscribersWereAdded,
-  //   GlobalStore,
-  //   GlobalStoreAbstract,
-  //   createGlobalStateWithDecoupledFuncs,
-  //   createGlobalState,
-  //   createCustomGlobalStateWithDecoupledFuncs,
-  createDerivate,
-  createDerivateEmitter,
-  shallowCompare,
-  debounce,
-  combineAsyncGettersEmitter,
-  combineRetrieverEmitterAsynchronously,
-  combineAsyncGetters,
-  combineRetrieverAsynchronously,
-
-  // types
+// #region base library exports copy of the original library index
+export type {
   StateSetter,
-  StateHook,
-  AvoidNever,
+  HookExtensions,
+  ObservableFragment,
   MetadataSetter,
   StateChanges,
-  // StoreTools,
-  // ActionCollectionConfig,
-  // ActionCollectionResult,
-  // GlobalStoreConfig,
+  StoreTools,
+  ActionCollectionResult,
+  GlobalStoreCallbacks,
   UseHookConfig,
   UnsubscribeCallback,
   SubscribeCallbackConfig,
   SubscribeCallback,
-  SubscriberCallback,
   StateGetter,
-  Subscribe,
-  // createStateConfig,
+  BaseMetadata,
+  MetadataGetter,
   CustomGlobalHookBuilderParams,
-  // CustomGlobalHookParams,
   SelectorCallback,
-  SubscribeToEmitter,
   SubscriberParameters,
   SubscriptionCallback,
-  SetStateCallback,
-  // StateChangesParam,
-  // StateConfigCallbackParam,
-  // createStatefulContext,
-} from "react-hooks-global-states";
-
-export {
-  AsyncStorageConfig,
-  TMetadataResult,
-  StoreTools,
+  StateHook,
   ActionCollectionConfig,
-  ActionCollectionResult,
-  StateConfigCallbackParam,
-  StateChangesParam,
-  GlobalStoreConfig,
-  createStateConfig,
-  CustomGlobalHookParams,
-} from "./GlobalStore.types";
+  StateMeta,
+} from "./types";
 
+// classes
+// export { GlobalStore } from './GlobalStore'; // overridden
+// export { GlobalStoreAbstract } from './GlobalStoreAbstract';// overridden
+
+// functions
+// export { createGlobalState } from './createGlobalState'; // overridden
+// export { createCustomGlobalState } from './createCustomGlobalState'; // overridden
+
+// utils
+export { shallowCompare } from "./shallowCompare";
+export { debounce } from "./debounce";
+export { uniqueId } from "./uniqueId";
+export { throwWrongKeyOnActionCollectionConfig } from "./throwWrongKeyOnActionCollectionConfig";
+export { isRecord } from "./isRecord";
+export { uniqueSymbol, UniqueSymbol } from "./uniqueSymbol";
+export { useConstantValueRef } from "./useConstantValueRef";
+
+// combiners
+export { combineRetrieverAsynchronously } from "./combineRetrieverAsynchronously";
+export { combineRetrieverEmitterAsynchronously } from "./combineRetrieverEmitterAsynchronously";
+
+// context
+export {
+  ContextProviderAPI,
+  ContextProvider,
+  ContextHook,
+  CreateContext,
+  createContext,
+} from "./createContext";
+
+// #endregion base library exports
+
+export { AsyncStorageConfig } from "./types";
 export { GlobalStore } from "./GlobalStore";
 export { GlobalStoreAbstract } from "./GlobalStoreAbstract";
-
-export {
-  createGlobalStateWithDecoupledFuncs,
-  createGlobalState,
-  createCustomGlobalStateWithDecoupledFuncs,
-} from "./GlobalStore.functionHooks";
-
-export { getAsyncStorageItem, setAsyncStorageItem } from "./GlobalStore.utils";
-export * from "./GlobalStore.context";
+export { CreateGlobalState, createGlobalState } from "./createGlobalState";
+export { createCustomGlobalState, CustomCreateGlobalState } from "./createCustomGlobalState";
+export { getAsyncStorageItem } from "./getAsyncStorageItem";
+export { setAsyncStorageItem } from "./setAsyncStorageItem";
+export { asyncStorageWrapper } from "./asyncStorageWrapper";

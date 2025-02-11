@@ -1,60 +1,27 @@
-import { StateSetter } from "react-hooks-global-states";
+import type { ActionCollectionConfig, StateChanges, StoreTools } from "react-hooks-global-states/types";
+
+import type { BaseMetadata, StateMeta } from "./types";
 
 import { GlobalStore } from "./GlobalStore";
 
-import {
-  GlobalStoreConfig,
-  StateConfigCallbackParam,
-  StateChangesParam,
-  ActionCollectionConfig,
-} from "./GlobalStore.types";
-
-/**
- * @description
- * Use this class to extends the capabilities of the GlobalStore.
- * by implementing the abstract methods onInitialize and onChange.
- * You can use this class to create a store with async storage.
- */
 export abstract class GlobalStoreAbstract<
-  TState,
-  TMetadata = null,
-  TStateSetter extends
-    | ActionCollectionConfig<TState, TMetadata>
-    | StateSetter<TState> = StateSetter<TState>
-> extends GlobalStore<TState, TMetadata, TStateSetter> {
-  constructor(
-    state: TState,
-    config: GlobalStoreConfig<TState, TMetadata, TStateSetter> = {},
-    actionsConfig: TStateSetter | null = null
-  ) {
-    super(state, config, actionsConfig);
-  }
-
-  protected onInit = (
-    parameters: StateConfigCallbackParam<TState, TMetadata, TStateSetter>
-  ) => {
-    this.onInitialize(parameters);
+  State,
+  Metadata extends BaseMetadata | unknown,
+  ActionsConfig extends ActionCollectionConfig<State, StateMeta<Metadata>> | unknown
+> extends GlobalStore<State, Metadata, ActionsConfig> {
+  protected override onInit = (args: StoreTools<State, StateMeta<Metadata>>) => {
+    this._onInitialize(args as StoreTools<State, Metadata>);
+    this.onInitialize?.(args);
   };
 
-  protected onStateChanged = (
-    parameters: StateChangesParam<TState, TMetadata, TStateSetter>
+  protected override onStateChanged = (
+    args: StoreTools<State, StateMeta<Metadata>> & StateChanges<State>
   ) => {
-    this.onChange(parameters);
+    this._onInitialize(args as StoreTools<State, Metadata> & StateChanges<State>);
+    this.onChange?.(args);
   };
 
-  protected abstract onInitialize: ({
-    setState,
-    setMetadata,
-    getMetadata,
-    getState,
-    actions,
-  }: StateConfigCallbackParam<TState, TMetadata, TStateSetter>) => void;
+  protected abstract onInitialize: (args: StoreTools<State, StateMeta<Metadata>>) => void;
 
-  protected abstract onChange: ({
-    setState,
-    setMetadata,
-    getMetadata,
-    getState,
-    actions,
-  }: StateChangesParam<TState, TMetadata, TStateSetter>) => void;
+  protected abstract onChange: (args: StoreTools<State, StateMeta<Metadata>> & StateChanges<State>) => void;
 }

@@ -1,169 +1,153 @@
-import * as GlobalStoreBase from "react-hooks-global-states";
-
-import {
-  GlobalStoreConfig,
-  StateChangesParam,
-  TMetadataResult,
+import type {
   ActionCollectionConfig,
-  ActionCollectionResult,
-} from "./GlobalStore.types";
-import { getAsyncStorageItem, setAsyncStorageItem } from "./GlobalStore.utils";
+  GlobalStoreCallbacks,
+  StateChanges,
+  StoreTools,
+} from "react-hooks-global-states/types";
+import type { AsyncStorageConfig, BaseMetadata, StateMeta } from "./types";
 
-import {
-  GlobalStoreAbstract,
-  MetadataGetter,
-  StateGetter,
-  StateSetter,
-  UseHookConfig,
-} from "react-hooks-global-states";
+import { GlobalStoreAbstract } from "react-hooks-global-states/GlobalStoreAbstract";
+import { getAsyncStorageItem } from "./getAsyncStorageItem";
+import { setAsyncStorageItem } from "./setAsyncStorageItem";
 
 export class GlobalStore<
-  TState,
-  TMetadata = null,
-  TStateSetter extends
-    | ActionCollectionConfig<TState, TMetadata>
-    | StateSetter<TState> = StateSetter<TState>
-> extends GlobalStoreAbstract<TState, TMetadata, NonNullable<TStateSetter>> {
-  protected config: GlobalStoreConfig<TState, TMetadata, TStateSetter>;
+  State,
+  Metadata extends BaseMetadata | unknown,
+  ActionsConfig extends ActionCollectionConfig<State, StateMeta<Metadata>> | undefined | unknown
+> extends GlobalStoreAbstract<State, StateMeta<Metadata>, ActionsConfig> {
+  protected asyncStorage: AsyncStorageConfig | null = null;
+
+  constructor(state: State);
 
   constructor(
-    state: TState,
-    config: GlobalStoreConfig<TState, TMetadata, TStateSetter> = {},
-    actionsConfig: TStateSetter | null = null
+    state: State,
+    args: {
+      metadata?: Metadata;
+      callbacks?: GlobalStoreCallbacks<State, Metadata>;
+      actions?: ActionsConfig;
+      name?: string;
+      asyncStorage?: AsyncStorageConfig;
+    }
+  );
+
+  constructor(
+    state: State,
+    args: {
+      metadata?: Metadata;
+      callbacks?: GlobalStoreCallbacks<State, StateMeta<Metadata>>;
+      actions?: ActionsConfig;
+      name?: string;
+      asyncStorage?: AsyncStorageConfig;
+    } = { metadata: {} as Metadata }
   ) {
-    super(state, config, actionsConfig);
+    super(
+      state,
+      args as {
+        metadata: StateMeta<Metadata>;
+        callbacks: GlobalStoreCallbacks<State, StateMeta<Metadata>>;
+        actions: ActionsConfig;
+        name: string;
+        asyncStorage: AsyncStorageConfig;
+      }
+    );
+
+    this.asyncStorage = args.asyncStorage ?? null;
+
+    this.setMetadata(
+      (metadata) =>
+        ({
+          ...(metadata ?? {}),
+          isAsyncStorageReady: false,
+          asyncStorageKey: this.asyncStorage?.key ?? null,
+        } as StateMeta<Metadata>)
+    );
 
     const isExtensionClass = this.constructor !== GlobalStore;
     if (isExtensionClass) return;
 
-    (this as GlobalStore<TState, TMetadata, TStateSetter>).initialize();
+    (this as GlobalStore<State, Metadata, ActionsConfig>).initialize();
   }
 
-  // @ts-ignore-next-line
   protected getMetadata = () => {
-    const { metadata, asyncStorage } = this.config;
-
-    if (!asyncStorage?.key) {
-      return metadata ?? null;
+    if (!this.asyncStorage?.key) {
+      return this.metadata;
     }
 
     return {
       isAsyncStorageReady: false,
-      asyncStorageKey: asyncStorage?.key,
-      ...(metadata ?? {}),
-    } as TMetadataResult<TMetadata>;
+      asyncStorageKey: this.asyncStorage.key,
+      ...(this.metadata ?? {}),
+    } as StateMeta<Metadata>;
   };
 
-  /**
-   * @deprecated
-   * Returns an array with the a function to get the state, the state setter or the actions map, and a function to get the metadata
-   * @returns {[() => TState, TStateSetter, () => TMetadata]} - The state getter, the state setter or the actions map, the metadata getter
-   * */
-  // @ts-ignore-next-line - we need to override the return type to add the metadata
-  public getHookDecoupled: () => [
-    StateGetter<TState>,
-    keyof TStateSetter extends never
-      ? StateSetter<TState>
-      : ActionCollectionResult<TState, TMetadata, TStateSetter>,
-    MetadataGetter<TMetadataResult<TMetadata>>
-  ];
+  public static isAsyncStorageAvailable = (
+    config: AsyncStorageConfig | null
+  ): config is AsyncStorageConfig => {
+    return Boolean(config?.key);
+  };
 
-  // @ts-ignore-next-line - we need to override the return type to add the metadata
-  public stateControls: () => [
-    StateGetter<TState>,
-    keyof TStateSetter extends never
-      ? StateSetter<TState>
-      : ActionCollectionResult<TState, TMetadata, TStateSetter>,
-    MetadataGetter<TMetadataResult<TMetadata>>
-  ];
-
-  // @ts-ignore-next-line - we need to override the return type to add the metadata
-  createSelectorHook: <
-    RootState,
-    StateMutator,
-    RootSelectorResult,
-    RootDerivate = RootSelectorResult extends never
-      ? RootState
-      : RootSelectorResult
-  >(
-    this: GlobalStoreBase.StateHook<
-      RootState,
-      StateMutator,
-      MetadataGetter<TMetadataResult<TMetadata>>
-    >,
-    mainSelector?: (state: RootState) => RootSelectorResult,
-    {
-      isEqualRoot,
-      isEqual,
-    }?: Omit<UseHookConfig<RootDerivate, RootState>, "dependencies">
-  ) => GlobalStoreBase.StateHook<
-    RootDerivate,
-    StateMutator,
-    MetadataGetter<TMetadataResult<TMetadata>>
-  >;
-
-  /**
-   * Returns a custom hook that allows to handle a global state
-   * @returns {[TState, TStateSetter, TMetadata]} - The state, the state setter or the actions map, the metadata
-   * */
-  // @ts-ignore-next-line - we need to override the return type to add the metadata
-  public getHook: () => GlobalStoreBase.StateHook<
-    TState,
-    keyof TStateSetter extends never
-      ? StateSetter<TState>
-      : ActionCollectionResult<TState, TMetadata, TStateSetter>,
-    MetadataGetter<TMetadataResult<TMetadata>>
-  >;
-
-  protected onInitialize = ({
+  protected _onInitialize = async ({
     setState,
     getState,
     setMetadata,
-  }: GlobalStoreBase.StateConfigCallbackParam<TState, TMetadata>) => {
-    (async () => {
-      const localStorageKey = this.config?.asyncStorage?.key;
+  }: StoreTools<State, Metadata>): Promise<void> => {
+    if (!GlobalStore.isAsyncStorageAvailable(this.asyncStorage)) return;
 
-      if (!localStorageKey) return;
+    // set initial value of the metadata
+    setMetadata(
+      (metadata) =>
+        ({
+          ...(metadata ?? {}),
+          isAsyncStorageReady: false,
+        } as Metadata)
+    );
 
-      setMetadata(
-        (metadata) =>
-          ({
-            ...(metadata ?? {}),
-            isAsyncStorageReady: false,
-          } as TMetadata)
-      );
+    let restored: State = await getAsyncStorageItem(this.asyncStorage);
 
-      let restored: TState = await getAsyncStorageItem({
-        config: this.config,
-      });
+    setMetadata(
+      (metadata) =>
+        ({
+          ...(metadata ?? {}),
+          isAsyncStorageReady: true,
+        } as Metadata)
+    );
 
-      setMetadata((metadata) => ({
-        ...metadata,
-        isAsyncStorageReady: true,
-      }));
+    if (restored === null) {
+      restored = getState();
 
-      if (restored === null) {
-        restored = getState();
+      setAsyncStorageItem(restored, this.asyncStorage);
+    }
 
-        setAsyncStorageItem({
-          item: restored,
-          config: this.config,
-        });
-      }
-
-      // force update to trigger the subscribers in case the state is the same
-      setState(restored, {
-        forceUpdate: true,
-      });
-    })();
+    // force update to trigger the subscribers in case the state is the same
+    setState(restored, {
+      forceUpdate: true,
+    });
   };
 
-  protected onChange = ({
-    getState,
-  }: StateChangesParam<TState, TMetadata, TStateSetter>) => {
-    setAsyncStorageItem({
-      item: getState(),
-      config: this.config,
-    });
+  protected _onChange = ({ getState }: StoreTools<State, Metadata> & StateChanges<State>): void => {
+    if (!GlobalStore.isAsyncStorageAvailable(this.asyncStorage)) return;
+
+    setAsyncStorageItem(getState(), this.asyncStorage);
+  };
+
+  /**
+   * We set it to null so the instances of the GlobalStoreAbstract can override it.
+   */
+  protected onInitialize = null as unknown as (args: StoreTools<State, StateMeta<Metadata>>) => void;
+
+  protected onChange = null as unknown as (
+    args: StoreTools<State, StateMeta<Metadata>> & StateChanges<State>
+  ) => void;
+
+  /**
+   * Instead of calling onInitialize and onChange directly, we call the _onInitialize and _onChange
+   * This allows the concat the logic of the GlobalStore with the logic of the extension class.
+   */
+  protected onInit = (parameters: StoreTools<State, StateMeta<Metadata>>) => {
+    this._onInitialize?.(parameters as StoreTools<State, Metadata>);
+  };
+
+  protected onStateChanged = (args: StoreTools<State, StateMeta<Metadata>> & StateChanges<State>) => {
+    this._onChange?.(args as StoreTools<State, Metadata> & StateChanges<State>);
   };
 }

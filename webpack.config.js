@@ -1,19 +1,38 @@
 const path = require("path");
-const { CleanWebpackPlugin } = require("clean-webpack-plugin");
+const TerserPlugin = require("terser-webpack-plugin");
 
 module.exports = {
   mode: "production",
   entry: {
+    // inherit from react-global-state-hooks
     bundle: "./src/index.ts",
+    createContext: "./src/createContext.ts",
+    GlobalStore: "./src/GlobalStore.ts",
+    GlobalStoreAbstract: "./src/GlobalStoreAbstract.ts",
+    createCustomGlobalState: "./src/createCustomGlobalState.ts",
+    createGlobalState: "./src/createGlobalState.ts",
+    combineRetrieverAsynchronously: "./src/combineRetrieverAsynchronously.ts",
+    combineRetrieverEmitterAsynchronously: "./src/combineRetrieverEmitterAsynchronously.ts",
+    types: "./src/types.ts",
+    debounce: "./src/debounce.ts",
+    isRecord: "./src/isRecord.ts",
+    shallowCompare: "./src/shallowCompare.ts",
+    throwWrongKeyOnActionCollectionConfig: "./src/throwWrongKeyOnActionCollectionConfig.ts",
+    uniqueId: "./src/uniqueId.ts",
+    uniqueSymbol: "./src/uniqueSymbol.ts",
+    useConstantValueRef: "./src/useConstantValueRef.ts",
+    // extras
+    asyncStorageWrapper: "./src/asyncStorageWrapper.ts",
+    getAsyncStorageItem: "./src/getAsyncStorageItem.ts",
+    setAsyncStorageItem: "./src/setAsyncStorageItem.ts",
   },
   externals: {
     react: "react",
     "react-native": "react-native",
-    "@react-native-async-storage/async-storage":
-      "@react-native-async-storage/async-storage",
+    "@react-native-async-storage/async-storage": "@react-native-async-storage/async-storage",
   },
   output: {
-    path: path.resolve(__dirname, "lib"),
+    path: path.resolve(__dirname),
     filename: ({ chunk: { name } }) => {
       return `${name}.js`;
     },
@@ -38,11 +57,7 @@ module.exports = {
           {
             loader: "babel-loader",
             options: {
-              presets: [
-                "@babel/preset-env",
-                "@babel/preset-react",
-                "@babel/preset-typescript",
-              ],
+              presets: ["@babel/preset-env", "@babel/preset-react", "@babel/preset-typescript"],
               plugins: [
                 "@babel/plugin-transform-modules-commonjs",
                 "@babel/plugin-proposal-class-properties",
@@ -58,9 +73,17 @@ module.exports = {
       },
     ],
   },
-  plugins: [
-    new CleanWebpackPlugin({
-      cleanAfterEveryBuildPatterns: ["**/__test__/**"],
-    }),
-  ],
+  optimization: {
+    minimize: true,
+    minimizer: [
+      new TerserPlugin({
+        extractComments: false,
+        terserOptions: {
+          format: {
+            comments: false,
+          },
+        },
+      }),
+    ],
+  },
 };
