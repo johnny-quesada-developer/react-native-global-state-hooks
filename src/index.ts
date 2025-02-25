@@ -43,7 +43,7 @@ export { uniqueId } from "./uniqueId";
 export { throwWrongKeyOnActionCollectionConfig } from "./throwWrongKeyOnActionCollectionConfig";
 export { isRecord } from "./isRecord";
 export { uniqueSymbol, UniqueSymbol } from "./uniqueSymbol";
-export { useConstantValueRef } from "./useConstantValueRef";
+export { useStableState, type UseStableState } from "./useStableState";
 
 // combiners
 export { combineRetrieverAsynchronously } from "./combineRetrieverAsynchronously";
