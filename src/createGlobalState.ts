@@ -56,3 +56,5 @@ export const createGlobalState = ((
     asyncStorage?: AsyncStorageConfig;
   }
 ) => new GlobalStore(state, args).getHook()) as CreateGlobalState;
+
+export default createGlobalState;

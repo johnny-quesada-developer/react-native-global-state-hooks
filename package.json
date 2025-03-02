@@ -1,6 +1,6 @@
 {
   "name": "react-native-global-state-hooks",
-  "version": "8.0.3",
+  "version": "9.0.0",
   "description": "This is a package to easily handling global-state across your react-native-components No-redux... The library now includes @react-native-async-storage/async-storage to persist your state across sessions... if you want to keep using the old version without async-storage or react-native dependencies just use version 5.0.15 or user react-hooks-global-states instead",
   "main": "./bundle.js",
   "types": "./index.d.ts",
@@ -15,16 +15,6 @@
       "import": "./asyncStorageWrapper.js",
       "require": "./asyncStorageWrapper.js",
       "types": "./asyncStorageWrapper.d.ts"
-    },
-    "./combineRetrieverAsynchronously": {
-      "import": "./combineRetrieverAsynchronously.js",
-      "require": "./combineRetrieverAsynchronously.js",
-      "types": "./combineRetrieverAsynchronously.d.ts"
-    },
-    "./combineRetrieverEmitterAsynchronously": {
-      "import": "./combineRetrieverEmitterAsynchronously.js",
-      "require": "./combineRetrieverEmitterAsynchronously.js",
-      "types": "./combineRetrieverEmitterAsynchronously.d.ts"
     },
     "./createContext": {
       "import": "./createContext.js",
@@ -179,6 +169,6 @@
     }
   },
   "dependencies": {
-    "react-hooks-global-states": "^6.0.11"
+    "react-hooks-global-states": "^7.0.10"
   }
 }

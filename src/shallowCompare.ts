@@ -1,1 +1,1 @@
-export * from "react-hooks-global-states/shallowCompare";
+export { shallowCompare, default } from "react-hooks-global-states/shallowCompare";

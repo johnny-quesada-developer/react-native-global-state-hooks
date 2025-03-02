@@ -1,1 +1,1 @@
-export * from "react-hooks-global-states/isRecord";
+export { isRecord, default } from "react-hooks-global-states/isRecord";

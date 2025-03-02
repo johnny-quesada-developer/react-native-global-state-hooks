@@ -31,3 +31,5 @@ export const setAsyncStorageItem = <T>(item: T, args: AsyncStorageConfig): void 
 
   asyncStorageWrapper.setItem(localStorageKey, parsed);
 };
+
+export default setAsyncStorageItem;

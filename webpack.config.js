@@ -11,8 +11,6 @@ module.exports = {
     GlobalStoreAbstract: "./src/GlobalStoreAbstract.ts",
     createCustomGlobalState: "./src/createCustomGlobalState.ts",
     createGlobalState: "./src/createGlobalState.ts",
-    combineRetrieverAsynchronously: "./src/combineRetrieverAsynchronously.ts",
-    combineRetrieverEmitterAsynchronously: "./src/combineRetrieverEmitterAsynchronously.ts",
     types: "./src/types.ts",
     debounce: "./src/debounce.ts",
     isRecord: "./src/isRecord.ts",

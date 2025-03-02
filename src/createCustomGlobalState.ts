@@ -96,3 +96,5 @@ export const createCustomGlobalState = <
     });
   }) as CustomCreateGlobalState<TCustomConfig, InheritMetadata>;
 };
+
+export default createCustomGlobalState;

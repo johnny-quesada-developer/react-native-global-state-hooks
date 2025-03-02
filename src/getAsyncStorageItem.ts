@@ -33,3 +33,5 @@ export const getAsyncStorageItem = async <TState>(args: AsyncStorageConfig): Pro
 
   return value;
 };
+
+export default getAsyncStorageItem;

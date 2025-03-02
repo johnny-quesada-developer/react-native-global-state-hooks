@@ -1,1 +1,1 @@
-export * from "react-hooks-global-states/uniqueSymbol";
+export { uniqueSymbol, UniqueSymbol, default } from "react-hooks-global-states/uniqueSymbol";

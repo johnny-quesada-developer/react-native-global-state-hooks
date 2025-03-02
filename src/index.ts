@@ -45,10 +45,6 @@ export { isRecord } from "./isRecord";
 export { uniqueSymbol, UniqueSymbol } from "./uniqueSymbol";
 export { useStableState, type UseStableState } from "./useStableState";
 
-// combiners
-export { combineRetrieverAsynchronously } from "./combineRetrieverAsynchronously";
-export { combineRetrieverEmitterAsynchronously } from "./combineRetrieverEmitterAsynchronously";
-
 // context
 export {
   ContextProviderAPI,

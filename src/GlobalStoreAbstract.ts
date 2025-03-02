@@ -25,3 +25,5 @@ export abstract class GlobalStoreAbstract<
 
   protected abstract onChange: (args: StoreTools<State, StateMeta<Metadata>> & StateChanges<State>) => void;
 }
+
+export default GlobalStoreAbstract;

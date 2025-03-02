@@ -1,1 +1,4 @@
-export * from "react-hooks-global-states/throwWrongKeyOnActionCollectionConfig";
+export {
+  throwWrongKeyOnActionCollectionConfig,
+  default,
+} from "react-hooks-global-states/throwWrongKeyOnActionCollectionConfig";

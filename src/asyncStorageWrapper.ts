@@ -99,3 +99,5 @@ export const asyncStorageWrapper: AsyncStorageManager & {
     addAsyncStorageManager,
   };
 })();
+
+export default asyncStorageWrapper;

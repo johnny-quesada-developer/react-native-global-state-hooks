@@ -151,3 +151,5 @@ export class GlobalStore<
     this._onChange?.(args as StoreTools<State, Metadata> & StateChanges<State>);
   };
 }
+
+export default GlobalStore;

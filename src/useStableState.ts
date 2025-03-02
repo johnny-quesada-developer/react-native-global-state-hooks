@@ -1,1 +1,1 @@
-export * from "react-hooks-global-states/useStableState";
+export { useStableState, UseStableState, default } from "react-hooks-global-states/useStableState";
