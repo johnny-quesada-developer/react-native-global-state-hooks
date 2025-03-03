@@ -2,88 +2,95 @@
 
 ![Image John Avatar](https://raw.githubusercontent.com/johnny-quesada-developer/global-hooks-example/main/public/avatar2.jpeg)
 
-Hi There! Welcome to **react-native-global-state-hooks** your New State Management Solution for React Native Components 🚀
+Effortless **global state management** for React & React Native! 🚀 Define a **global state in just one line of code** and enjoy **lightweight, flexible, and scalable** state management. Try it now on **[CodePen](https://codepen.io/johnnynabetes/pen/WNmeGwb?editors=0010)** and see it in action! ✨
 
-Are you looking for a solution to manage **global state** in your **React Native components**? Look no further!
+---
 
-**react-native-global-state-hooks** is your option for efficiently handling global state management in your React Native applications.
+## 🔗 Explore More
 
-One line of code for a **global state**! try it out now on [CODEPEN-react-global-state-hooks](https://codepen.io/johnnynabetes/pen/WNmeGwb?editors=0010) and witness the magic ✨.
+- **[Live Example](https://johnny-quesada-developer.github.io/react-global-state-hooks-example/)** 📘
+- **[React Native Integration](https://www.npmjs.com/package/react-native-global-state-hooks/)** 📱
+- **[Todo-List Example](https://github.com/johnny-quesada-developer/todo-list-with-global-hooks.git/)** 📝
+- **[Video Overview](https://www.youtube.com/watch?v=1UBqXk2MH8I/)** 🎥
+- **[GitHub Repository](https://github.com/johnny-quesada-developer/global-hooks-example/)** 🧩
 
-For a deeper dive into how these hooks work, check out a comprehensive example at [react-global-state-hooks-example](https://johnny-quesada-developer.github.io/react-global-state-hooks-example/) 📘.
+Works seamlessly with **React & React Native**:
 
-You can explore a **TODO-LIST** example using global state and asynchronous storage by heading to [todo-list-with-global-hooks](https://github.com/johnny-quesada-developer/todo-list-with-global-hooks.git) 📝.
+- **[react-global-state-hooks](https://www.npmjs.com/package/react-global-state-hooks)** for web applications.
+- **[react-native-global-state-hooks](https://www.npmjs.com/package/react-native-global-state-hooks)** for React Native projects.
 
-For a more visual introduction, watch our informative video [here!](https://www.youtube.com/watch?v=1UBqXk2MH8I) 🎥 and dive into the code on [global-hooks-example](https://github.com/johnny-quesada-developer/global-hooks-example) 🧩.
+---
 
-The best part? [react-hooks-global-states](https://www.npmjs.com/package/react-hooks-global-states) is compatible with both **React** and **React Native**. If you're building web applications, explore this [react-global-state-hooks](https://www.npmjs.com/package/react-global-state-hooks), and for your React Native projects, here you are at **react-native-global-state-hooks**. These specialized libraries extend the capabilities of [react-hooks-global-states](https://www.npmjs.com/package/react-hooks-global-states) to perfectly fit your specific development environments. Discover the ease of global state management today! 🌐
+## 🗂️ Async Persist Storage
 
-# Creating a global state
-
-We are gonna create a global state hook **useCount** with one line of code.
-
-```ts
-import { createGlobalState } from "react-native-global-state-hooks/createGlobalState";
-
-export const useCount = createGlobalState(0);
-```
-
-That's it! Welcome to global hooks. Now, you can use this state wherever you need it in your application.
-
-Let's see how to use it inside a simple **component**
+To persist the global state using **Async Storage**, simply add the `asyncStorage` option:
 
 ```ts
-const [count, setCount] = useCount();
-
-return <Button onClick={() => setCount((count) => count + 1)}>{count}</Button>;
-```
-
-Isn't it cool? It works just like a regular **useState**. Notice the only difference is that now you don't need to provide the initial value since this is a global hook, and the initial value has already been provided.
-
-# Using async persist storage
-
-Just add a key for the async storage
-
-```ts
-const useCountPersisted = createGlobalState(1, {
+const useCount = createGlobalState(0, {
   asyncStorage: {
     key: "count",
   },
 });
 ```
 
-After this the metadata of the hooks will now include a flag which will help you to determinate if the async storage was already reached.
+### 🔹 How It Works
 
-```ts
-const [count, setCount, { isAsyncStorageReady }] = useCountPersisted();
-```
+✅ **Automatically syncs the state with Async Storage** if the value is serializable.
+✅ **Provides an `isAsyncStorageReady` flag** to indicate when the async storage has been reviewed and committed.
+✅ **Uses `@react-native-async-storage/async-storage` by default** (make sure to install this package if needed).
+✅ **Allows custom async storage managers** with `asyncStorageWrapper.addAsyncStorageManager(customAsyncStorageManager)`;
 
-If no key is provided, the default metadata is null. Otherwise, it's set to **{ isAsyncStorageReady: false }**.
-
-Upon the first successful retrieval from **AsyncStorage**, components will re-render with **{ isAsyncStorageReady: true }** in the metadata.
-The metadata and components will be updated and re-rendered even if there's no difference between the value stored in **AsyncStorage** and the store's default value. This is the only instance where the metadata forces a re-render, after this the metadata will not update the component
-
-# Selectors
-
-What if you already have a global state that you want to subscribe to, but you don't want your component to listen to all the changes of the state, only a small portion of it? Let's create a more complex **state**
-
-```ts
-import { createGlobalState } from 'react-hooks-global-states';
-
-export const useContacts = createGlobalState({
-  isLoading: true,
-  entities: Contact[],
-  selected: Set<number>,
-});
-```
-
-Now, let's say we have a situation where we want to access only the list of contacts. We don't care about the rest of the state.
+Inside your components:
 
 ```tsx
-// That's it. With that simple selector, we now get the list of contacts,
-// and the component will only re-render if the property **entities** changes on the global state
-const [contacts] = useContacts((state) => state.entities]);
+const [count, setCount, { isAsyncStorageReady }] = useCount();
+```
 
+If you specify a key in `asyncStorage`, the state value persists automatically when serializable. When connecting to async storage, expect a **second render** that updates `isAsyncStorageReady`, indicating that the storage has been reviewed and the state is committed.
+
+### 🔧 Custom Async Storage Manager
+
+You can configure your own storage selection by using `asyncStorageWrapper.addAsyncStorageManager`. Ensure that the manager is **added before any hook is called**.
+
+`index.ts`
+
+```ts
+import { asyncStorageWrapper } from "react-global-state-hooks";
+asyncStorageWrapper.addAsyncStorageManager(customAsyncStorageManager);
+```
+
+## 🛠 Creating a Global State
+
+Define a **global state** in **one line**:
+
+```tsx
+import { createGlobalState } from "react-hooks-global-states/createGlobalState";
+export const useCount = createGlobalState(0);
+```
+
+Now, use it inside a component:
+
+```tsx
+const [count, setCount] = useCount();
+return <Button onClick={() => setCount((count) => count + 1)}>{count}</Button>;
+```
+
+Works just like **useState**, but the **state is shared globally**! 🎉
+
+---
+
+## 🎯 Selectors: Subscribing to Specific State Changes
+
+For **complex state objects**, you can subscribe to specific properties instead of the entire state:
+
+```tsx
+export const useContacts = createGlobalState({ entities: [], selected: new Set<number>() });
+```
+
+To access only the `entities` property:
+
+```tsx
+const [contacts] = useContacts((state) => state.entities);
 return (
   <ul>
     {contacts.map((contact) => (
@@ -93,312 +100,152 @@ return (
 );
 ```
 
-What about special cases, like when you have a map instead of an array and want to extract a list of contacts? It's common to use selectors that return a new array, but this can cause React to re-render because the new array has a different reference than the previous one.
+### 📌 Using Dependencies in Selectors
+
+You can also add **dependencies** to a selector. This is useful when you want to derive state based on another piece of state (e.g., a filtered list). For example, if you're filtering contacts based on a `filter` value:
 
 ```tsx
-export const useContacts = createGlobalState({
-  isLoading: true,
-  entities: Map<number, Contact>,
-  selected: Set<number>,
-});
-
-// The selector is simply a standard selector used to extract the values from the map.
-
-const [contacts] = useContacts((state) => [...state.entities.values()], {
-  // The isEqualRoots function allows you to create your own validation logic for determining when to recompute the selector.
-  isEqualRoot: (a, b) => a.entities === b.entities,
-});
-```
-
-Okay, everything works when the changes come from the state, but what happens if I want to recompute the selector based on the internal state of the component?
-
-**component.ts**
-
-```tsx
-const [filter, setFilter] = useState("");
-
 const [contacts] = useContacts(
-  (state) => [...state.entities.values()].filter((item) => item.name.includes(filter)),
-  {
-    isEqualRoot: (a, b) => a.entities === b.entities,
-    /**
-     * Easy to understand, right? With the dependencies prop, you can,
-     * just like with any other hook, provide a collection of values that will be compared during each render cycle
-     * to determine if the selector should be recomputed.*/
-    dependencies: [filter],
-  }
+  (state) => state.entities.filter((item) => item.name.includes(filter)),
+  [filter]
 );
 ```
 
-And finally, what if you need to reuse this selector throughout your application and don't want to duplicate code?
+Alternatively, you can pass dependencies inside an **options object**:
 
 ```tsx
-export const useContacts = createGlobalState({
-  isLoading: true,
-  entities: Map<number, Contact>,
-  selected: Set<number>,
-});
-
-const useContactsArray = useContacts.createSelectorHook((state) => [...state.entities.values()], {
+const [contacts] = useContacts((state) => state.entities.filter((item) => item.name.includes(filter)), {
+  dependencies: [filter],
   isEqualRoot: (a, b) => a.entities === b.entities,
 });
 ```
 
-Now inside your component just call the new hook
+Unlike Redux, where only **root state changes trigger re-selection**, this approach ensures that **derived values recompute when dependencies change** while maintaining performance.
 
-**component.ts**
+---
 
-```tsx
-const [filter, setFilter] = useState("");
+## 🔄 Reusing Selectors
 
-const [contacts] = useContactsArray((entities) => entities.name.includes(filter), {
-  dependencies: [filter],
-});
-```
-
-Or you can create another selectorHook from your **useContactsArray**
-
-```ts
-const useContactsArray = useContacts.createSelectorHook((state) => [...state.entities.values()], {
-  isEqualRoot: (a, b) => a.entities === b.entities,
-});
-
-const useContactsLength = useContactsArray.createSelectorHook((entities) => entities.length);
-```
-
-Or you can create a custom hook
+### 📌 Creating a Selector
 
 ```tsx
-const useFilteredContacts = (filter: string) => {
-  const [contacts] = useContactsArray((entities) => entities.name.includes(filter), {
-    dependencies: [filter],
-  });
-
-  return contacts;
-};
+export const useContactsArray = useContacts.createSelectorHook((state) => state.entities);
+export const useContactsCount = useContactsArray.createSelectorHook((entities) => entities.length);
 ```
 
-To summarize
+### 📌 Using Selectors in Components
 
 ```tsx
-const [filter, setFilter] = useState("");
+const [contacts] = useContactsArray();
+const [count] = useContactsCount();
+```
 
-const [contacts] = useContacts((state) => state.contacts.filter((contact) => contact.name.includes(filter)), {
-  /**
-   * You can use the `isEqualRoot` to validate if the values before the selector are equal.
-   * This validation will run before `isEqual` and if the result is true the selector will not be recomputed.
-   * If the result is true the re-render of the component will be prevented.
-   */
-  isEqualRoot: (r1, r2) => r1.filter === r2.filter,
+#### ✅ Selectors support inline selectors and dependencies
 
-  /**
-   * You can use the `isEqual` to validate if the values after the selector are equal.
-   * This validation will run after the selector computed a new value...
-   * and if the result is true it will prevent the re-render of the component.
-   */
-  isEqual: (filter1, filter2) => filter1 === filter2,
+You can still **use dependencies** inside a selector hook:
 
-  /**
-   * You can use the `dependencies` array as with regular hooks to to force the recomputation of the selector.
-   * Is important ot mention that changes in the dependencies will not trigger a re-render of the component...
-   * Instead the recomputation of the selector will returned immediately.
-   */
-  dependencies: [filter],
-});
-
-return (
-  <ul>
-    {contacts.map((contact) => (
-      <li key={contact.id}>{contact.name}</li>
-    ))}
-  </ul>
+```tsx
+const [filteredContacts] = useContactsArray(
+  (contacts) => contacts.filter((c) => c.name.includes(filter)),
+  [filter]
 );
 ```
 
-Btw, If you want to perform a shallow comparison between the previous and new values, you can use the **shallowCompare** function from the library.
+#### ✅ Selector hooks share the same state mutator
 
-```TSX
-({
-  /**
-  * You can use the `shallowCompare` from the GlobalStore.utils to compare the values at first level.
-  */
-  isEqual: shallowCompare,
-})
+The **stateMutator remains the same** across all derived selectors, meaning actions and setState functions stay consistent.
+
+```tsx
+const [actions1] = useContactsArray();
+const [actions2] = useContactsCount();
+
+console.log(actions1 === actions2); // true
 ```
 
-Just remember, you can select or derive different values from the global state endlessly, but the state mutator will remain the same throughout the hooks.
+---
 
-More examples:
+## 🎛 State Actions: Controlling State Modifications
 
-```ts
-const useFilter = useContacts.createSelectorHook(({ filter }) => filter);
+Restrict **state modifications** by defining custom actions:
 
-const useContactsArray = useContacts.createSelectorHook(({ items }) => items);
-
-const useContactsLength = useContactsArray.createSelectorHook((items) => items.length);
-
-const useIsContactsEmpty = useContactsLength.createSelectorHook((length) => !length);
-```
-
-It can't get any simpler, right? Everything is connected, everything is reactive. Plus, these hooks are strongly typed, so if you're working with **TypeScript**, you'll absolutely love it.
-
-Each selector hook is reactive only to the fragment/derived of the state returned by the selector. And again you can optimize it by using the **isEqualRoot** and **isEqual** functions, which help avoid recomputing the selector if the root state or the fragment hasn't changed.
-
-# State actions
-
-Is common and often necessary to restrict the manipulation of state to a specific set of actions or operations. To achieve this, we can simplify the process by adding a custom API to the configuration of our **useContacts**.
-
-By defining a custom API for the **useContacts**, we can encapsulate and expose only the necessary actions or operations that are allowed to modify the state. This provides a controlled interface for interacting with the state, ensuring that modifications stick to the desired restrictions.
-
-```ts
-import { createGlobalState } from "react-native-global-state-hooks";
-
+```tsx
 export const useContacts = createGlobalState(
+  { filter: "", items: [] },
   {
-    isLoading: true,
-    filter: "",
-    items: [] as Contact[],
-  },
-  {
-    // this are the actions available for this state
     actions: {
-      setFilter(filter: string) {
-        return ({ setState }) => {
-          setState((state) => ({
-            ...state,
-            filter,
-          }));
+      async fetch() {
+        return async ({ setState }) => {
+          const items = await fetchItems();
+          setState({ items });
         };
       },
-    } as const,
-    onInit: ({ setState }) => {
-      // fetch contacts
+      setFilter(filter: string) {
+        return ({ setState }) => {
+          setState((state) => ({ ...state, filter }));
+        };
+      },
     },
   }
 );
 ```
 
-That's it! In this updated version, the **useContacts** hook will no longer return [**state**, **stateMutator**] but instead will return [**state**, **actions**]. This change will provide a more intuitive and convenient way to access and interact with the state and its associated actions.
-
-Let's see how that will look now into our **FilterBar.tsx**
+Now, instead of `setState`, the hook returns **actions**:
 
 ```tsx
-const [{ filter }, { setFilter }] = useFilter();
-
-return <TextInput onChangeText={setFilter} />;
+const [filter, { setFilter }] = useContacts();
 ```
 
-Yeah, that's it! All the **derived states** and **emitters** (we will talk about this later) will inherit the new actions interface.
+---
 
-You can even **derive** from another **derived state**! Let's explore a few silly examples:
+## 🌍 Accessing Global State Outside Components
 
-```ts
-const useFilter = createDerivate(useContacts, ({ filter }) => ({ filter }));
-
-const useFilterString = createDerivate(useFilter, { filter } => filter);
-
-const useContacts = createDerivate(useContacts, ({ items }) => items);
-
-const useContactsLength = createDerivate(useContacts, (items) => items.length);
-
-const useIsContactsEmpty = createDerivate(useContactsLength, (length) => !length);
-```
-
-It can't get any simpler, right? Everything is connected, everything is reactive. Plus, these hooks are strongly typed, so if you're working with **TypeScript**, you'll absolutely love it.
-
-# State Controls
-
-If you need to access the global state outside of a component or a hook without subscribing to state changes, or even inside a **ClassComponent**, you can use:
+Use `stateControls()` to **retrieve or update state outside React components**:
 
 ```tsx
-useContacts.stateControls: () => [stateRetriever: StateGetter<State>, stateMutator: Setter<State>|ActionCollectionResult<State>, metadataRetriever: Metadata];
-
-// example:
-const [getContacts, setContacts] = useContacts.stateControls();
-
-console.log(getContacts()); // prints the list of contacts
+const [contactsRetriever, contactsApi] = useContacts.stateControls();
+console.log(contactsRetriever()); // Retrieves the current state
 ```
 
-**stateMutator** is particularly useful when you want to create components that have editing access to a specific store but don't necessarily need to reactively respond to state changes.
+#### ✅ Subscribe to changes
 
-Using the **stateRetriever** and the **stateMutator** allows you to retrieve the state when needed without establishing a reactive relationship with the state changes. This approach provides more flexibility and control over when and how components interact with the global state.
-
-So, While **useContacts** will allow your components to subscribe to the custom hook, using the **contactsRetriever** method you will be able retrieve the current value of the state. This allows you to access the state whenever necessary, without being reactive to its changes and with the **contactsMutator** you now have the ability to modify the state without the need for subscription to the hook.
-
-Additionally, to subscribe to state changes, you can pass a callback function as a parameter to the **stateRetriever**. This approach enables you to create a subscription group, allowing you to subscribe to either the entire state or a specific portion of it. When a callback function is provided to the **stateRetriever**, it will return a cleanup function instead of the state. This cleanup function can be used to unsubscribe or clean up the subscription when it is no longer needed.
-
-```ts
-/**
- * This not only allows you to retrieve the current value of the state...
- * but also enables you to subscribe to any changes in the state or a portion of it
- */
-const unsubscribe1 = contactsRetriever((state) => {
-  console.log("state changed: ", state);
-});
-
-const unsubscribe2 = contactsRetriever(
-  (state) => state.isLoading,
-  (isLoading) => {
-    console.log("is loading changed", isLoading);
-  }
-);
-```
-
-That's great, isn't it? everything stays synchronized with the original state!!
-
-## stateMutator
-
-Let's add more actions to the state and explore how to use one action from inside another.
-
-Here's an example of adding multiple actions to the state and utilizing one action within another:
-
-```ts
-import { createGlobalState } from "react-hooks-global-states";
-
-export const useCount = createGlobalState(0, {
-  actions: {
-    log: (currentValue: string) => {
-      return ({ getState }: StoreTools<number>): void => {
-        console.log(`Current Value: ${getState()}`);
-      };
-    },
-
-    increase(value: number = 1) {
-      return ({ getState, setState, actions }: StoreTools<number>) => {
-        setState((count) => count + value);
-
-        actions.log(message);
-      };
-    },
-
-    decrease(value: number = 1) {
-      return ({ getState, setState, actions }: StoreTools<number>) => {
-        setState((count) => count - value);
-
-        actions.log(message);
-      };
-    },
-  } as const,
+```tsx
+const unsubscribe = contactsRetriever((state) => {
+  console.log("State updated:", state);
 });
 ```
 
-Notice that the **StoreTools** will contain a reference to the generated actions API. From there, you'll be able to access all actions from inside another one... the **StoreTools** is generic and allow your to set an interface for getting the typing on the actions.
-
-# Stateful Context with Actions
-
-**The ultimate blend of flexibility and control in React state management!** You can now create an isolated global state within a React context, giving each consumer of the context provider a unique state instance. But that’s not all...
-
-**Stateful Context with Actions** extends the powerful features of global hooks into the realm of React Context. By integrating global hooks within a context, you bring all the benefits of global state management—such as modularity, selectors, derived states, and actions—into a context-specific environment. This means each consumer of the context not only gets a unique state instance but also inherits all the advanced capabilities of global hooks.
-
-## Creating a Stateful Context
-
-Forget about the boilerplate of creating a context... with **createStatefulContext** it's straightforward and powerful. You can create a context and provider with one line of code.
+#### ✅ Subscriptions are great when one state depends on another.
 
 ```tsx
-export const [useCounterContext, CounterProvider] = createStatefulContext(2);
+const useSelectedContact = createGlobalState(null, {
+  callbacks: {
+    onInit: ({ setState, getState }) => {
+      contactsRetriever(
+        (state) => state.contacts,
+        (contacts) => {
+          if (!contacts.has(getState())) setState(null);
+        }
+      );
+    },
+  },
+});
 ```
 
-Then just wrap the components you need with the provider:
+---
+
+## 🎭 Using Context for Scoped State
+
+- **Scoped State** – Context state is **isolated inside the provider**.
+- **Same API** – Context supports **selectors, actions, and state controls**.
+
+### 📌 Creating a Context
+
+```tsx
+import { createContext } from "react-global-state-hooks/createContext";
+export const [useCounterContext, CounterProvider] = createContext(0);
+```
+
+Wrap your app:
 
 ```tsx
 <CounterProvider>
@@ -406,169 +253,131 @@ Then just wrap the components you need with the provider:
 </CounterProvider>
 ```
 
-And finally, access the context value with the generated custom hook:
+Use the context state:
 
 ```tsx
-const MyComponent = () => {
-  const [useCounter] = useCounterContext();
-
-  // If the component needs to react to state changes, simply use the hook
-  const [count, setCount] = useCounter();
-
-  return <>{count}</>;
-};
+const [count] = useCounterContext();
 ```
 
-What’s the advantage of this, you might ask? Well, now you have all the capabilities of the global hooks within the isolated scope of the context. For example, you can choose whether or not to listen to changes in the state:
+### 📌 Context Selectors
+
+Works **just like global state**, but within the provider.
+
+---
+
+## 🔥 Observables: Watching State Changes
+
+Observables **let you react to state changes** via subscriptions.
+
+### 📌 Creating an Observable
 
 ```tsx
-const MyComponent = () => {
-  const [, , setCount] = useCounterContext();
-
-  // This component can access only the stateMutator of the state,
-  // and won't re-render if the counter changes
-  return <button onClick={() => setCount((count) => count + 1)}>Increase</button>;
-};
+export const useCounter = createGlobalState(0);
+export const counterLogs = useCounter.createObservable((count) => `Counter is at ${count}`);
 ```
 
-Now you have selectors—if the state changes, the component will only re-render if the selected portion of the state changes.
+### 📌 Subscribing to an Observable
 
 ```tsx
-const MyComponent = () => {
-  const [useCounter] = useCounterContext();
-
-  // Notice that we can select and derive values from the state
-  const [isEven, setCount] = useCounter((count) => count % 2 === 0);
-
-  useEffect(() => {
-    // Since the counter initially was 2 and now is 4, it’s still an even number.
-    // Because of this, the component will not re-render.
-    setCount(4);
-  }, []);
-
-  return <>{isEven ? "is even" : "is odd"}</>;
-};
+const unsubscribe = counterLogs((message) => {
+  console.log(message);
+});
 ```
 
-**createStatefulContext** also allows you to add custom actions to control the manipulation of the state.
+### 📌 Using Observables Inside Context
 
 ```tsx
-import { createStatefulContext, StoreTools } from "react-global-state-hooks";
-
-export const [useCounterContext, CounterProvider] = createStatefulContext(
-  {
-    count: 0,
-  },
-  {
-    actions: {
-      increase: (value: number = 1) => {
-        return ({ setState }) => {
-          setState((state) => ({
-            ...state,
-            count: state.count + value,
-          }));
-        };
-      },
-      decrease: (value: number = 1) => {
-        return ({ setState }) => {
-          setState((state) => ({
-            ...state,
-            count: state.count - value,
-          }));
-        };
-      },
-    } as const,
-  }
-);
+export const [useStateControls, useObservableBuilder] = useCounterContext.stateControls();
+const createObservable = useObservableBuilder();
+useEffect(() => {
+  const unsubscribe = createObservable((count) => {
+    console.log(`Updated count: ${count}`);
+  });
+  return unsubscribe;
+}, []);
 ```
 
-And just like with regular global hooks, now instead of a setState function, the hook will return the collection of actions:
+---
+
+## ⚖️ `createGlobalState` vs. `createContext`
+
+| Feature                | `createGlobalState`                      | `createContext`                                                                                                    |
+| ---------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **Scope**              | Available globally across the entire app | Scoped to the Provider where it’s used                                                                             |
+| **How to Use**         | `const useCount = createGlobalState(0)`  | `const [useCountContext, Provider] = createContext(0)`                                                             |
+| **createSelectorHook** | `useCount.createSelectorHook`            | `useCountContext.createSelectorHook`                                                                               |
+| **inline selectors?**  | ✅ Supported                             | ✅ Supported                                                                                                       |
+| **Custom Actions**     | ✅ Supported                             | ✅ Supported                                                                                                       |
+| **Observables**        | `useCount.createObservable`              | `const [, useObservableBuilder] = useCountContext.stateControls()`                                                 |
+| **State Controls**     | `useCount.stateControls()`               | `const [useStateControls] = useCountContext.stateControls()`                                                       |
+| **Best For**           | Global app state (auth, settings, cache) | Scoped module state, reusable component state, or state shared between child components without being fully global |
+
+## 🔄 Lifecycle Methods
+
+Global state hooks support lifecycle callbacks for additional control.
 
 ```tsx
-const MyComponent = () => {
-  const [, , actions] = useCounterContext();
-
-  return <button onClick={() => actions.increase(1)}>Increase</button>;
-};
-```
-
-# Life cycle methods
-
-There are some lifecycle methods available for use with global hooks, let's review them:
-
-```ts
-/**
-* @description callback function called when the store is initialized
-* @returns {void} result - void
-* */
-onInit?: ({
-  /**
-   * Set the metadata
-   * @param {TMetadata} setter - The metadata or a function that will receive the metadata and return the new metadata
-   * */
-  setMetadata: MetadataSetter<TMetadata>;
-
-  /**
-   * Set the state
-   * @param {TState} setter - The state or a function that will receive the state and return the new state
-   * @param {{ forceUpdate?: boolean }} options - Options
-   * */
-  setState: StateSetter<TState>;
-
-  /**
-   * Get the state
-   * @returns {TState} result - The state
-   * */
-  getState: () => TState;
-
-  /**
-   * Get the metadata
-   * @returns {TMetadata} result - The metadata
-   * */
-  getMetadata: () => TMetadata;
-
-  /**
-   * Actions of the hook if configuration was provided
-   */
-  actions: TActions;
-}: StateConfigCallbackParam<TState, TMetadata, TActions>) => void;
-
-/**
-* @description - callback function called every time the state is changed
-*/
-onStateChanged?: (parameters: StoreTools<any, any> & StateChanges<unknown>) => void;
-
-/**
-* callback function called every time a component is subscribed to the store
-*/
-onSubscribed?: (parameters: StoreTools<any, any>) => void;
-
-/**
-* callback function called every time the state is about to change and it allows you to prevent the state change
-*/
-computePreventStateChange?: (parameters: StoreTools<any, any> & StateChanges<unknown>) => boolean;
-```
-
-You can pass this callbacks between on the second parameter of the builders like **createGlobalState**
-
-```ts
 const useData = createGlobalState(
   { value: 1 },
   {
-    metadata: {
-      someExtraInformation: "someExtraInformation",
-    },
     callbacks: {
-      // onSubscribed: (StateConfigCallbackParam) => {},
-      // onInit // etc
+      onInit: ({ setState }) => {
+        console.log("Store initialized");
+      },
+      onStateChanged: ({ state, previousState }) => {
+        console.log("State changed:", previousState, "→", state);
+      },
       computePreventStateChange: ({ state, previousState }) => {
-        const prevent = isEqual(state, previousState);
-
-        return prevent;
+        return state.value === previousState.value;
       },
     },
   }
 );
 ```
 
-# That's it for now!! hope you enjoy coding!!
+Use **`onInit`** for setup, **`onStateChanged`** to listen to updates, and **`computePreventStateChange`** to prevent unnecessary updates.
+
+## Metadata
+
+There is a possibility to add non reactive information in the global state:
+
+```tsx
+const useCount = createGlobalState(0, { metadata: { renders: 0 } });
+```
+
+How to use it?
+
+```tsx
+const [count, , metadata] = useCount();
+
+metadata.renders += 1;
+```
+
+## 🎯 Ready to Try It?
+
+📦 **NPM Package:** [react-hooks-global-states](https://www.npmjs.com/package/react-hooks-global-states)
+
+🚀 Simplify your **global state management** in React & React Native today! 🚀
+
+# Using async persist storage
+
+```ts
+const useCount = createGlobalState(0, {
+  asyncStorage: {
+    key: "count",
+  },
+});
+```
+
+Inside your components
+
+```tsx
+const [count, setCount, { isAsyncStorageReady }] = useCount();
+```
+
+- if you specify a key into the `asyncStorage` this will persist the state value if the same is serializable
+- when connecting to the async storage you can expect a second render which will update isAsyncStorageReady indicating that the async storage was already reviewed and the state value is committed.
+
+The async storage default functionality depends on **@react-native-async-storage/async-storage** but this dependency is optional, install the package as a dependency if you want to enable persisted state.
+
+optionally you can configure your own selection for persisting storage by using `asyncStorageWrapper.addAsyncStorageManager`, notice that the manager should be added before any hook gets call;
