@@ -1,68 +1,76 @@
 const path = require("path");
 const TerserPlugin = require("terser-webpack-plugin");
 
+const individualEntries = {
+  // inherit from react-global-state-hooks
+  createContext: "./src/createContext.ts",
+  GlobalStore: "./src/GlobalStore.ts",
+  GlobalStoreAbstract: "./src/GlobalStoreAbstract.ts",
+  createCustomGlobalState: "./src/createCustomGlobalState.ts",
+  createGlobalState: "./src/createGlobalState.ts",
+  types: "./src/types.ts",
+  debounce: "./src/debounce.ts",
+  isRecord: "./src/isRecord.ts",
+  shallowCompare: "./src/shallowCompare.ts",
+  throwWrongKeyOnActionCollectionConfig: "./src/throwWrongKeyOnActionCollectionConfig.ts",
+  uniqueId: "./src/uniqueId.ts",
+  uniqueSymbol: "./src/uniqueSymbol.ts",
+  useStableState: "./src/useStableState.ts",
+  generateStackHash: "./src/generateStackHash.ts",
+
+  // extras
+  asyncStorageWrapper: "./src/asyncStorageWrapper.ts",
+  getAsyncStorageItem: "./src/getAsyncStorageItem.ts",
+  setAsyncStorageItem: "./src/setAsyncStorageItem.ts",
+};
+
+const getExternalsForEntries = () => {
+  const keys = Object.keys(individualEntries);
+  const fromEntries = keys.reduce((acc, key) => {
+    acc[`./${key}`] = `./${key}.js`;
+    return acc;
+  }, {});
+
+  const fromBasePackage = keys.reduce((acc, key) => {
+    acc[`react-hooks-global-states/${key}`] = `react-hooks-global-states/${key}`;
+    return acc;
+  }, {});
+
+  return {
+    ...fromEntries,
+    ...fromBasePackage,
+  };
+};
+
 module.exports = {
   mode: "production",
   entry: {
-    // inherit from react-global-state-hooks
     bundle: "./src/index.ts",
-    createContext: "./src/createContext.ts",
-    GlobalStore: "./src/GlobalStore.ts",
-    GlobalStoreAbstract: "./src/GlobalStoreAbstract.ts",
-    createCustomGlobalState: "./src/createCustomGlobalState.ts",
-    createGlobalState: "./src/createGlobalState.ts",
-    types: "./src/types.ts",
-    debounce: "./src/debounce.ts",
-    isRecord: "./src/isRecord.ts",
-    shallowCompare: "./src/shallowCompare.ts",
-    throwWrongKeyOnActionCollectionConfig: "./src/throwWrongKeyOnActionCollectionConfig.ts",
-    uniqueId: "./src/uniqueId.ts",
-    uniqueSymbol: "./src/uniqueSymbol.ts",
-    useStableState: "./src/useStableState.ts",
-    // extras
-    asyncStorageWrapper: "./src/asyncStorageWrapper.ts",
-    getAsyncStorageItem: "./src/getAsyncStorageItem.ts",
-    setAsyncStorageItem: "./src/setAsyncStorageItem.ts",
+    ...individualEntries,
   },
   externals: {
     react: "react",
     "react-native": "react-native",
     "@react-native-async-storage/async-storage": "@react-native-async-storage/async-storage",
+
     // avoid bundle the base package
+    "json-storage-formatter": "json-storage-formatter",
+    "json-storage-formatter/clone": "json-storage-formatter/clone",
+    "json-storage-formatter/isNil": "json-storage-formatter/isNil",
+    "json-storage-formatter/isNumber": "json-storage-formatter/isNumber",
+    "json-storage-formatter/isBoolean": "json-storage-formatter/isBoolean",
+    "json-storage-formatter/isString": "json-storage-formatter/isString",
+    "json-storage-formatter/isDate": "json-storage-formatter/isDate",
+    "json-storage-formatter/isRegex": "json-storage-formatter/isRegex",
+    "json-storage-formatter/isFunction": "json-storage-formatter/isFunction",
+    "json-storage-formatter/isPrimitive": "json-storage-formatter/isPrimitive",
+    "json-storage-formatter/types": "json-storage-formatter/types",
+    "json-storage-formatter/formatFromStore": "json-storage-formatter/formatFromStore",
+    "json-storage-formatter/formatToStore": "json-storage-formatter/formatToStore",
+
     "react-hooks-global-states": "react-hooks-global-states",
-    "react-hooks-global-states/createContext": "react-hooks-global-states/createContext",
-    "react-hooks-global-states/GlobalStore": "react-hooks-global-states/GlobalStore",
-    "react-hooks-global-states/GlobalStoreAbstract": "react-hooks-global-states/GlobalStoreAbstract",
-    "react-hooks-global-states/createCustomGlobalState": "react-hooks-global-states/createCustomGlobalState",
-    "react-hooks-global-states/createGlobalState": "react-hooks-global-states/createGlobalState",
-    "react-hooks-global-states/types": "react-hooks-global-states/types",
-    "react-hooks-global-states/debounce": "react-hooks-global-states/debounce",
-    "react-hooks-global-states/isRecord": "react-hooks-global-states/isRecord",
-    "react-hooks-global-states/shallowCompare": "react-hooks-global-states/shallowCompare",
-    "react-hooks-global-states/throwWrongKeyOnActionCollectionConfig":
-      "react-hooks-global-states/throwWrongKeyOnActionCollectionConfig",
-    "react-hooks-global-states/uniqueId": "react-hooks-global-states/uniqueId",
-    "react-hooks-global-states/uniqueSymbol": "react-hooks-global-states/uniqueSymbol",
-    "react-hooks-global-states/useStableState": "react-hooks-global-states/useStableState",
-    "react-hooks-global-states/generateStackHash": "react-hooks-global-states/generateStackHash",
-    // inherit from react-global-state-hooks
-    "./createContext": "./createContext.js",
-    "./GlobalStore": "./GlobalStore.js",
-    "./GlobalStoreAbstract": "./GlobalStoreAbstract.js",
-    "./createCustomGlobalState": "./createCustomGlobalState.js",
-    "./createGlobalState": "./createGlobalState.js",
-    "./types": "./types.js",
-    "./debounce": "./debounce.js",
-    "./isRecord": "./isRecord.js",
-    "./shallowCompare": "./shallowCompare.js",
-    "./throwWrongKeyOnActionCollectionConfig": "./throwWrongKeyOnActionCollectionConfig.js",
-    "./uniqueId": "./uniqueId.js",
-    "./uniqueSymbol": "./uniqueSymbol.js",
-    "./useStableState": "./useStableState.js",
-    // extras
-    "./asyncStorageWrapper": "./asyncStorageWrapper.js",
-    "./getAsyncStorageItem": "./getAsyncStorageItem.js",
-    "./setAsyncStorageItem": "./setAsyncStorageItem.js",
+
+    ...getExternalsForEntries(),
   },
   output: {
     path: path.resolve(__dirname),
