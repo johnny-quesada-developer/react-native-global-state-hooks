@@ -64,3 +64,5 @@ export { createCustomGlobalState, type CustomCreateGlobalState } from "./createC
 export { getAsyncStorageItem } from "./getAsyncStorageItem";
 export { setAsyncStorageItem } from "./setAsyncStorageItem";
 export { asyncStorageWrapper, type AsyncStorageManager } from "./asyncStorageWrapper";
+
+export { generateStackHash } from "./generateStackHash";
