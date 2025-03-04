@@ -9,7 +9,6 @@ const individualEntries = {
   createCustomGlobalState: "./src/createCustomGlobalState.ts",
   createGlobalState: "./src/createGlobalState.ts",
   types: "./src/types.ts",
-  debounce: "./src/debounce.ts",
   isRecord: "./src/isRecord.ts",
   shallowCompare: "./src/shallowCompare.ts",
   throwWrongKeyOnActionCollectionConfig: "./src/throwWrongKeyOnActionCollectionConfig.ts",
@@ -114,6 +113,21 @@ module.exports = {
       new TerserPlugin({
         extractComments: false,
         terserOptions: {
+          compress: {
+            passes: 5,
+            drop_console: true,
+            drop_debugger: true,
+            keep_fargs: false,
+            keep_infinity: true,
+            reduce_funcs: true,
+            reduce_vars: true,
+            keep_fnames: false,
+            toplevel: true,
+          },
+          mangle: {
+            toplevel: true,
+            properties: false,
+          },
           format: {
             comments: false,
           },

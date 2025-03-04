@@ -1,6 +1,6 @@
 {
   "name": "react-native-global-state-hooks",
-  "version": "9.0.4",
+  "version": "10.0.0",
   "description": "This is a package to easily handling global-state across your react-native-components No-redux... The library now includes @react-native-async-storage/async-storage to persist your state across sessions... if you want to keep using the old version without async-storage or react-native dependencies just use version 5.0.15 or user react-hooks-global-states instead",
   "main": "./bundle.js",
   "types": "./index.d.ts",
@@ -30,11 +30,6 @@
       "import": "./createGlobalState.js",
       "require": "./createGlobalState.js",
       "types": "./createGlobalState.d.ts"
-    },
-    "./debounce": {
-      "import": "./debounce.js",
-      "require": "./debounce.js",
-      "types": "./debounce.d.ts"
     },
     "./generateStackHash": {
       "import": "./generateStackHash.js",
@@ -174,6 +169,6 @@
     }
   },
   "dependencies": {
-    "react-hooks-global-states": "^7.0.17"
+    "react-hooks-global-states": "^8.0.0"
   }
 }
