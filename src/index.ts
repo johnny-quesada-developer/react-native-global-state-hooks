@@ -42,25 +42,25 @@ export { debounce } from "./debounce";
 export { uniqueId } from "./uniqueId";
 export { throwWrongKeyOnActionCollectionConfig } from "./throwWrongKeyOnActionCollectionConfig";
 export { isRecord } from "./isRecord";
-export { uniqueSymbol, UniqueSymbol } from "./uniqueSymbol";
+export { uniqueSymbol, type UniqueSymbol } from "./uniqueSymbol";
 export { useStableState, type UseStableState } from "./useStableState";
 
 // context
 export {
-  ContextProviderAPI,
-  ContextProvider,
-  ContextHook,
-  CreateContext,
+  type ContextProviderAPI,
+  type ContextProvider,
+  type ContextHook,
+  type CreateContext,
   createContext,
 } from "./createContext";
 
 // #endregion base library exports
 
-export { AsyncStorageConfig } from "./types";
+export type { AsyncStorageConfig } from "./types";
 export { GlobalStore } from "./GlobalStore";
 export { GlobalStoreAbstract } from "./GlobalStoreAbstract";
-export { CreateGlobalState, createGlobalState } from "./createGlobalState";
-export { createCustomGlobalState, CustomCreateGlobalState } from "./createCustomGlobalState";
+export { type CreateGlobalState, createGlobalState } from "./createGlobalState";
+export { createCustomGlobalState, type CustomCreateGlobalState } from "./createCustomGlobalState";
 export { getAsyncStorageItem } from "./getAsyncStorageItem";
 export { setAsyncStorageItem } from "./setAsyncStorageItem";
-export { asyncStorageWrapper } from "./asyncStorageWrapper";
+export { asyncStorageWrapper, type AsyncStorageManager } from "./asyncStorageWrapper";

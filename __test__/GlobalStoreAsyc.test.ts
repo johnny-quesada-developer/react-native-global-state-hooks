@@ -1,9 +1,7 @@
 import { createDecoupledPromise } from "easy-cancelable-promise/createDecoupledPromise";
 import { formatToStore } from "json-storage-formatter/formatToStore";
 import { getFakeAsyncStorage } from "./getFakeAsyncStorage";
-import { GlobalStore } from "../src/GlobalStore";
-import { createGlobalState } from "../src/createGlobalState";
-import { asyncStorageWrapper } from "../src/asyncStorageWrapper";
+import { GlobalStore, createGlobalState, asyncStorageWrapper } from "..";
 
 export const { fakeAsyncStorage: asyncStorage } = getFakeAsyncStorage();
 asyncStorageWrapper.addAsyncStorageManager(() => Promise.resolve(asyncStorage));
@@ -15,8 +13,7 @@ describe("GlobalStoreAsync Basics", () => {
     const { promise, resolve } = createDecoupledPromise();
 
     setTimeout(async () => {
-      const { promise: onStateChangedPromise, resolve: onStateChangedResolve } =
-        createDecoupledPromise();
+      const { promise: onStateChangedPromise, resolve: onStateChangedResolve } = createDecoupledPromise();
 
       const storage = new GlobalStore(0, {
         asyncStorage: {
@@ -28,10 +25,7 @@ describe("GlobalStoreAsync Basics", () => {
 
       const [getState, _, getMetadata] = useStorage.stateControls();
 
-      const onStateChanged = Object.getOwnPropertyDescriptor(
-        storage,
-        "onStateChanged"
-      )?.value;
+      const onStateChanged = Object.getOwnPropertyDescriptor(storage, "onStateChanged")?.value;
 
       onStateChanged.bind(storage);
 
@@ -74,8 +68,7 @@ describe("createGlobalState", () => {
     const { promise, resolve } = createDecoupledPromise();
 
     setTimeout(async () => {
-      const { promise: onStateChangedPromise, resolve: onStateChangedResolve } =
-        createDecoupledPromise();
+      const { promise: onStateChangedPromise, resolve: onStateChangedResolve } = createDecoupledPromise();
 
       const useData = createGlobalState(new Map<string, number>(), {
         asyncStorage: {

@@ -1,4 +1,4 @@
-type AsyncStorageManager = {
+export type AsyncStorageManager = {
   getItem: <T extends string | null>(key: string) => Promise<T>;
   setItem: (key: string, value: string) => Promise<void>;
 };

@@ -1,6 +1,6 @@
 import { createDecoupledPromise } from "easy-cancelable-promise/createDecoupledPromise";
 import { CancelablePromise } from "easy-cancelable-promise/CancelablePromise";
-import { GlobalStore } from "../src";
+import { GlobalStore } from "..";
 
 import { useState, useEffect } from "react";
 import { formatFromStore, formatToStore } from "json-storage-formatter";
@@ -48,10 +48,7 @@ describe("GlobalStore Basic", () => {
     const store = new GlobalStore(stateValue);
 
     expect(store).toBeInstanceOf(GlobalStore);
-    expect(
-      (store as unknown as { stateWrapper: { state: unknown } }).stateWrapper
-        .state
-    ).toBe(stateValue);
+    expect((store as unknown as { stateWrapper: { state: unknown } }).stateWrapper.state).toBe(stateValue);
   });
 
   it("state setter should be a function", () => {
@@ -80,10 +77,7 @@ describe("GlobalStore Basic", () => {
 
     setState("test2");
 
-    expect(
-      (store as unknown as { stateWrapper: { state: unknown } }).stateWrapper
-        .state
-    ).toBe("test2");
+    expect((store as unknown as { stateWrapper: { state: unknown } }).stateWrapper.state).toBe("test2");
   });
 
   it("should be able to set the state with a function", () => {
@@ -94,10 +88,7 @@ describe("GlobalStore Basic", () => {
 
     setState((state) => `${state}2`);
 
-    expect(
-      (store as unknown as { stateWrapper: { state: unknown } }).stateWrapper
-        .state
-    ).toBe("test2");
+    expect((store as unknown as { stateWrapper: { state: unknown } }).stateWrapper.state).toBe("test2");
   });
 
   it("should notify initialize all subscribers of the store", () => {
@@ -112,8 +103,7 @@ describe("GlobalStore Basic", () => {
     useHook();
     useHook();
 
-    const [[, { callback: setter1 }], [__, { callback: setter2 }]] =
-      store.subscribers;
+    const [[, { callback: setter1 }], [__, { callback: setter2 }]] = store.subscribers;
 
     setState(stateValue2);
 
@@ -167,8 +157,7 @@ describe("GlobalStore with actions", () => {
     useHook();
     useHook();
 
-    const [[, { callback: setter1 }], [__, { callback: setter2 }]] =
-      store.subscribers;
+    const [[, { callback: setter1 }], [__, { callback: setter2 }]] = store.subscribers;
 
     expect(getState()).toBe(countStoreInitialState);
     expect(useState).toHaveBeenCalledTimes(2);
@@ -187,8 +176,7 @@ describe("GlobalStore with actions", () => {
     useHook();
     useHook();
 
-    const [[, { callback: setter1 }], [__, { callback: setter2 }]] =
-      store.subscribers;
+    const [[, { callback: setter1 }], [__, { callback: setter2 }]] = store.subscribers;
 
     actions.increase();
 
@@ -213,8 +201,7 @@ describe("GlobalStore with configuration callbacks", () => {
         onInit: (parameters) => {
           onInitSpy();
 
-          const { setState, getState, getMetadata, setMetadata, actions } =
-            parameters;
+          const { setState, getState, getMetadata, setMetadata, actions } = parameters;
 
           expect(getState()).toEqual(initialState);
           expect(getMetadata()).toEqual({
@@ -275,8 +262,7 @@ describe("GlobalStore with configuration callbacks", () => {
           onSubscribed: (parameters) => {
             onSubscribedSpy();
 
-            const { setState, getState, getMetadata, setMetadata, actions } =
-              parameters;
+            const { setState, getState, getMetadata, setMetadata, actions } = parameters;
 
             // this code will be execute 3 times
             expect(getMetadata()).toEqual({
@@ -318,8 +304,7 @@ describe("GlobalStore with configuration callbacks", () => {
           onStateChanged: (parameters) => {
             onStateChangedSpy();
 
-            const { setState, getState, getMetadata, setMetadata, actions } =
-              parameters;
+            const { setState, getState, getMetadata, setMetadata, actions } = parameters;
 
             expect(getMetadata()).toEqual({
               asyncStorageKey: null,
@@ -460,10 +445,7 @@ describe("Custom store by using config parameter", () => {
                 return;
               }
 
-              const items = formatFromStore(JSON.parse(stored)) as Map<
-                number,
-                { name: string }
-              >;
+              const items = formatFromStore(JSON.parse(stored)) as Map<number, { name: string }>;
 
               setState(items);
               resolve();
@@ -528,10 +510,7 @@ describe("Custom store by using config parameter", () => {
                 return;
               }
 
-              const items = formatFromStore(JSON.parse(stored)) as Map<
-                number,
-                { name: string }
-              >;
+              const items = formatFromStore(JSON.parse(stored)) as Map<number, { name: string }>;
 
               setState(items);
               resolve();
@@ -566,8 +545,7 @@ describe("Custom store by using config parameter", () => {
     const { fakeAsyncStorage } = getFakeAsyncStorage();
 
     const { promise: mainPromise, ...tools } = createDecoupledPromise();
-    const { promise: onStateChangedPromise, ...toolsOnStateChangedPromise } =
-      createDecoupledPromise();
+    const { promise: onStateChangedPromise, ...toolsOnStateChangedPromise } = createDecoupledPromise();
 
     setTimeout(async () => {
       let store!: GlobalStore<any, any, null>;
@@ -589,10 +567,7 @@ describe("Custom store by using config parameter", () => {
                 return;
               }
 
-              const items = formatFromStore(JSON.parse(stored)) as Map<
-                number,
-                { name: string }
-              >;
+              const items = formatFromStore(JSON.parse(stored)) as Map<number, { name: string }>;
 
               setState(items);
               resolve();

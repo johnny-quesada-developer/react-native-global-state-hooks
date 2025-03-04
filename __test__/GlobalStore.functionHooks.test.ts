@@ -3,8 +3,7 @@ import { createDecoupledPromise } from "easy-cancelable-promise/createDecoupledP
 import { useState } from "react";
 import { formatFromStore, formatToStore } from "json-storage-formatter";
 import { getFakeAsyncStorage } from "./getFakeAsyncStorage";
-import { createGlobalState } from "../src";
-import { createCustomGlobalState } from "../src/createCustomGlobalState";
+import { createGlobalState, createCustomGlobalState } from "..";
 
 describe("basic", () => {
   it("should be able to create a new instance with state", () => {
@@ -639,9 +638,7 @@ describe("custom global hooks", () => {
       b: 2,
     });
 
-    const selector = jest.fn(
-      (state: { a: number; b: number }) => state.a + state.b
-    );
+    const selector = jest.fn((state: { a: number; b: number }) => state.a + state.b);
 
     let [derivate, setState] = useCount(selector);
 

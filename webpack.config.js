@@ -28,6 +28,41 @@ module.exports = {
     react: "react",
     "react-native": "react-native",
     "@react-native-async-storage/async-storage": "@react-native-async-storage/async-storage",
+    // avoid bundle the base package
+    "react-hooks-global-states": "react-hooks-global-states",
+    "react-hooks-global-states/createContext": "react-hooks-global-states/createContext",
+    "react-hooks-global-states/GlobalStore": "react-hooks-global-states/GlobalStore",
+    "react-hooks-global-states/GlobalStoreAbstract": "react-hooks-global-states/GlobalStoreAbstract",
+    "react-hooks-global-states/createCustomGlobalState": "react-hooks-global-states/createCustomGlobalState",
+    "react-hooks-global-states/createGlobalState": "react-hooks-global-states/createGlobalState",
+    "react-hooks-global-states/types": "react-hooks-global-states/types",
+    "react-hooks-global-states/debounce": "react-hooks-global-states/debounce",
+    "react-hooks-global-states/isRecord": "react-hooks-global-states/isRecord",
+    "react-hooks-global-states/shallowCompare": "react-hooks-global-states/shallowCompare",
+    "react-hooks-global-states/throwWrongKeyOnActionCollectionConfig":
+      "react-hooks-global-states/throwWrongKeyOnActionCollectionConfig",
+    "react-hooks-global-states/uniqueId": "react-hooks-global-states/uniqueId",
+    "react-hooks-global-states/uniqueSymbol": "react-hooks-global-states/uniqueSymbol",
+    "react-hooks-global-states/useStableState": "react-hooks-global-states/useStableState",
+    "react-hooks-global-states/generateStackHash": "react-hooks-global-states/generateStackHash",
+    // inherit from react-global-state-hooks
+    "./createContext": "./createContext.js",
+    "./GlobalStore": "./GlobalStore.js",
+    "./GlobalStoreAbstract": "./GlobalStoreAbstract.js",
+    "./createCustomGlobalState": "./createCustomGlobalState.js",
+    "./createGlobalState": "./createGlobalState.js",
+    "./types": "./types.js",
+    "./debounce": "./debounce.js",
+    "./isRecord": "./isRecord.js",
+    "./shallowCompare": "./shallowCompare.js",
+    "./throwWrongKeyOnActionCollectionConfig": "./throwWrongKeyOnActionCollectionConfig.js",
+    "./uniqueId": "./uniqueId.js",
+    "./uniqueSymbol": "./uniqueSymbol.js",
+    "./useStableState": "./useStableState.js",
+    // extras
+    "./asyncStorageWrapper": "./asyncStorageWrapper.js",
+    "./getAsyncStorageItem": "./getAsyncStorageItem.js",
+    "./setAsyncStorageItem": "./setAsyncStorageItem.js",
   },
   output: {
     path: path.resolve(__dirname),
@@ -40,12 +75,6 @@ module.exports = {
   },
   resolve: {
     extensions: [".ts", ".js"],
-    alias: {
-      "react-native-global-state-hooks": path.resolve(
-        __dirname,
-        "node_modules/react-native-global-state-hooks/package.json"
-      ),
-    },
   },
   module: {
     rules: [

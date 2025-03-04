@@ -1,4 +1,4 @@
-import { shallowCompare } from "../src";
+import { shallowCompare } from "..";
 
 describe("shallowCompare", () => {
   it("should return true if the objects are the same", () => {

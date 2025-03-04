@@ -1,11 +1,8 @@
 import { createDecoupledPromise } from "easy-cancelable-promise/createDecoupledPromise";
 
-import React from "react";
-import { GlobalStore } from "../src/GlobalStore";
+import { GlobalStore, createGlobalState, asyncStorageWrapper } from "..";
 import { formatToStore } from "json-storage-formatter/formatToStore";
-import { createGlobalState } from "../src/createGlobalState";
 import { getFakeAsyncStorage } from "./getFakeAsyncStorage";
-import { asyncStorageWrapper } from "../src/asyncStorageWrapper";
 
 export const { fakeAsyncStorage: asyncStorage } = getFakeAsyncStorage();
 asyncStorageWrapper.addAsyncStorageManager(() => Promise.resolve(asyncStorage));
