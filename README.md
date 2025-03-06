@@ -8,16 +8,14 @@ Effortless **global state management** for React & React Native! 🚀 Define a *
 
 ## 🔗 Explore More
 
-- **[Live Example](https://johnny-quesada-developer.github.io/react-global-state-hooks-example/)** 📘
-- **[React Native Integration](https://www.npmjs.com/package/react-native-global-state-hooks/)** 📱
-- **[Todo-List Example](https://github.com/johnny-quesada-developer/todo-list-with-global-hooks.git/)** 📝
+- **[Live Example](https://johnny-quesada-developer.github.io/global-hooks-example/)** 📘
 - **[Video Overview](https://www.youtube.com/watch?v=1UBqXk2MH8I/)** 🎥
-- **[GitHub Repository](https://github.com/johnny-quesada-developer/global-hooks-example/)** 🧩
 
 Works seamlessly with **React & React Native**:
 
-- **[react-global-state-hooks](https://www.npmjs.com/package/react-global-state-hooks)** for web applications.
-- **[react-native-global-state-hooks](https://www.npmjs.com/package/react-native-global-state-hooks)** for React Native projects.
+- **[react-hooks-global-states](https://www.npmjs.com/package/react-hooks-global-states)** compatible with both `React & React Native`
+- **[react-global-state-hooks](https://www.npmjs.com/package/react-global-state-hooks)** specific for web applications (**local-storage integration**).
+- **[react-native-global-state-hooks](https://www.npmjs.com/package/react-native-global-state-hooks)** specific for React Native projects (**async-storage integration**).
 
 ---
 
