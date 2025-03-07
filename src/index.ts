@@ -42,7 +42,7 @@ export { uniqueId } from "./uniqueId";
 export { throwWrongKeyOnActionCollectionConfig } from "./throwWrongKeyOnActionCollectionConfig";
 export { isRecord } from "./isRecord";
 export { uniqueSymbol, type UniqueSymbol } from "./uniqueSymbol";
-export { useStableState, type UseStableState } from "./useStableState";
+export { useStableState } from "./useStableState";
 
 // context
 export {
