@@ -3,6 +3,7 @@ import { createDecoupledPromise } from "easy-cancelable-promise/createDecoupledP
 import { GlobalStore, createGlobalState, asyncStorageWrapper } from "..";
 import { formatToStore } from "json-storage-formatter/formatToStore";
 import { getFakeAsyncStorage } from "./getFakeAsyncStorage";
+import { act, renderHook } from "@testing-library/react";
 
 export const { fakeAsyncStorage: asyncStorage } = getFakeAsyncStorage();
 asyncStorageWrapper.addAsyncStorageManager(() => Promise.resolve(asyncStorage));
@@ -16,22 +17,22 @@ describe("GlobalStoreAsync Basics", () => {
     setTimeout(async () => {
       const { promise: onStateChangedPromise, resolve: onStateChangedResolve } = createDecoupledPromise();
 
-      const storage = new GlobalStore(0, {
+      const store = new GlobalStore(0, {
         asyncStorage: {
           key: "counter",
         },
         metadata: {},
       });
 
-      const [getState, setState, getMetadata] = storage.stateControls();
+      const [getState, setState, getMetadata] = store.stateControls();
 
-      const onStateChanged = Object.getOwnPropertyDescriptor(storage, "onStateChanged")?.value;
+      const onStateChanged = Object.getOwnPropertyDescriptor(store, "onStateChanged")?.value;
 
-      onStateChanged.bind(storage);
+      onStateChanged.bind(store);
 
       jest
         .spyOn(
-          storage as unknown as {
+          store as unknown as {
             onStateChanged: () => void;
           },
           "onStateChanged"
@@ -42,7 +43,7 @@ describe("GlobalStoreAsync Basics", () => {
           onStateChangedResolve();
         });
 
-      expect(storage).toBeInstanceOf(GlobalStore);
+      expect(store).toBeInstanceOf(GlobalStore);
 
       expect(getMetadata().isAsyncStorageReady).toBe(false);
 
@@ -50,7 +51,9 @@ describe("GlobalStoreAsync Basics", () => {
 
       expect(getMetadata().isAsyncStorageReady).toBe(true);
 
-      setState((state) => state + 1);
+      act(() => {
+        setState((state) => state + 1);
+      });
 
       // time for the async storage to update
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -77,7 +80,7 @@ describe("createGlobalState", () => {
     setTimeout(async () => {
       const { promise: onStateChangedPromise, resolve: onStateChangedResolve } = createDecoupledPromise();
 
-      const useData = createGlobalState(new Map<string, number>(), {
+      const store = new GlobalStore(new Map<string, number>(), {
         asyncStorage: {
           key: "data",
         },
@@ -87,25 +90,38 @@ describe("createGlobalState", () => {
         },
       });
 
-      let hook = useData();
-      let [data, setData, metadata] = hook;
+      const useData = store.getHook();
+      const { result, rerender } = renderHook(() => useData());
+      let [data, setData, metadata] = result.current;
 
       expect(metadata?.isAsyncStorageReady).toBe(false);
 
+      const [[, subscriber1]] = store.subscribers;
+      const callback = subscriber1.callback;
+      jest.spyOn(subscriber1, "callback").mockImplementation((...args) => {
+        act(() => {
+          (callback as (...args: any[]) => void)(...args);
+        });
+      });
+
       await onStateChangedPromise;
 
-      [data, setData, metadata] = useData();
+      rerender();
+      [data, setData, metadata] = result.current;
 
       expect(!!metadata.isAsyncStorageReady).toBe(true);
       expect(data).toEqual(new Map([["prop", 0]]));
 
-      setData((data) => {
-        data.set("prop", 1);
+      act(() => {
+        setData((data) => {
+          data.set("prop", 1);
 
-        return data;
+          return data;
+        });
       });
 
-      const [data2] = useData();
+      const { result: result2 } = renderHook(() => useData());
+      const [data2] = result2.current;
 
       expect(data).toBe(data2);
 
@@ -148,35 +164,39 @@ describe("getter subscriptions custom global state", () => {
       ),
     ];
 
-    expect(subscriptionSpy).toBeCalledTimes(1);
+    expect(subscriptionSpy).toHaveBeenCalledTimes(1);
     expect(subscriptionSpy).toBeCalledWith(state);
 
-    expect(subscriptionDerivateSpy).toBeCalledTimes(1);
+    expect(subscriptionDerivateSpy).toHaveBeenCalledTimes(1);
     expect(subscriptionDerivateSpy).toBeCalledWith(3);
 
-    setter((state) => ({
-      ...state,
-      b: 3,
-    }));
+    act(() => {
+      setter((state) => ({
+        ...state,
+        b: 3,
+      }));
+    });
 
-    expect(subscriptionSpy).toBeCalledTimes(2);
+    expect(subscriptionSpy).toHaveBeenCalledTimes(2);
     expect(subscriptionSpy).toBeCalledWith({
       a: 3,
       b: 3,
     });
 
     // the derivate should not be called since it didn't change
-    expect(subscriptionDerivateSpy).toBeCalledTimes(1);
+    expect(subscriptionDerivateSpy).toHaveBeenCalledTimes(1);
 
     subscriptions.forEach((unsubscribe) => unsubscribe());
 
-    setter((state) => ({
-      ...state,
-      a: 4,
-    }));
+    act(() => {
+      setter((state) => ({
+        ...state,
+        a: 4,
+      }));
+    });
 
     // the subscription should not be called since it was removed
-    expect(subscriptionSpy).toBeCalledTimes(2);
-    expect(subscriptionDerivateSpy).toBeCalledTimes(1);
+    expect(subscriptionSpy).toHaveBeenCalledTimes(2);
+    expect(subscriptionDerivateSpy).toHaveBeenCalledTimes(1);
   });
 });

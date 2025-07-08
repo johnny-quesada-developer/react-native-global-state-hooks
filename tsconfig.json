@@ -26,6 +26,7 @@
     "sourceMap": true,
     "allowJs": true,
     "declarationDir": "./",
+    "types": ["jest", "node"],
     "typeRoots": [
       "node_modules/@types",
       "./types"

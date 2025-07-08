@@ -13,7 +13,6 @@ const individualEntries = {
   shallowCompare: "./src/shallowCompare.ts",
   throwWrongKeyOnActionCollectionConfig: "./src/throwWrongKeyOnActionCollectionConfig.ts",
   uniqueId: "./src/uniqueId.ts",
-  uniqueSymbol: "./src/uniqueSymbol.ts",
   useStableState: "./src/useStableState.ts",
   generateStackHash: "./src/generateStackHash.ts",
 
@@ -94,7 +93,6 @@ module.exports = {
               presets: ["@babel/preset-env", "@babel/preset-react", "@babel/preset-typescript"],
               plugins: [
                 "@babel/plugin-transform-modules-commonjs",
-                "@babel/plugin-proposal-class-properties",
                 "@babel/plugin-proposal-export-namespace-from",
               ],
             },
