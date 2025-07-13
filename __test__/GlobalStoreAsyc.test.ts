@@ -1,7 +1,7 @@
 import { createDecoupledPromise } from "easy-cancelable-promise/createDecoupledPromise";
 import { formatToStore } from "json-storage-formatter/formatToStore";
 import { getFakeAsyncStorage } from "./getFakeAsyncStorage";
-import { GlobalStore, createGlobalState, asyncStorageWrapper, type SubscriptionCallback } from "..";
+import { GlobalStore, createGlobalState, asyncStorageWrapper } from "..";
 import { act, renderHook } from "@testing-library/react";
 
 export const { fakeAsyncStorage: asyncStorage } = getFakeAsyncStorage();
@@ -24,6 +24,176 @@ describe("GlobalStoreAsync Basics", () => {
 
       const useStorage = storage.getHook();
 
+      const [getState, _, getMetadata] = useStorage.stateControls();
+
+      const onStateChanged = Object.getOwnPropertyDescriptor(storage, "onStateChanged")?.value;
+
+      onStateChanged.bind(storage);
+
+      jest
+        .spyOn(
+          storage as unknown as {
+            onStateChanged: () => void;
+          },
+          "onStateChanged"
+        )
+        .mockImplementation((...parameters) => {
+          onStateChanged(...parameters);
+          onStateChangedResolve();
+        });
+
+      expect(storage).toBeInstanceOf(GlobalStore);
+
+      expect(getMetadata().isAsyncStorageReady).toBe(false);
+
+      await onStateChangedPromise;
+
+      expect(getMetadata().isAsyncStorageReady).toBe(true);
+      expect(getState()).toBe(0);
+
+      const storedValue = await asyncStorage.getItem("counter");
+
+      expect(storedValue).toBe('"0"');
+
+      resolve();
+    }, 0);
+
+    return promise;
+  });
+
+  it("should correctly restore the state from async storage", async () => {
+    expect.assertions(2);
+    asyncStorage.setItem("counter", 25);
+
+    const { promise, resolve } = createDecoupledPromise();
+
+    setTimeout(async () => {
+      const { promise: onStateChangedPromise, resolve: onStateChangedResolve } = createDecoupledPromise();
+
+      const store = new GlobalStore(0, {
+        asyncStorage: {
+          key: "counter",
+        },
+      });
+
+      const useStorage = store.getHook();
+      const { result, rerender } = renderHook(() => useStorage());
+      let [state] = result.current;
+
+      const [[, subscriber1]] = store.subscribers;
+      const callback = subscriber1.callback;
+      jest.spyOn(subscriber1, "callback").mockImplementation((...args) => {
+        act(() => {
+          (callback as (...args: any[]) => void)(...args);
+        });
+      });
+
+      expect(state).toBe(0);
+
+      const onStateChanged = Object.getOwnPropertyDescriptor(store, "onStateChanged")?.value;
+
+      onStateChanged.bind(store);
+
+      jest
+        .spyOn(
+          store as unknown as {
+            onStateChanged: () => void;
+          },
+          "onStateChanged"
+        )
+        .mockImplementation((...parameters) => {
+          onStateChanged(...parameters);
+          onStateChangedResolve();
+        });
+
+      await onStateChangedPromise;
+
+      rerender();
+      [state] = result.current;
+
+      expect(state).toBe(25);
+
+      resolve();
+    }, 0);
+
+    return promise;
+  });
+
+  it("should rerender even if the restored state is the same", async () => {
+    expect.assertions(4);
+    asyncStorage.setItem("counter", 1);
+
+    const { promise, resolve } = createDecoupledPromise();
+
+    setTimeout(async () => {
+      const { promise: onStateChangedPromise, resolve: onStateChangedResolve } = createDecoupledPromise();
+
+      const store = new GlobalStore(1, {
+        asyncStorage: {
+          key: "counter",
+        },
+      });
+
+      const useStorage = store.getHook();
+      const { result, rerender } = renderHook(() => useStorage());
+      let [state, , metadata] = result.current;
+
+      const [[, subscriber1]] = store.subscribers;
+      const callback = subscriber1.callback;
+      jest.spyOn(subscriber1, "callback").mockImplementation((...args) => {
+        act(() => {
+          (callback as (...args: any[]) => void)(...args);
+        });
+      });
+
+      expect(state).toBe(1);
+      expect(metadata.isAsyncStorageReady).toBe(false);
+
+      const onStateChanged = Object.getOwnPropertyDescriptor(store, "onStateChanged")?.value;
+
+      onStateChanged.bind(store);
+
+      jest
+        .spyOn(
+          store as unknown as {
+            onStateChanged: () => void;
+          },
+          "onStateChanged"
+        )
+        .mockImplementation((...parameters) => {
+          onStateChanged(...parameters);
+          onStateChangedResolve();
+        });
+
+      await onStateChangedPromise;
+
+      rerender();
+      [state, , metadata] = result.current;
+
+      expect(state).toBe(1);
+      expect(metadata.isAsyncStorageReady).toBe(true);
+
+      resolve();
+    }, 0);
+
+    return promise;
+  });
+
+  it("should create a store with async storage", async () => {
+    asyncStorage.setItem("counter", 0);
+
+    const { promise, resolve } = createDecoupledPromise();
+
+    setTimeout(async () => {
+      const { promise: onStateChangedPromise, resolve: onStateChangedResolve } = createDecoupledPromise();
+
+      const storage = new GlobalStore(0, {
+        asyncStorage: {
+          key: "counter",
+        },
+      });
+
+      const useStorage = storage.getHook();
       const [getState, _, getMetadata] = useStorage.stateControls();
 
       const onStateChanged = Object.getOwnPropertyDescriptor(storage, "onStateChanged")?.value;
