@@ -45,7 +45,7 @@ export { useStableState } from "./useStableState";
 
 // context
 export {
-  type ContextProviderAPI,
+  type Context,
   type ContextProvider,
   type ContextHook,
   type CreateContext,

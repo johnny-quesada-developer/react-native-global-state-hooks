@@ -48,7 +48,7 @@ describe("GlobalStore Basic", () => {
     const store = new GlobalStore(stateValue);
 
     expect(store).toBeInstanceOf(GlobalStore);
-    expect((store as unknown as { stateWrapper: { state: unknown } }).stateWrapper.state).toBe(stateValue);
+    expect(store.state).toBe(stateValue);
   });
 
   it("state setter should be a function", () => {
@@ -77,7 +77,7 @@ describe("GlobalStore Basic", () => {
 
     setState("test2");
 
-    expect((store as unknown as { stateWrapper: { state: unknown } }).stateWrapper.state).toBe("test2");
+    expect(store.state).toBe("test2");
   });
 
   it("should be able to set the state with a function", () => {
@@ -88,7 +88,7 @@ describe("GlobalStore Basic", () => {
 
     setState((state) => `${state}2`);
 
-    expect((store as unknown as { stateWrapper: { state: unknown } }).stateWrapper.state).toBe("test2");
+    expect(store.state).toBe("test2");
   });
 
   it("should notify initialize all subscribers of the store", () => {
@@ -122,7 +122,7 @@ describe("GlobalStore with actions", () => {
     const store = createCountStoreWithActions();
 
     expect(store).toBeInstanceOf(GlobalStore);
-    expect(store.stateWrapper.state).toBe(countStoreInitialState);
+    expect(store.state).toBe(countStoreInitialState);
     expect(store.actionsConfig).toBeDefined();
 
     const actions = store.getStoreActionsMap()!;
