@@ -9,6 +9,8 @@ import type {
 import { AsyncStorageConfig, BaseMetadata, StateMeta } from "./types";
 import { GlobalStore } from "./GlobalStore";
 
+export type { InferActionsType } from "react-hooks-global-states/createGlobalState";
+
 export interface CreateGlobalState {
   <State>(state: State): StateHook<State, StateSetter<State>, BaseMetadata>;
 

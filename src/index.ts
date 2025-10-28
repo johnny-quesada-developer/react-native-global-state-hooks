@@ -49,6 +49,7 @@ export {
   type ContextProvider,
   type ContextHook,
   type CreateContext,
+  type InferContextType,
   createContext,
 } from "./createContext";
 
@@ -57,7 +58,7 @@ export {
 export type { AsyncStorageConfig } from "./types";
 export { GlobalStore } from "./GlobalStore";
 export { GlobalStoreAbstract } from "./GlobalStoreAbstract";
-export { type CreateGlobalState, createGlobalState } from "./createGlobalState";
+export { type CreateGlobalState, createGlobalState, type InferActionsType } from "./createGlobalState";
 export { createCustomGlobalState, type CustomCreateGlobalState } from "./createCustomGlobalState";
 export { getAsyncStorageItem } from "./getAsyncStorageItem";
 export { setAsyncStorageItem } from "./setAsyncStorageItem";
