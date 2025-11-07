@@ -1,0 +1,6 @@
+webpack.config.js
+src/
+__tests__/
+*.log
+*.ts
+eslint.config.mts

@@ -4,64 +4,46 @@
  */
 // #region base library exports copy of the original library index
 export type {
-  StateSetter,
-  HookExtensions,
+  StateApi,
   ObservableFragment,
   MetadataSetter,
   StateChanges,
   StoreTools,
   ActionCollectionResult,
   GlobalStoreCallbacks,
-  UseHookConfig,
+  UseHookOptions,
   UnsubscribeCallback,
   SubscribeCallbackConfig,
   SubscribeCallback,
-  StateGetter,
-  BaseMetadata,
+  AsyncMetadata as BaseMetadata,
   MetadataGetter,
-  CustomGlobalHookBuilderParams,
   SelectorCallback,
   SubscriberParameters,
   SubscriptionCallback,
   StateHook,
   ActionCollectionConfig,
-  StateMeta,
 } from "./types";
 
 // classes
 // export { GlobalStore } from './GlobalStore'; // overridden
-// export { GlobalStoreAbstract } from './GlobalStoreAbstract';// overridden
 
 // functions
 // export { createGlobalState } from './createGlobalState'; // overridden
-// export { createCustomGlobalState } from './createCustomGlobalState'; // overridden
 
 // utils
 export { shallowCompare } from "./shallowCompare";
 export { uniqueId } from "./uniqueId";
 export { throwWrongKeyOnActionCollectionConfig } from "./throwWrongKeyOnActionCollectionConfig";
 export { isRecord } from "./isRecord";
-export { useStableState } from "./useStableState";
 
 // context
-export {
-  type Context,
-  type ContextProvider,
-  type ContextHook,
-  type CreateContext,
-  type InferContextType,
-  createContext,
-} from "./createContext";
+export { type ContextProvider, type ContextHook, type InferContextApi, createContext } from "./createContext";
 
 // #endregion base library exports
 
 export type { AsyncStorageConfig } from "./types";
 export { GlobalStore } from "./GlobalStore";
-export { GlobalStoreAbstract } from "./GlobalStoreAbstract";
 export { type CreateGlobalState, createGlobalState, type InferActionsType } from "./createGlobalState";
-export { createCustomGlobalState, type CustomCreateGlobalState } from "./createCustomGlobalState";
 export { getAsyncStorageItem } from "./getAsyncStorageItem";
 export { setAsyncStorageItem } from "./setAsyncStorageItem";
 export { asyncStorageWrapper, type AsyncStorageManager } from "./asyncStorageWrapper";
-
-export { generateStackHash } from "./generateStackHash";

@@ -3,9 +3,7 @@
     "jsx": "react",
     "target": "ES2016",
     "module": "commonjs",
-    "lib": [
-      "es2016",
-    ],
+    "lib": ["es2016"],
     "declaration": true,
     "outDir": "./",
     "strict": true,
@@ -27,24 +25,13 @@
     "allowJs": true,
     "declarationDir": "./",
     "types": ["jest", "node"],
-    "typeRoots": [
-      "node_modules/@types",
-      "./types"
-    ],
+    "typeRoots": ["node_modules/@types", "./types"],
     "moduleResolution": "node",
     "baseUrl": ".",
     "paths": {
-      "*": [
-        "src/*"
-      ],
+      "*": ["src/*"]
     }
   },
-  "include": [
-    "src/**/*",
-    "types/**/*",
-  ],
-  "exclude": [
-    "node_modules",
-    "lib"
-  ]
+  "include": ["src/**/*", "types/**/*"],
+  "exclude": ["node_modules", "lib"]
 }

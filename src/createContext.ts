@@ -1,9 +1,7 @@
 export {
-  type Context,
   type ContextProvider,
   type ContextHook,
-  type CreateContext,
-  type InferContextType,
+  type InferContextApi,
   createContext,
   default,
 } from "react-hooks-global-states/createContext";

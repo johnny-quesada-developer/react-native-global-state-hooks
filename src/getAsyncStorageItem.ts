@@ -2,19 +2,24 @@ import type { AsyncStorageConfig } from "./types";
 import { asyncStorageWrapper } from "./asyncStorageWrapper";
 import { formatFromStore } from "json-storage-formatter/formatFromStore";
 
+/**
+ * Gets an item from async storage
+ * @param args AsyncStorageConfig configuration
+ * @returns The stored value or null if not found
+ */
 export const getAsyncStorageItem = async <TState>(args: AsyncStorageConfig): Promise<TState> => {
-  const localStorageKeySource = args.key;
-  if (!localStorageKeySource) return null;
+  const asyncStorageKeySource = args.key;
+  if (!asyncStorageKeySource) return null;
 
-  const localStorageKey = (() => {
-    if (typeof localStorageKeySource === "function") {
-      return localStorageKeySource();
+  const asyncStorageKey = (() => {
+    if (typeof asyncStorageKeySource === "function") {
+      return asyncStorageKeySource();
     }
 
-    return localStorageKeySource;
+    return asyncStorageKeySource;
   })();
 
-  const storedItem = await asyncStorageWrapper.getItem(localStorageKey);
+  const storedItem = await asyncStorageWrapper.getItem(asyncStorageKey);
   if (storedItem === null) return null;
 
   const json = (() => {

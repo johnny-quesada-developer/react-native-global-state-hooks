@@ -1,3 +1,5 @@
+/* eslint-disable no-undef */
+/* eslint-disable @typescript-eslint/no-require-imports */
 const path = require("path");
 const TerserPlugin = require("terser-webpack-plugin");
 
@@ -5,16 +7,12 @@ const individualEntries = {
   // inherit from react-global-state-hooks
   createContext: "./src/createContext.ts",
   GlobalStore: "./src/GlobalStore.ts",
-  GlobalStoreAbstract: "./src/GlobalStoreAbstract.ts",
-  createCustomGlobalState: "./src/createCustomGlobalState.ts",
   createGlobalState: "./src/createGlobalState.ts",
   types: "./src/types.ts",
   isRecord: "./src/isRecord.ts",
   shallowCompare: "./src/shallowCompare.ts",
   throwWrongKeyOnActionCollectionConfig: "./src/throwWrongKeyOnActionCollectionConfig.ts",
   uniqueId: "./src/uniqueId.ts",
-  useStableState: "./src/useStableState.ts",
-  generateStackHash: "./src/generateStackHash.ts",
 
   // extras
   asyncStorageWrapper: "./src/asyncStorageWrapper.ts",
@@ -22,7 +20,7 @@ const individualEntries = {
   setAsyncStorageItem: "./src/setAsyncStorageItem.ts",
 };
 
-const getExternalsForEntries = () => {
+const generateExternalEntryMappings = () => {
   const keys = Object.keys(individualEntries);
   const fromEntries = keys.reduce((acc, key) => {
     acc[`./${key}`] = `./${key}.js`;
@@ -68,7 +66,7 @@ module.exports = {
 
     "react-hooks-global-states": "react-hooks-global-states",
 
-    ...getExternalsForEntries(),
+    ...generateExternalEntryMappings(),
   },
   output: {
     path: path.resolve(__dirname),

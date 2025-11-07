@@ -7,20 +7,18 @@ const { fakeAsyncStorage: asyncStorage } = getFakeAsyncStorage();
 
 beforeEach(() => {
   jest.spyOn(React, "useState").mockImplementation(((initialState) => {
-    const value =
-      typeof initialState === "function" ? initialState() : initialState;
+    const value = typeof initialState === "function" ? initialState() : initialState;
 
     const setState = jest.fn(
       (() => {
         let state;
 
         return jest.fn((setter) => {
-          const newState =
-            typeof setter === "function" ? setter(state) : setter;
+          const newState = typeof setter === "function" ? setter(state) : setter;
 
           state = newState;
         });
-      })()
+      })(),
     );
 
     return [value, setState];

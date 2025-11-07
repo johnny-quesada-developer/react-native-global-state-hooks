@@ -24,8 +24,6 @@ describe("GlobalStoreAsync Basics", () => {
         metadata: {},
       });
 
-      const [getState, setState, getMetadata] = store.stateControls();
-
       const onStateChanged = Object.getOwnPropertyDescriptor(store, "onStateChanged")?.value;
 
       onStateChanged.bind(store);
@@ -35,7 +33,7 @@ describe("GlobalStoreAsync Basics", () => {
           store as unknown as {
             onStateChanged: () => void;
           },
-          "onStateChanged"
+          "onStateChanged",
         )
         .mockImplementation((...parameters) => {
           onStateChanged(...parameters);
@@ -45,20 +43,20 @@ describe("GlobalStoreAsync Basics", () => {
 
       expect(store).toBeInstanceOf(GlobalStore);
 
-      expect(getMetadata().isAsyncStorageReady).toBe(false);
+      expect(store.getMetadata().isAsyncStorageReady).toBe(false);
 
       await onStateChangedPromise;
 
-      expect(getMetadata().isAsyncStorageReady).toBe(true);
+      expect(store.getMetadata().isAsyncStorageReady).toBe(true);
 
       act(() => {
-        setState((state) => state + 1);
+        store.setState((state) => state + 1);
       });
 
       // time for the async storage to update
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(getState()).toBe(1);
+      expect(store.getState()).toBe(1);
 
       const storedValue = await asyncStorage.getItem("counter");
 
@@ -90,17 +88,16 @@ describe("createGlobalState", () => {
         },
       });
 
-      const useData = store.getHook();
-      const { result, rerender } = renderHook(() => useData());
+      const { result, rerender } = renderHook(() => store.use());
       let [data, setData, metadata] = result.current;
 
       expect(metadata?.isAsyncStorageReady).toBe(false);
 
-      const [[, subscriber1]] = store.subscribers;
+      const [subscriber1] = store.subscribers;
       const callback = subscriber1.callback;
       jest.spyOn(subscriber1, "callback").mockImplementation((...args) => {
         act(() => {
-          (callback as (...args: any[]) => void)(...args);
+          (callback as (...args: unknown[]) => void)(...args);
         });
       });
 
@@ -120,7 +117,7 @@ describe("createGlobalState", () => {
         });
       });
 
-      const { result: result2 } = renderHook(() => useData());
+      const { result: result2 } = renderHook(() => store.use());
       const [data2] = result2.current;
 
       expect(data).toBe(data2);
@@ -134,12 +131,12 @@ describe("createGlobalState", () => {
 
 describe("getter subscriptions custom global state", () => {
   it("should subscribe to changes from getter", () => {
-    const [getter, setter] = createGlobalState({
+    const store = createGlobalState({
       a: 3,
       b: 2,
-    }).stateControls();
+    });
 
-    const state = getter();
+    const state = store.getState();
 
     // without a callback, it should return the current state
     expect(state).toEqual({
@@ -151,16 +148,16 @@ describe("getter subscriptions custom global state", () => {
     const subscriptionDerivateSpy = jest.fn();
 
     const subscriptions = [
-      getter((state) => {
+      store.subscribe((state) => {
         subscriptionSpy(state);
       }),
-      getter(
+      store.subscribe(
         (state) => {
           return state.a;
         },
         jest.fn((derivate) => {
           subscriptionDerivateSpy(derivate);
-        })
+        }),
       ),
     ];
 
@@ -171,7 +168,7 @@ describe("getter subscriptions custom global state", () => {
     expect(subscriptionDerivateSpy).toBeCalledWith(3);
 
     act(() => {
-      setter((state) => ({
+      store.setState((state) => ({
         ...state,
         b: 3,
       }));
@@ -189,7 +186,7 @@ describe("getter subscriptions custom global state", () => {
     subscriptions.forEach((unsubscribe) => unsubscribe());
 
     act(() => {
-      setter((state) => ({
+      store.setState((state) => ({
         ...state,
         a: 4,
       }));

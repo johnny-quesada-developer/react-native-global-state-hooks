@@ -1,5 +1,6 @@
 export type {
-  StateSetter,
+  StateApi,
+  AnyFunction,
   // HookExtensions,
   ObservableFragment,
   // MetadataSetter,
@@ -7,11 +8,10 @@ export type {
   // StoreTools,
   // ActionCollectionResult,
   // GlobalStoreCallbacks,
-  UseHookConfig,
+  UseHookOptions,
   UnsubscribeCallback,
   SubscribeCallbackConfig,
   SubscribeCallback,
-  StateGetter,
   // BaseMetadata,
   // MetadataGetter,
   // CustomGlobalHookBuilderParams,
@@ -21,14 +21,14 @@ export type {
   // ActionCollectionConfig,
 } from "react-hooks-global-states/types";
 
+import React from "react";
 import type {
-  BaseMetadata as MetadataBase,
+  BaseMetadata as BaseLibraryMetadata,
   ObservableFragment,
   StateChanges,
-  StateGetter,
-  StateSetter,
-  UseHookConfig,
+  UseHookOptions,
 } from "react-hooks-global-states";
+import { AnyFunction, SubscribeToState } from "react-hooks-global-states/types";
 
 export type AsyncStorageConfig = {
   key: string | (() => string);
@@ -44,14 +44,20 @@ export type AsyncStorageConfig = {
   decrypt?: boolean | ((value: string) => string);
 };
 
-export type BaseMetadata = MetadataBase & {
+// Type to extend the metadata with async storage specific properties
+export type AsyncMetadata = BaseLibraryMetadata & {
   isAsyncStorageReady?: boolean;
   asyncStorageKey?: string | null;
 };
 
-export type StateMeta<T> = (keyof T extends never ? {} : T) & BaseMetadata;
+/**
+ * The base metadata for async storage always carries the information about the async storage state and
+ * the key used to store the state in async storage.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export type BaseMetadata<T> = (keyof T extends never ? {} : T) & AsyncMetadata;
 
-export type HookExtensions<State, StateMutator, Metadata extends BaseMetadata | unknown> = {
+export type HookExtensions<State, StateMutator, Metadata extends AsyncMetadata> = {
   /**
    * @description Return the state controls of the hook
    * This selectors includes:
@@ -60,7 +66,7 @@ export type HookExtensions<State, StateMutator, Metadata extends BaseMetadata | 
    * - metadataRetriever: a function to get the metadata of the global state
    */
   stateControls: () => Readonly<
-    [retriever: StateGetter<State>, mutator: StateMutator, metadata: MetadataGetter<Metadata>]
+    [retriever: () => State, mutator: StateMutator, metadata: MetadataGetter<Metadata>]
   >;
 
   /***
@@ -72,9 +78,9 @@ export type HookExtensions<State, StateMutator, Metadata extends BaseMetadata | 
   createSelectorHook: <Derivate>(
     this: StateHook<State, StateMutator, Metadata>,
     selector: (state: State) => Derivate,
-    args?: Omit<UseHookConfig<Derivate, State>, "dependencies"> & {
+    args?: Omit<UseHookOptions<Derivate, State>, "dependencies"> & {
       name?: string;
-    }
+    },
   ) => StateHook<Derivate, StateMutator, Metadata>;
 
   createObservable: <Fragment>(
@@ -84,76 +90,109 @@ export type HookExtensions<State, StateMutator, Metadata extends BaseMetadata | 
       isEqual?: (current: Fragment, next: Fragment) => boolean;
       isEqualRoot?: (current: State, next: State) => boolean;
       name?: string;
-    }
-  ) => ObservableFragment<Fragment>;
+    },
+  ) => ObservableFragment<Fragment, StateMutator, Metadata>;
 };
 
-export interface StateHook<State, StateMutator, Metadata extends BaseMetadata | unknown>
+export interface StateHook<State, StateMutator, Metadata extends AsyncMetadata>
   extends HookExtensions<State, StateMutator, Metadata> {
   (): Readonly<[state: State, stateMutator: StateMutator, metadata: Metadata]> &
     HookExtensions<State, StateMutator, Metadata>;
 
-  <Derivate>(selector: (state: State) => Derivate, config?: UseHookConfig<Derivate, State>): Readonly<
-    [state: Derivate, stateMutator: StateMutator, metadata: Metadata]
-  > &
+  <Derivate>(
+    selector: (state: State) => Derivate,
+    config?: UseHookOptions<Derivate, State>,
+  ): Readonly<[state: Derivate, stateMutator: StateMutator, metadata: Metadata]> &
     HookExtensions<Derivate, StateMutator, Metadata>;
 }
 
-export type MetadataSetter<Metadata extends BaseMetadata | unknown> = (
-  setter: Metadata | ((metadata: Metadata) => Metadata)
+export type MetadataSetter<Metadata extends AsyncMetadata> = (
+  setter: Metadata | ((metadata: Metadata) => Metadata),
 ) => void;
 
+/**
+ * API for the actions of the global states
+ **/
 export type StoreTools<
   State,
-  Metadata extends BaseMetadata | unknown = BaseMetadata,
-  Actions extends undefined | unknown | Record<string, (...args: any[]) => any> = unknown
+  StateMutator = React.Dispatch<React.SetStateAction<State>>,
+  Metadata extends AsyncMetadata = AsyncMetadata,
 > = {
-  setMetadata: MetadataSetter<Metadata>;
-  setState: StateSetter<State>;
-  getState: StateGetter<State>;
+  /**
+   * The actions available for the global state
+   */
+  actions: StateMutator extends AnyFunction ? null : StateMutator;
+  /**
+   * @description Metadata associated with the global state
+   */
   getMetadata: () => Metadata;
-  actions: Actions;
+  /**
+   * @description Current state value
+   */
+  getState: () => State;
+  /**
+   * @description Sets the metadata value
+   */
+  setMetadata: MetadataSetter<Metadata>;
+  /**
+   * @description Function to set the state value
+   */
+  setState: React.Dispatch<React.SetStateAction<State>>;
+  /**
+   * @description Subscribe to the state changes
+   * You can subscribe to the whole state or to a fragment of the state by passing a selector as first parameter,
+   * this can be used in non react environments to listen to the state changes
+   *
+   * @example
+   * ```ts
+   * const unsubscribe = storeTools.subscribe((state) => {
+   *   console.log('State changed:', state);
+   * });
+   *
+   * // To unsubscribe later
+   * unsubscribe();
+   * ```
+   */
+  subscribe: SubscribeToState<State>;
 };
 
+/**
+ * contract for the storeActionsConfig configuration
+ */
 export interface ActionCollectionConfig<
   State,
-  Metadata extends BaseMetadata | unknown,
-  ThisAPI = Record<string, (...parameters: any[]) => unknown>
+  Metadata extends AsyncMetadata,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ThisAPI = Record<string, (...parameters: any[]) => unknown>,
 > {
   readonly [key: string]: {
-    (this: ThisAPI, ...parameters: any[]): (
+    (
       this: ThisAPI,
-      storeTools: StoreTools<State, Metadata, Record<string, (...parameters: any[]) => unknown | void>>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...parameters: any[]
+    ): (
+      this: ThisAPI,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      storeTools: StoreTools<State, Record<string, (...parameters: any[]) => unknown | void>, Metadata>,
     ) => unknown | void;
   };
 }
 
 export type ActionCollectionResult<
   State,
-  Metadata extends BaseMetadata | unknown,
-  ActionsConfig extends ActionCollectionConfig<State, Metadata>
+  Metadata extends AsyncMetadata,
+  ActionsConfig extends ActionCollectionConfig<State, Metadata>,
 > = {
   [key in keyof ActionsConfig]: {
     (...params: Parameters<ActionsConfig[key]>): ReturnType<ReturnType<ActionsConfig[key]>>;
   };
 };
 
-export type GlobalStoreCallbacks<State, Metadata extends BaseMetadata | unknown> = {
+export type GlobalStoreCallbacks<State, Metadata extends AsyncMetadata> = {
   onInit?: (args: StoreTools<State, Metadata>) => void;
   onStateChanged?: (args: StoreTools<State, Metadata> & StateChanges<State>) => void;
   onSubscribed?: (args: StoreTools<State, Metadata>) => void;
   computePreventStateChange?: (args: StoreTools<State, Metadata> & StateChanges<State>) => boolean;
 };
 
-export type MetadataGetter<Metadata extends BaseMetadata | unknown> = () => Metadata;
-
-export type CustomGlobalHookBuilderParams<
-  TCustomConfig extends BaseMetadata | unknown,
-  Metadata extends BaseMetadata | unknown
-> = {
-  onInitialize?: (args: StoreTools<unknown, Metadata, unknown>, config: TCustomConfig | undefined) => void;
-  onChange?: (
-    args: StoreTools<unknown, Metadata, unknown> & StateChanges<unknown>,
-    config: TCustomConfig | undefined
-  ) => void;
-};
+export type MetadataGetter<Metadata extends AsyncMetadata> = () => Metadata;

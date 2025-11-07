@@ -1,8 +1,27 @@
+/**
+ * Async Storage Manager
+ */
 export type AsyncStorageManager = {
+  /**
+   * Get item from storage
+   * @param key storage key
+   * @returns stored value or null if not found
+   */
   getItem: <T extends string | null>(key: string) => Promise<T>;
+
+  /**
+   * Set item in storage
+   * @param key storage key
+   * @param value value to store
+   */
   setItem: (key: string, value: string) => Promise<void>;
 };
 
+/**
+ * Wrapper to manage async storage manager
+ * It tries to use @react-native-async-storage/async-storage by default
+ * If not available, you can add your own async storage manager using the addAsyncStorageManager method
+ */
 export const asyncStorageWrapper: AsyncStorageManager & {
   addAsyncStorageManager: (callback: () => Promise<AsyncStorageManager>) => Promise<void>;
 } = (() => {
@@ -45,7 +64,7 @@ export const asyncStorageWrapper: AsyncStorageManager & {
       `[AsyncStorageManager Not Found] 
 
       Please install the react-native-async-storage/async-storage to be use as the default async storage manager or
-      add an AsyncStorageManager using the asyncStorageWrapper.addAsyncStorageManager method before attempting to get or set items.`
+      add an AsyncStorageManager using the asyncStorageWrapper.addAsyncStorageManager method before attempting to get or set items.`,
     );
   };
 

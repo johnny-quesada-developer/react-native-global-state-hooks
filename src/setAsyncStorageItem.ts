@@ -3,15 +3,15 @@ import { asyncStorageWrapper } from "./asyncStorageWrapper";
 import type { AsyncStorageConfig } from "types";
 
 export const setAsyncStorageItem = <T>(item: T, args: AsyncStorageConfig): void => {
-  const localStorageKeySource = args.key;
-  if (!localStorageKeySource) return;
+  const asyncStorageKeySource = args.key;
+  if (!asyncStorageKeySource) return;
 
-  const localStorageKey = (() => {
-    if (typeof localStorageKeySource === "function") {
-      return localStorageKeySource();
+  const asyncStorageKey = (() => {
+    if (typeof asyncStorageKeySource === "function") {
+      return asyncStorageKeySource();
     }
 
-    return localStorageKeySource;
+    return asyncStorageKeySource;
   })();
 
   const json = formatToStore(item, {
@@ -29,7 +29,7 @@ export const setAsyncStorageItem = <T>(item: T, args: AsyncStorageConfig): void 
     return btoa(json);
   })();
 
-  asyncStorageWrapper.setItem(localStorageKey, parsed);
+  asyncStorageWrapper.setItem(asyncStorageKey, parsed);
 };
 
 export default setAsyncStorageItem;
