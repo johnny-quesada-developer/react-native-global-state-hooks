@@ -7,7 +7,7 @@ export type AsyncStorageManager = {
    * @param key storage key
    * @returns stored value or null if not found
    */
-  getItem: <T extends string | null>(key: string) => Promise<T>;
+  getItem: (key: string) => Promise<string | null>;
 
   /**
    * Set item in storage
@@ -100,10 +100,10 @@ export const asyncStorageWrapper: AsyncStorageManager & {
     return manager;
   };
 
-  const getItem = async <T extends string | null>(key: string): Promise<T> => {
+  const getItem = async (key: string): Promise<string | null> => {
     await waitUntilReady();
 
-    return manager.getItem<T>(key);
+    return manager.getItem(key);
   };
 
   const setItem = async (key: string, value: string) => {

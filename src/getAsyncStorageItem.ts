@@ -1,6 +1,6 @@
 import type { AsyncStorageConfig } from "./types";
 import { asyncStorageWrapper } from "./asyncStorageWrapper";
-import { formatFromStore } from "json-storage-formatter/formatFromStore";
+import formatFromStore from "json-storage-formatter/formatFromStore";
 
 /**
  * Gets an item from async storage
@@ -32,9 +32,7 @@ export const getAsyncStorageItem = async <TState>(args: AsyncStorageConfig): Pro
     return atob(storedItem);
   })();
 
-  const value = formatFromStore<TState>(json, {
-    jsonParse: true,
-  });
+  const value = formatFromStore<TState>(json);
 
   return value;
 };

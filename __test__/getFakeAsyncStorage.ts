@@ -2,7 +2,7 @@ export const getFakeAsyncStorage = () => {
   const dictionary = new Map<string, string>();
 
   const fakeAsyncStorage = {
-    getItem: jest.fn().mockImplementation((key): Promise<string | null> => {
+    getItem: jest.fn((key): Promise<string | null> => {
       return new Promise<string | null>((resolve) => {
         setTimeout(() => {
           const value = dictionary.get(key) ?? null;
@@ -11,12 +11,12 @@ export const getFakeAsyncStorage = () => {
         }, 0);
       });
     }),
-    setItem: jest.fn().mockImplementation(async (key, value): Promise<void> => {
+    setItem: jest.fn((key, value): Promise<void> => {
       return new Promise<void>((resolve) => {
         setTimeout(() => {
-          const jsonValue = JSON.stringify(value);
+          const stringValue = typeof value === "string" ? value : JSON.stringify(value);
 
-          dictionary.set(key, jsonValue);
+          dictionary.set(key, stringValue);
           resolve();
         }, 0);
       });

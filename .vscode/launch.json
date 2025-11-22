@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Jest (terminal)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/jest/bin/jest.js",
+      "args": ["${file}", "--runInBand", "--detectOpenHandles", "--colors"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "env": {
+        // If your tests/TS need it; safe to remove otherwise
+        // "NODE_OPTIONS": "--experimental-vm-modules"
+      }
+    }
+  ]
+}

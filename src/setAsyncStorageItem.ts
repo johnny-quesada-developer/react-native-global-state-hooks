@@ -1,4 +1,4 @@
-import { formatToStore } from "json-storage-formatter/formatToStore";
+import formatToStore from "json-storage-formatter/formatToStore";
 import { asyncStorageWrapper } from "./asyncStorageWrapper";
 import type { AsyncStorageConfig } from "types";
 
@@ -15,7 +15,6 @@ export const setAsyncStorageItem = <T>(item: T, args: AsyncStorageConfig): void 
   })();
 
   const json = formatToStore(item, {
-    stringify: true,
     excludeTypes: ["function"],
   });
 

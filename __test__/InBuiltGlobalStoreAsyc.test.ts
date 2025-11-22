@@ -1,9 +1,10 @@
 import { createDecoupledPromise } from "easy-cancelable-promise/createDecoupledPromise";
 
 import { GlobalStore, createGlobalState, asyncStorageWrapper } from "..";
-import { formatToStore } from "json-storage-formatter/formatToStore";
+import formatToStore from "json-storage-formatter/formatToStore";
 import { getFakeAsyncStorage } from "./getFakeAsyncStorage";
-import { act, renderHook } from "@testing-library/react";
+import { act } from "@testing-library/react";
+import it from "./$it";
 
 export const { fakeAsyncStorage: asyncStorage } = getFakeAsyncStorage();
 asyncStorageWrapper.addAsyncStorageManager(() => Promise.resolve(asyncStorage));
@@ -60,7 +61,7 @@ describe("GlobalStoreAsync Basics", () => {
 
       const storedValue = await asyncStorage.getItem("counter");
 
-      expect(storedValue).toBe('"1"');
+      expect(storedValue).toBe("1");
 
       resolve();
     }, 0);
@@ -70,7 +71,7 @@ describe("GlobalStoreAsync Basics", () => {
 });
 
 describe("createGlobalState", () => {
-  it("should create a store with async storage", async () => {
+  it("should create a store with async storage", async ({ renderHook }) => {
     asyncStorage.setItem("data", formatToStore(new Map([["prop", 0]])) as unknown as string);
 
     const { promise, resolve } = createDecoupledPromise();
@@ -94,8 +95,8 @@ describe("createGlobalState", () => {
       expect(metadata?.isAsyncStorageReady).toBe(false);
 
       const [subscriber1] = store.subscribers;
-      const callback = subscriber1.callback;
-      jest.spyOn(subscriber1, "callback").mockImplementation((...args) => {
+      const callback = subscriber1.onStoreChange;
+      jest.spyOn(subscriber1, "onStoreChange").mockImplementation((...args) => {
         act(() => {
           (callback as (...args: unknown[]) => void)(...args);
         });
