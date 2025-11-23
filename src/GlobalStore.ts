@@ -67,14 +67,11 @@ export class GlobalStore<
 
     this.asyncStorage = args.asyncStorage ?? null;
 
-    this.setMetadata(
-      (metadata) =>
-        ({
-          ...(metadata ?? {}),
-          isAsyncStorageReady: false,
-          asyncStorageKey: this.asyncStorage?.key ?? null,
-        }) as AsyncMetadata<Metadata>,
-    );
+    // avoid changing the reference of the metadata object
+    Object.assign(this.getMetadata(), {
+      isAsyncStorageReady: false,
+      asyncStorageKey: this.asyncStorage?.key ?? null,
+    });
 
     const isExtensionClass = this.constructor !== GlobalStore;
     if (isExtensionClass) return;
@@ -83,15 +80,7 @@ export class GlobalStore<
   }
 
   public getMetadata = () => {
-    if (!this.asyncStorage?.key) {
-      return this.metadata;
-    }
-
-    return {
-      isAsyncStorageReady: false,
-      asyncStorageKey: this.asyncStorage.key,
-      ...(this.metadata ?? {}),
-    } as AsyncMetadata<Metadata>;
+    return this.metadata as AsyncMetadata<Metadata>;
   };
 
   protected isPersistStorageAvailable = () => {
@@ -99,7 +88,6 @@ export class GlobalStore<
   };
 
   protected _onInitialize = async ({
-    setMetadata,
     getState,
   }: StoreTools<State, PublicStateMutator, Metadata>): Promise<void> => {
     const storageConfig = this.asyncStorage;
@@ -107,13 +95,7 @@ export class GlobalStore<
     if (!storageConfig || !this.isPersistStorageAvailable()) return;
 
     // set initial value of the metadata
-    setMetadata(
-      (metadata) =>
-        ({
-          ...(metadata ?? {}),
-          isAsyncStorageReady: false,
-        }) as Metadata,
-    );
+    this.metadata.isAsyncStorageReady = false;
 
     // versioning parameters
     const versioning = storageConfig.versioning;
@@ -131,18 +113,18 @@ export class GlobalStore<
       },
     );
 
-    tryCatch(() => {
+    const { error } = await tryCatch(async () => {
       // error while retrieving the item from local storage
       if (initializationError) {
-        this.handleLocalStorageError(initializationError);
-        this.updateStateWithValidation(this.getState());
+        this.handleStorageError(initializationError);
+        await this.updateStateWithValidation(this.getState());
         return;
       }
 
       // nothing to restore
       if (!restoredEnvelope) {
         // set the initial state in local storage
-        this.updateStateWithValidation(getState());
+        await this.updateStateWithValidation(getState());
         return;
       }
 
@@ -152,7 +134,7 @@ export class GlobalStore<
       // versions match or no migrator provided - just validate and update if possible
       // if the adapter is provided we cannot control versioning so we skip migration
       if (isSameVersion || !migratorFn || storageConfig.adapter) {
-        this.updateStateWithValidation(restoredEnvelope.s);
+        await this.updateStateWithValidation(restoredEnvelope.s);
         return;
       }
 
@@ -165,24 +147,22 @@ export class GlobalStore<
       });
 
       if (!migrateError) {
-        this.updateStateWithValidation(migrated as State);
+        await this.updateStateWithValidation(migrated as State);
         return;
       }
 
-      this.handleLocalStorageError(migrateError);
-      this.updateStateWithValidation(this.getState());
+      this.handleStorageError(migrateError);
+      await this.updateStateWithValidation(this.getState());
     });
 
-    setMetadata(
-      (metadata) =>
-        ({
-          ...(metadata ?? {}),
-          isAsyncStorageReady: true,
-        }) as Metadata,
-    );
+    this.metadata.isAsyncStorageReady = true;
+
+    if (!error) return;
+
+    this.handleStorageError(error);
   };
 
-  private trySetLocalStorageItem = async (state: State) => {
+  private trySetStorageItem = async (state: State) => {
     const storageConfig = this.asyncStorage;
     if (!storageConfig) return;
 
@@ -190,16 +170,16 @@ export class GlobalStore<
       const setFn = storageConfig.adapter?.setItem;
       if (!setFn) return this.setStorageItem(state);
 
-      setFn(storageConfig.key, state);
+      return setFn(storageConfig.key, state);
     });
 
     if (!error) return;
 
-    this.handleLocalStorageError(error);
+    this.handleStorageError(error);
   };
 
   // helper to validate and update the state
-  private updateStateWithValidation = (state: State) => {
+  private updateStateWithValidation = async (state: State) => {
     const storageConfig = this.asyncStorage;
     if (!storageConfig) return;
 
@@ -213,8 +193,8 @@ export class GlobalStore<
 
     // there was an error during validation
     if (validationError) {
-      this.handleLocalStorageError(validationError);
-      this.trySetLocalStorageItem(this.getState());
+      this.handleStorageError(validationError);
+      await this.trySetStorageItem(this.getState());
       return;
     }
 
@@ -222,7 +202,7 @@ export class GlobalStore<
     if (sanitizedState === undefined) {
       if (state === undefined) {
         // no restored, no sanitized state, adds to the store the initial state
-        this.trySetLocalStorageItem(this.getState());
+        await this.trySetStorageItem(this.getState());
         return;
       }
 
@@ -232,7 +212,7 @@ export class GlobalStore<
         forceUpdate: true,
       });
 
-      this.trySetLocalStorageItem(state);
+      await this.trySetStorageItem(state);
       return;
     }
 
@@ -242,7 +222,7 @@ export class GlobalStore<
       forceUpdate: true,
     });
 
-    this.trySetLocalStorageItem(sanitizedState as State);
+    await this.trySetStorageItem(sanitizedState as State);
   };
 
   protected _onChange = async ({
@@ -257,12 +237,12 @@ export class GlobalStore<
         return setFn(storageConfig.key, state);
       }
 
-      this.setStorageItem(state);
+      return this.setStorageItem(state);
     });
 
     if (!error) return;
 
-    this.handleLocalStorageError(error);
+    this.handleStorageError(error);
   };
 
   /**
@@ -282,7 +262,7 @@ export class GlobalStore<
    */
   // @ts-expect-error TS2345
   protected onInit = (parameters: StoreTools<State, PublicStateMutator, Metadata>) => {
-    this._onInitialize?.(parameters);
+    void this._onInitialize?.(parameters);
   };
 
   // @ts-expect-error TS2345
@@ -296,7 +276,11 @@ export class GlobalStore<
   private getStorageItem = async (): Promise<ItemEnvelope<State> | null> => {
     const json = await asyncStorageWrapper.getItem(this.asyncStorage.key);
 
-    return isNil(json) ? null : formatFromStore<ItemEnvelope<State>>(json);
+    const restoredEnvelope = isNil(json) ? null : formatFromStore<unknown>(json);
+
+    assertEnvelopeFormat<State>(this.asyncStorage.key, restoredEnvelope);
+
+    return restoredEnvelope;
   };
 
   // add a versioned item to the local storage
@@ -311,7 +295,7 @@ export class GlobalStore<
     return asyncStorageWrapper.setItem(this.asyncStorage.key, formatted);
   };
 
-  private handleLocalStorageError = (error: unknown) => {
+  private handleStorageError = (error: unknown) => {
     if (this.asyncStorage?.onError) {
       return this.asyncStorage.onError(error);
     }
@@ -331,6 +315,15 @@ export class GlobalStore<
       (error as Error).stack,
     );
   };
+}
+
+function assertEnvelopeFormat<T>(key: string, value: unknown): asserts value is ItemEnvelope<T> | null {
+  if (isNil(value)) return;
+  if (typeof value === "object" && "s" in value && "v" in value) return;
+
+  throw new Error(
+    `[react-native-global-state-hooks] The value of the key "${key}" is not a valid storage envelope.`,
+  );
 }
 
 export default GlobalStore;

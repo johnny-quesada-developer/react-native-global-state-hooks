@@ -56,7 +56,8 @@ export type AsyncStorageConfig<State> = {
    * }
    * ```
    */
-  validator: (args: { restored: unknown; initial: State }) => State | void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  validator: (args: { restored: unknown; initial: any }) => any | void;
 
   /**
    * @description Error callback invoked when an exception occurs during any persistence phase.
@@ -86,7 +87,8 @@ export type AsyncStorageConfig<State> = {
      * and the state falls back to the initial value.
      */
 
-    migrator: (args: { legacy: unknown; initial: State }) => State;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    migrator: (args: { legacy: unknown; initial: any }) => any;
   };
 
   /**
