@@ -22,7 +22,7 @@ export type AsyncStorageManager = {
  * It tries to use @react-native-async-storage/async-storage by default
  * If not available, you can add your own async storage manager using the addAsyncStorageManager method
  */
-export const asyncStorageWrapper: AsyncStorageManager & {
+const asyncStorageWrapper: AsyncStorageManager & {
   addAsyncStorageManager: (callback: () => Promise<AsyncStorageManager>) => Promise<void>;
 } = (() => {
   let managerStatus: "pending" | "resolved" | "rejected" = "pending";

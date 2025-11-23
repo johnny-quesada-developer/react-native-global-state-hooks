@@ -2,7 +2,7 @@ export type {
   StateApi,
   AnyFunction,
   // HookExtensions,
-  ObservableFragment,
+  // ObservableFragment,
   // MetadataSetter,
   StateChanges,
   // StoreTools,
@@ -24,28 +24,108 @@ export type {
 import React from "react";
 import type {
   BaseMetadata as BaseLibraryMetadata,
-  ObservableFragment,
+  StateApi,
   StateChanges,
+  SubscriberParameters,
   UseHookOptions,
 } from "react-hooks-global-states";
 import { AnyFunction, SubscribeToState } from "react-hooks-global-states/types";
 
-export type AsyncStorageConfig = {
-  key: string | (() => string);
+export type AsyncStorageConfig<State> = {
+  /**
+   * @description The key used to store the item in async storage.
+   */
+  key: string;
 
   /**
-   * The function used to encrypt the async storage, it can be a custom function or a boolean value (true = atob)
+   * @description Validator function to ensure the integrity of the restored state.
+   * Receives the restored value and the initial state... If the function returns a value then
+   * that value is used as the new state. If it returns `void` (undefined) then the restored state is used
+   * and the async storage is updated accordingly.
+   *
+   * Executes after every initialization from async storage, including after migration.
+   *
+   * @example
+   * ```ts
+   * validator: ({ restored, initial }) => {
+   *   if (typeof restored !== 'number') {
+   *     return initial;
+   *   }
+   *
+   *   return restored;
+   * }
+   * ```
    */
-  encrypt?: boolean | ((value: string) => string);
+  validator: (args: { restored: unknown; initial: State }) => State | void;
 
   /**
-   * The function used to decrypt the async storage, it can be a custom function or a boolean value (true = atob)
+   * @description Error callback invoked when an exception occurs during any persistence phase.
+   * Use this to log or report issues without throwing.
    */
-  decrypt?: boolean | ((value: string) => string);
+  onError?: (error: unknown) => void;
+
+  versioning?: {
+    /**
+     * @description Current schema version for this item. When the stored version differs,
+     * the `migrator` function is invoked to upgrade the stored value.
+     * @default -1
+     * @example
+     * ```ts
+     * {
+     *   key: 'counter',
+     *   version: 1
+     * }
+     * ```
+     */
+    version: string | number;
+
+    /**
+     * @description Called when a stored value is found with a different version.
+     * Receives the raw stored value and must return the upgraded `State`.
+     * If and error is thrown during migration, the `onError` callback is invoked
+     * and the state falls back to the initial value.
+     */
+
+    migrator: (args: { legacy: unknown; initial: State }) => State;
+  };
+
+  /**
+   * @description High level overrides of the async storage synchronization
+   * Use it if you want to have full control of how the state is stored/retrieved.
+   *
+   * This disables versioning, migration
+   */
+  adapter?: {
+    /**
+     * @description Custom setter for the stored value associated with `key`.
+     */
+    setItem: (key: string, value: State) => Promise<void>;
+
+    /**
+     * @description Custom getter for the stored value associated with `key`.
+     * Should return the previously stored value (parsed/decoded to `State`) for that key.
+     */
+    getItem: (key: string) => Promise<State | null>;
+  };
+};
+
+/**
+ * @description Structure of the item stored in async storage
+ */
+export type ItemEnvelope<T> = {
+  /**
+   * @description Actual stored state
+   */
+  s: T;
+
+  /**
+   * @description Version of the stored state
+   */
+  v?: string | number;
 };
 
 // Type to extend the metadata with async storage specific properties
-export type AsyncMetadata = BaseLibraryMetadata & {
+export type BaseMetadata = BaseLibraryMetadata & {
   isAsyncStorageReady?: boolean;
   asyncStorageKey?: string | null;
 };
@@ -55,58 +135,33 @@ export type AsyncMetadata = BaseLibraryMetadata & {
  * the key used to store the state in async storage.
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export type BaseMetadata<T> = (keyof T extends never ? {} : T) & AsyncMetadata;
+export type AsyncMetadata<T> = (keyof T extends never ? {} : T) & BaseMetadata;
 
-export type HookExtensions<State, StateMutator, Metadata extends AsyncMetadata> = {
+export interface StateHook<State, StateMutator, Metadata extends BaseMetadata>
+  extends StateApi<State, StateMutator, Metadata> {
   /**
-   * @description Return the state controls of the hook
-   * This selectors includes:
-   * - stateRetriever: a function to get the current state or subscribe a callback to the state changes
-   * - stateMutator: a function to set the state or a collection of actions if you pass an storeActionsConfig configuration
-   * - metadataRetriever: a function to get the metadata of the global state
+   * @description React hook that provides access to the state, state mutator, and metadata.
    */
-  stateControls: () => Readonly<
-    [retriever: () => State, mutator: StateMutator, metadata: MetadataGetter<Metadata>]
-  >;
+  (): Readonly<[state: State, stateMutator: StateMutator, metadata: Metadata]>;
 
-  /***
-   * @description Creates a new hooks that returns the result of the selector passed as a parameter
-   * Your can create selector hooks of other selectors hooks and extract as many derived states as or fragments of the state as you want
-   * The selector hook will be evaluated only if the result of the selector changes and the equality function returns false
-   * you can customize the equality function by passing the isEqualRoot and isEqual parameters
+  /**
+   * @description React hook that provides a derived state based on the provided selector function.
    */
-  createSelectorHook: <Derivate>(
-    this: StateHook<State, StateMutator, Metadata>,
+  <Derivate>(
     selector: (state: State) => Derivate,
-    args?: Omit<UseHookOptions<Derivate, State>, "dependencies"> & {
-      name?: string;
-    },
-  ) => StateHook<Derivate, StateMutator, Metadata>;
+    dependencies?: unknown[],
+  ): Readonly<[state: Derivate, stateMutator: StateMutator, metadata: Metadata]>;
 
-  createObservable: <Fragment>(
-    this: StateHook<State, StateMutator, Metadata>,
-    mainSelector: (state: State) => Fragment,
-    args?: {
-      isEqual?: (current: Fragment, next: Fragment) => boolean;
-      isEqualRoot?: (current: State, next: State) => boolean;
-      name?: string;
-    },
-  ) => ObservableFragment<Fragment, StateMutator, Metadata>;
-};
-
-export interface StateHook<State, StateMutator, Metadata extends AsyncMetadata>
-  extends HookExtensions<State, StateMutator, Metadata> {
-  (): Readonly<[state: State, stateMutator: StateMutator, metadata: Metadata]> &
-    HookExtensions<State, StateMutator, Metadata>;
-
+  /**
+   * @description React hook that provides a derived state based on the provided selector function and configuration.
+   */
   <Derivate>(
     selector: (state: State) => Derivate,
     config?: UseHookOptions<Derivate, State>,
-  ): Readonly<[state: Derivate, stateMutator: StateMutator, metadata: Metadata]> &
-    HookExtensions<Derivate, StateMutator, Metadata>;
+  ): Readonly<[state: Derivate, stateMutator: StateMutator, metadata: Metadata]>;
 }
 
-export type MetadataSetter<Metadata extends AsyncMetadata> = (
+export type MetadataSetter<Metadata extends BaseMetadata> = (
   setter: Metadata | ((metadata: Metadata) => Metadata),
 ) => void;
 
@@ -116,28 +171,33 @@ export type MetadataSetter<Metadata extends AsyncMetadata> = (
 export type StoreTools<
   State,
   StateMutator = React.Dispatch<React.SetStateAction<State>>,
-  Metadata extends AsyncMetadata = AsyncMetadata,
+  Metadata extends BaseMetadata = BaseMetadata,
 > = {
   /**
    * The actions available for the global state
    */
   actions: StateMutator extends AnyFunction ? null : StateMutator;
+
   /**
    * @description Metadata associated with the global state
    */
   getMetadata: () => Metadata;
+
   /**
    * @description Current state value
    */
   getState: () => State;
+
   /**
    * @description Sets the metadata value
    */
   setMetadata: MetadataSetter<Metadata>;
+
   /**
    * @description Function to set the state value
    */
   setState: React.Dispatch<React.SetStateAction<State>>;
+
   /**
    * @description Subscribe to the state changes
    * You can subscribe to the whole state or to a fragment of the state by passing a selector as first parameter,
@@ -161,7 +221,7 @@ export type StoreTools<
  */
 export interface ActionCollectionConfig<
   State,
-  Metadata extends AsyncMetadata,
+  Metadata extends BaseMetadata,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ThisAPI = Record<string, (...parameters: any[]) => unknown>,
 > {
@@ -178,9 +238,12 @@ export interface ActionCollectionConfig<
   };
 }
 
+/**
+ * @description Resulting type of the action collection configuration
+ */
 export type ActionCollectionResult<
   State,
-  Metadata extends AsyncMetadata,
+  Metadata extends BaseMetadata,
   ActionsConfig extends ActionCollectionConfig<State, Metadata>,
 > = {
   [key in keyof ActionsConfig]: {
@@ -188,11 +251,45 @@ export type ActionCollectionResult<
   };
 };
 
-export type GlobalStoreCallbacks<State, Metadata extends AsyncMetadata> = {
-  onInit?: (args: StoreTools<State, Metadata>) => void;
-  onStateChanged?: (args: StoreTools<State, Metadata> & StateChanges<State>) => void;
-  onSubscribed?: (args: StoreTools<State, Metadata>) => void;
-  computePreventStateChange?: (args: StoreTools<State, Metadata> & StateChanges<State>) => boolean;
+/**
+ * Callbacks for the global store lifecycle events
+ */
+export type GlobalStoreCallbacks<State, StateMutator, Metadata extends BaseMetadata> = {
+  /**
+   * @description Called when the store is initialized
+   */
+  onInit?: (args: StoreTools<State, StateMutator, Metadata>) => void;
+
+  /**
+   * @description Called when the state has changed
+   */
+  onStateChanged?: (args: StoreTools<State, StateMutator, Metadata> & StateChanges<State>) => void;
+
+  /**
+   * @description Called when a new subscription is created
+   */
+  onSubscribed?: (
+    args: StoreTools<State, StateMutator, Metadata>,
+    subscription: SubscriberParameters,
+  ) => void;
+
+  /**
+   * @description Called to determine whether to prevent a state change
+   */
+  computePreventStateChange?: (
+    args: StoreTools<State, StateMutator, Metadata> & StateChanges<State>,
+  ) => boolean;
+
+  /**
+   * @description Called when the store is unmounted, only applicable in context stores
+   */
+  onUnMount?: (store: StoreTools<State, StateMutator, Metadata>) => void;
 };
 
-export type MetadataGetter<Metadata extends AsyncMetadata> = () => Metadata;
+export type MetadataGetter<Metadata extends BaseMetadata> = () => Metadata;
+
+export type ObservableFragment<State, StateMutator, Metadata extends BaseMetadata> = SubscribeToState<State> &
+  Pick<
+    StateApi<State, StateMutator, Metadata>,
+    "getState" | "subscribe" | "createSelectorHook" | "createObservable" | "dispose" | "subscribers"
+  >;

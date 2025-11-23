@@ -15,7 +15,7 @@ export type {
   UnsubscribeCallback,
   SubscribeCallbackConfig,
   SubscribeCallback,
-  AsyncMetadata as BaseMetadata,
+  BaseMetadata as BaseMetadata,
   MetadataGetter,
   SelectorCallback,
   SubscriberParameters,
@@ -44,6 +44,4 @@ export { type ContextProvider, type ContextHook, type InferContextApi, createCon
 export type { AsyncStorageConfig } from "./types";
 export { GlobalStore } from "./GlobalStore";
 export { type CreateGlobalState, createGlobalState, type InferActionsType } from "./createGlobalState";
-export { getAsyncStorageItem } from "./getAsyncStorageItem";
-export { setAsyncStorageItem } from "./setAsyncStorageItem";
-export { asyncStorageWrapper, type AsyncStorageManager } from "./asyncStorageWrapper";
+export { default as asyncStorageWrapper, type AsyncStorageManager } from "./asyncStorageWrapper";

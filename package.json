@@ -26,16 +26,6 @@
       "require": "./createGlobalState.js",
       "types": "./createGlobalState.d.ts"
     },
-    "./getAsyncStorageItem": {
-      "import": "./getAsyncStorageItem.js",
-      "require": "./getAsyncStorageItem.js",
-      "types": "./getAsyncStorageItem.d.ts"
-    },
-    "./setAsyncStorageItem": {
-      "import": "./setAsyncStorageItem.js",
-      "require": "./setAsyncStorageItem.js",
-      "types": "./setAsyncStorageItem.d.ts"
-    },
     "./GlobalStore": {
       "import": "./GlobalStore.js",
       "require": "./GlobalStore.js",

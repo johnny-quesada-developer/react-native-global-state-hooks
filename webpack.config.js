@@ -16,8 +16,6 @@ const individualEntries = {
 
   // extras
   asyncStorageWrapper: "./src/asyncStorageWrapper.ts",
-  getAsyncStorageItem: "./src/getAsyncStorageItem.ts",
-  setAsyncStorageItem: "./src/setAsyncStorageItem.ts",
 };
 
 const generateExternalEntryMappings = () => {

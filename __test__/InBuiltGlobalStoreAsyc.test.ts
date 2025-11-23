@@ -1,6 +1,7 @@
 import { createDecoupledPromise } from "easy-cancelable-promise/createDecoupledPromise";
 
-import { GlobalStore, createGlobalState, asyncStorageWrapper } from "..";
+// import { GlobalStore, createGlobalState, asyncStorageWrapper } from "..";
+import { GlobalStore, createGlobalState, asyncStorageWrapper } from "../src";
 import formatToStore from "json-storage-formatter/formatToStore";
 import { getFakeAsyncStorage } from "./getFakeAsyncStorage";
 import { act } from "@testing-library/react";
@@ -21,6 +22,7 @@ describe("GlobalStoreAsync Basics", () => {
       const store = new GlobalStore(0, {
         asyncStorage: {
           key: "counter",
+          validator: () => {},
         },
         metadata: {},
       });
@@ -82,6 +84,7 @@ describe("createGlobalState", () => {
       const store = new GlobalStore(new Map<string, number>(), {
         asyncStorage: {
           key: "data",
+          validator: () => {},
         },
         metadata: {},
         callbacks: {

@@ -22,6 +22,7 @@ describe("GlobalStoreAsync Basics", () => {
       const storage = new GlobalStore(0, {
         asyncStorage: {
           key: "counter",
+          validator: () => {},
         },
       });
 
@@ -72,6 +73,7 @@ describe("GlobalStoreAsync Basics", () => {
       const store = new GlobalStore(0, {
         asyncStorage: {
           key: "counter",
+          validator: () => {},
         },
       });
 
@@ -129,6 +131,7 @@ describe("GlobalStoreAsync Basics", () => {
       const store = new GlobalStore(1, {
         asyncStorage: {
           key: "counter",
+          validator: () => {},
         },
       });
 
@@ -187,6 +190,7 @@ describe("GlobalStoreAsync Basics", () => {
       const storage = new GlobalStore(0, {
         asyncStorage: {
           key: "counter",
+          validator: () => {},
         },
       });
 
@@ -238,6 +242,7 @@ describe("createGlobalState", () => {
       const store = new GlobalStore(new Map<string, number>(), {
         asyncStorage: {
           key: "data",
+          validator: () => {},
         },
         callbacks: {
           onStateChanged: onStateChangedResolve,

@@ -3,6 +3,7 @@ import { createDecoupledPromise } from "easy-cancelable-promise/createDecoupledP
 import { formatFromStore, formatToStore } from "json-storage-formatter";
 import { getFakeAsyncStorage } from "./getFakeAsyncStorage";
 import { createGlobalState } from "..";
+// import { createGlobalState } from "../src";
 import { act } from "@testing-library/react";
 import it from "./$it";
 

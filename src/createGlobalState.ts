@@ -5,7 +5,7 @@ import type {
   GlobalStoreCallbacks,
 } from "react-hooks-global-states/types";
 
-import { AsyncStorageConfig, AsyncMetadata, BaseMetadata } from "./types";
+import { AsyncStorageConfig, BaseMetadata, AsyncMetadata } from "./types";
 import { GlobalStore } from "./GlobalStore";
 import React from "react";
 
@@ -31,7 +31,7 @@ export interface CreateGlobalState {
    *   );
    * }
    */
-  <State>(state: State): StateHook<State, React.Dispatch<React.SetStateAction<State>>, AsyncMetadata>;
+  <State>(state: State): StateHook<State, React.Dispatch<React.SetStateAction<State>>, BaseMetadata>;
 
   /**
    * Creates a global state hook that you can use across your application
@@ -85,7 +85,7 @@ export interface CreateGlobalState {
    */
   <
     State,
-    Metadata extends AsyncMetadata,
+    Metadata extends BaseMetadata,
     // eslint-disable-next-line @typescript-eslint/no-empty-object-type
     ActionsConfig extends ActionCollectionConfig<State, Metadata> | null | {},
     PublicStateMutator = keyof ActionsConfig extends never | undefined
@@ -98,9 +98,9 @@ export interface CreateGlobalState {
       metadata?: Metadata;
       callbacks?: GlobalStoreCallbacks<State, PublicStateMutator, Metadata>;
       actions?: ActionsConfig;
-      asyncStorage?: AsyncStorageConfig;
+      asyncStorage?: AsyncStorageConfig<State>;
     },
-  ): StateHook<State, PublicStateMutator, BaseMetadata<Metadata>>;
+  ): StateHook<State, PublicStateMutator, AsyncMetadata<Metadata>>;
 
   /**
    * Creates a global state hook that you can use across your application
@@ -154,7 +154,7 @@ export interface CreateGlobalState {
    */
   <
     State,
-    Metadata extends AsyncMetadata,
+    Metadata extends BaseMetadata,
     ActionsConfig extends ActionCollectionConfig<State, Metadata>,
     PublicStateMutator = ActionCollectionResult<State, Metadata, NonNullable<ActionsConfig>>,
   >(
@@ -164,7 +164,7 @@ export interface CreateGlobalState {
       metadata?: Metadata;
       callbacks?: GlobalStoreCallbacks<State, PublicStateMutator, Metadata>;
       actions: ActionsConfig;
-      asyncStorage?: AsyncStorageConfig;
+      asyncStorage?: AsyncStorageConfig<State>;
     },
   ): StateHook<State, PublicStateMutator, Metadata>;
 }
