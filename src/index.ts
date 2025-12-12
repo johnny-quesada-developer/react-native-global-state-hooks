@@ -32,7 +32,7 @@ export type {
 
 // utils
 export { shallowCompare } from "./shallowCompare";
-export { uniqueId } from "./uniqueId";
+export { uniqueId, type BrandedId } from "./uniqueId";
 export { throwWrongKeyOnActionCollectionConfig } from "./throwWrongKeyOnActionCollectionConfig";
 export { isRecord } from "./isRecord";
 
@@ -42,6 +42,12 @@ export { type ContextProvider, type ContextHook, type InferContextApi, createCon
 // #endregion base library exports
 
 export type { AsyncStorageConfig } from "./types";
-export { GlobalStore } from "./GlobalStore";
-export { createGlobalState, type InferActionsType, type InferStateApi } from "./createGlobalState";
+export { default as GlobalStore } from "./GlobalStore";
+export {
+  createGlobalState,
+  type InferActionsType,
+  type InferStateApi,
+  type AnyActions,
+} from "./createGlobalState";
+
 export { default as asyncStorageWrapper, type AsyncStorageManager } from "./asyncStorageWrapper";

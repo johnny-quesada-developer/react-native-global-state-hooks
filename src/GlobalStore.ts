@@ -2,7 +2,6 @@ import type {
   ActionCollectionConfig,
   GlobalStoreCallbacks,
   StateChanges,
-  StoreTools,
 } from "react-hooks-global-states/types";
 import type {
   ActionCollectionResult,
@@ -13,7 +12,7 @@ import type {
   ItemEnvelope,
 } from "./types";
 
-import { GlobalStoreAbstract } from "react-hooks-global-states/GlobalStoreAbstract";
+import GlobalStoreBase from "react-hooks-global-states/GlobalStore";
 import tryCatch from "./tryCatch";
 import isNil from "json-storage-formatter/isNil";
 import formatFromStore from "json-storage-formatter/formatFromStore";
@@ -32,7 +31,7 @@ export class GlobalStore<
   PublicStateMutator = keyof ActionsConfig extends never | undefined
     ? React.Dispatch<React.SetStateAction<State>>
     : ActionCollectionResult<State, Metadata, NonNullable<ActionsConfig>>,
-> extends GlobalStoreAbstract<State, AsyncMetadata<Metadata>, ActionsConfig> {
+> extends GlobalStoreBase<State, AsyncMetadata<Metadata>, ActionsConfig> {
   public asyncStorage: AsyncStorageConfig<State> | null = null;
 
   constructor(state: State);
@@ -85,81 +84,6 @@ export class GlobalStore<
 
   protected isPersistStorageAvailable = () => {
     return Boolean(this.asyncStorage?.key);
-  };
-
-  protected _onInitialize = async ({
-    getState,
-  }: StoreTools<State, PublicStateMutator, Metadata>): Promise<void> => {
-    const storageConfig = this.asyncStorage;
-
-    if (!storageConfig || !this.isPersistStorageAvailable()) return;
-
-    // set initial value of the metadata
-    this.metadata.isAsyncStorageReady = false;
-
-    // versioning parameters
-    const versioning = storageConfig.versioning;
-
-    // try to restore the state from local storage
-    const { result: restoredEnvelope, error: initializationError } = await tryCatch(
-      async (): Promise<ItemEnvelope<State> | null> => {
-        const getFn = storageConfig.adapter?.getItem;
-        if (!getFn) return this.getStorageItem();
-
-        return {
-          s: await getFn(storageConfig.key),
-          v: versioning?.version ?? defaultStorageVersion,
-        };
-      },
-    );
-
-    const { error } = await tryCatch(async () => {
-      // error while retrieving the item from local storage
-      if (initializationError) {
-        this.handleStorageError(initializationError);
-        await this.updateStateWithValidation(this.getState());
-        return;
-      }
-
-      // nothing to restore
-      if (!restoredEnvelope) {
-        // set the initial state in local storage
-        await this.updateStateWithValidation(getState());
-        return;
-      }
-
-      const isSameVersion = restoredEnvelope.v === versioning?.version;
-      const migratorFn = versioning?.migrator;
-
-      // versions match or no migrator provided - just validate and update if possible
-      // if the adapter is provided we cannot control versioning so we skip migration
-      if (isSameVersion || !migratorFn || storageConfig.adapter) {
-        await this.updateStateWithValidation(restoredEnvelope.s);
-        return;
-      }
-
-      // [VERSIONING] try to executed a migration
-      const { result: migrated, error: migrateError } = tryCatch(() => {
-        return migratorFn({
-          legacy: restoredEnvelope.s,
-          initial: this.getState(),
-        }) as unknown;
-      });
-
-      if (!migrateError) {
-        await this.updateStateWithValidation(migrated as State);
-        return;
-      }
-
-      this.handleStorageError(migrateError);
-      await this.updateStateWithValidation(this.getState());
-    });
-
-    this.metadata.isAsyncStorageReady = true;
-
-    if (!error) return;
-
-    this.handleStorageError(error);
   };
 
   private trySetStorageItem = async (state: State) => {
@@ -225,51 +149,99 @@ export class GlobalStore<
     await this.trySetStorageItem(sanitizedState as State);
   };
 
-  protected _onChange = async ({
-    state,
-  }: StoreTools<State, PublicStateMutator, Metadata> & StateChanges<State>): Promise<void> => {
+  /**
+   * Instead of calling onInitialize and onChange directly, we call the _onInitialize and _onChange
+   * This allows the concat the logic of the GlobalStore with the logic of the extension class.
+   */
+  protected onInit = async () => {
     const storageConfig = this.asyncStorage;
+
     if (!storageConfig || !this.isPersistStorageAvailable()) return;
 
-    const { error } = await tryCatch((): Promise<void> => {
-      const setFn = storageConfig.adapter?.setItem;
-      if (setFn) {
-        return setFn(storageConfig.key, state);
+    // set initial value of the metadata
+    this.metadata.isAsyncStorageReady = false;
+
+    // versioning parameters
+    const versioning = storageConfig.versioning;
+
+    // try to restore the state from local storage
+    const { result: restoredEnvelope, error: initializationError } = await tryCatch(
+      async (): Promise<ItemEnvelope<State> | null> => {
+        const getFn = storageConfig.adapter?.getItem;
+        if (!getFn) return this.getStorageItem();
+
+        return {
+          s: await getFn(storageConfig.key),
+          v: versioning?.version ?? defaultStorageVersion,
+        };
+      },
+    );
+
+    const { error } = await tryCatch(async () => {
+      // error while retrieving the item from local storage
+      if (initializationError) {
+        this.handleStorageError(initializationError);
+        await this.updateStateWithValidation(this.getState());
+        return;
       }
 
-      return this.setStorageItem(state);
+      // nothing to restore
+      if (!restoredEnvelope) {
+        // set the initial state in local storage
+        await this.updateStateWithValidation(this.getState());
+        return;
+      }
+
+      const isSameVersion = restoredEnvelope.v === versioning?.version;
+      const migratorFn = versioning?.migrator;
+
+      // versions match or no migrator provided - just validate and update if possible
+      // if the adapter is provided we cannot control versioning so we skip migration
+      if (isSameVersion || !migratorFn || storageConfig.adapter) {
+        await this.updateStateWithValidation(restoredEnvelope.s);
+        return;
+      }
+
+      // [VERSIONING] try to executed a migration
+      const { result: migrated, error: migrateError } = tryCatch(() => {
+        return migratorFn({
+          legacy: restoredEnvelope.s,
+          initial: this.getState(),
+        }) as unknown;
+      });
+
+      if (!migrateError) {
+        await this.updateStateWithValidation(migrated as State);
+        return;
+      }
+
+      this.handleStorageError(migrateError);
+      await this.updateStateWithValidation(this.getState());
     });
+
+    this.metadata.isAsyncStorageReady = true;
 
     if (!error) return;
 
     this.handleStorageError(error);
   };
 
-  /**
-   * We set it to null so the instances of the GlobalStoreAbstract can override it.
-   */
-  // @ts-expect-error TS2345
-  protected onInitialize = null as unknown as (args: StoreTools<State, PublicStateMutator, Metadata>) => void;
+  protected onStateChanged = async (changes: StateChanges<State>) => {
+    const storageConfig = this.asyncStorage;
+    if (!storageConfig || !this.isPersistStorageAvailable()) return;
 
-  // @ts-expect-error TS2345
-  protected onChange = null as unknown as (
-    args: StoreTools<State, PublicStateMutator, Metadata> & StateChanges<State>,
-  ) => void;
+    const { error } = await tryCatch((): Promise<void> => {
+      const setFn = storageConfig.adapter?.setItem;
+      if (setFn) {
+        return setFn(storageConfig.key, changes.state);
+      }
 
-  /**
-   * Instead of calling onInitialize and onChange directly, we call the _onInitialize and _onChange
-   * This allows the concat the logic of the GlobalStore with the logic of the extension class.
-   */
-  // @ts-expect-error TS2345
-  protected onInit = (parameters: StoreTools<State, PublicStateMutator, Metadata>) => {
-    void this._onInitialize?.(parameters);
-  };
+      return this.setStorageItem(changes.state);
+    });
 
-  // @ts-expect-error TS2345
-  protected onStateChanged = (
-    args: StoreTools<State, PublicStateMutator, Metadata> & StateChanges<State>,
-  ) => {
-    void this._onChange?.(args);
+    if (!error) return;
+
+    this.handleStorageError(error);
   };
 
   // retrieves a versioned item from the local storage
