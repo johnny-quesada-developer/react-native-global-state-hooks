@@ -139,8 +139,11 @@ export type BaseMetadata = BaseLibraryMetadata & {
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export type AsyncMetadata<T> = (keyof T extends never ? {} : T) & BaseMetadata;
 
-export interface StateHook<State, StateMutator, Metadata extends BaseMetadata>
-  extends StateApi<State, StateMutator, Metadata> {
+export interface StateHook<State, StateMutator, Metadata extends BaseMetadata> extends StateApi<
+  State,
+  StateMutator,
+  Metadata
+> {
   /**
    * @description React hook that provides access to the state, state mutator, and metadata.
    */

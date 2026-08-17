@@ -153,6 +153,8 @@ export class GlobalStore<
    * Instead of calling onInitialize and onChange directly, we call the _onInitialize and _onChange
    * This allows the concat the logic of the GlobalStore with the logic of the extension class.
    */
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
   protected onInit = async () => {
     const storageConfig = this.asyncStorage;
 

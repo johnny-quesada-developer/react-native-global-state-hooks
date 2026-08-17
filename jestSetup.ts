@@ -1,16 +1,23 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
 import { getFakeAsyncStorage } from "./__test__/getFakeAsyncStorage";
 
 const { fakeAsyncStorage: asyncStorage } = getFakeAsyncStorage();
 
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn(),
+    setItem: jest.fn(),
+  },
+}));
+
+const AsyncStorage = jest.requireMock("@react-native-async-storage/async-storage").default;
+
 beforeEach(() => {
-  jest.restoreAllMocks();
   jest.clearAllMocks();
   jest.clearAllTimers();
 
-  jest.spyOn(AsyncStorage, "getItem").mockImplementation(asyncStorage.getItem);
-  jest.spyOn(AsyncStorage, "setItem").mockImplementation(asyncStorage.setItem);
+  AsyncStorage.getItem.mockImplementation(asyncStorage.getItem);
+  AsyncStorage.setItem.mockImplementation(asyncStorage.setItem);
 });
 
 export {};
